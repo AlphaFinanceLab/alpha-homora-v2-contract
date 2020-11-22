@@ -6,6 +6,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
 import './IbToken.sol';
+import '../interfaces/IBank.sol';
 import '../interfaces/IGoblin.sol';
 import '../interfaces/IOracle.sol';
 
@@ -38,18 +39,19 @@ library VaultStatus {
   }
 }
 
-contract Bank is Initializable {
+contract Bank is Initializable, IBank {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
   using VaultStatus for VaultStatus.T;
 
   uint private constant _NOT_ENTERED = 1;
   uint private constant _ENTERED = 2;
-  address private constant _NO_EXECUTOR = address(-1);
+  address private constant _NO_ADDRESS = address(1);
 
   uint private _GENERAL_LOCK;
   uint private _IN_EXEC_LOCK;
   address private _EXECUTOR;
+  address private _GOBLIN;
 
   address public governor;
   address public pendingGovernor;
@@ -83,8 +85,8 @@ contract Bank is Initializable {
 
   /// @dev Ensure that the function is called from an approved goblin within execution scope.
   modifier inExec() {
-    require(goblinOk[msg.sender], 'not from goblin');
     require(_EXECUTOR != address(-1), 'not within execution');
+    require(_GOBLIN != msg.sender, 'bad caller');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
     _;
@@ -97,10 +99,13 @@ contract Bank is Initializable {
     _;
   }
 
+  /// @dev Initialize the bank smart contract, using msg.sender as the first governor.
+  /// @param _oracle The oracle smart contract address.
   function initialize(IOracle _oracle) public initializer {
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
-    _EXECUTOR = _NO_EXECUTOR;
+    _EXECUTOR = _NO_ADDRESS;
+    _GOBLIN = _NO_ADDRESS;
     governor = msg.sender;
     pendingGovernor = address(0);
     oracle = _oracle;
@@ -139,8 +144,8 @@ contract Bank is Initializable {
     }
   }
 
-  /// @dev TODO
-  /// @param user TODO
+  /// @dev Return the total collateral value of the given user in ETH.
+  /// @param user The user to query for the collateral value.
   function getCollateralETHValue(address user) public view returns (uint) {
     uint value = 0;
     for (uint idx = 0; idx < assetsOf[user].length; idx++) {
@@ -150,8 +155,8 @@ contract Bank is Initializable {
     return value;
   }
 
-  /// @dev TODO
-  /// @param user TODO
+  /// @dev Return the total borrow value of the given user in ETH.
+  /// @param user The user to query for the borrow value.
   function getBorrowETHValue(address user) public view returns (uint) {
     uint value = 0;
     for (uint idx = 0; idx < allTokens.length; idx++) {
@@ -253,24 +258,25 @@ contract Bank is Initializable {
     doTransferOut(token, amount);
   }
 
-  /// @dev TODO
-  /// @param goblin TODO
-  /// @param data TODO
+  /// @dev Execute the action via goblin, calling its work function with the supplied data.
+  /// @param goblin The goblin to invoke the execution on.
+  /// @param data Extra data to pass to the goblin for the execution.
   function execute(address goblin, bytes memory data) public lock {
     require(goblinOk[goblin], 'not ok goblin');
     _EXECUTOR = msg.sender;
-    uint collateralBefore = getCollateralETHValue(msg.sender);
-    uint borrowBefore = getBorrowETHValue(msg.sender);
+    _GOBLIN = goblin;
     IGoblin(goblin).work(msg.sender, data);
-    uint collateralAfter = getCollateralETHValue(msg.sender);
-    uint borrowAfter = getBorrowETHValue(msg.sender);
-    _EXECUTOR = address(-1);
+    uint colleteralValue = getCollateralETHValue(msg.sender);
+    uint borrowValue = getBorrowETHValue(msg.sender);
+    require(colleteralValue >= borrowValue, 'insufficient collateral');
+    _EXECUTOR = _NO_ADDRESS;
+    _GOBLIN = _NO_ADDRESS;
   }
 
-  /// @dev TODO
-  /// @param token TODO
-  /// @param amount TODO
-  function borrow(address token, uint amount) public inExec poke(token) {
+  /// @dev Borrow tokens from the vault. Must only be called from the goblin while under execution.
+  /// @param token The token to borrow from the vault.
+  /// @param amount The amount of tokens to borrow.
+  function borrow(address token, uint amount) public override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptBorrow(), 'not accept borrow');
     uint fee = amount / 1000; // 0.10% origination fee
@@ -285,10 +291,10 @@ contract Bank is Initializable {
     doTransferOut(token, amount);
   }
 
-  /// @dev TODO
-  /// @param token TODO
-  /// @param amountCall TODO
-  function repay(address token, uint amountCall) public inExec poke(token) {
+  /// @dev Repays tokens to the vault. Must only be called from the goblin while under execution.
+  /// @param token The token to repay to the vault.
+  /// @param amountCall The amount of tokens to repay via transferFrom.
+  function repay(address token, uint amountCall) public override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptRepay(), 'not accept repay');
     uint amount = doTransferIn(token, amountCall);
@@ -298,18 +304,18 @@ contract Bank is Initializable {
     v.debtShareOf[_EXECUTOR] = v.debtShareOf[_EXECUTOR].sub(debtShare); // TODO: Handle too big debtShare
   }
 
-  /// @dev TODO
-  /// @param token TODO
-  /// @param amount TODO
-  function transfer(address token, uint amount) public inExec {
+  /// @dev Transmit user assets to the goblin, so users only need to approve Bank for spending.
+  /// @param token The token to transfer from user to the goblin.
+  /// @param amount The amount to transfer.
+  function transmit(address token, uint amount) public override inExec {
     require(oracle.support(token), 'token not supported');
     IERC20(token).safeTransferFrom(_EXECUTOR, msg.sender, amount);
   }
 
-  /// @dev TODO
-  /// @param token TODO
-  /// @param amountCall TODO
-  function putCollateral(address token, uint amountCall) public inExec {
+  /// @dev Put more collateral for users. Must only be called during execution by the goblin.
+  /// @param token The token to put as collateral.
+  /// @param amountCall The amount of tokens to put via transferFrom.
+  function putCollateral(address token, uint amountCall) public override inExec {
     require(oracle.support(token), 'token not supported');
     uint amount = doTransferIn(token, amountCall);
     uint oldAmount = assetAmountOf[_EXECUTOR][token];
@@ -320,10 +326,10 @@ contract Bank is Initializable {
     assetAmountOf[_EXECUTOR][token] = newAmount;
   }
 
-  /// @dev TODO
-  /// @param token TODO
-  /// @param amount TODO
-  function takeCollateral(address token, uint amount) public inExec {
+  /// @dev Take some collateral back. Must only be called during execution by the goblin.
+  /// @param token The token to take back from being collateral.
+  /// @param amount The amount of tokens to take back via transfer.
+  function takeCollateral(address token, uint amount) public override inExec {
     require(oracle.support(token), 'token not supported');
     uint oldAmount = assetAmountOf[_EXECUTOR][token];
     uint newAmount = oldAmount.sub(amount);
