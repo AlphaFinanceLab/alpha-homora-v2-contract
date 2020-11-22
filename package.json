@@ -1,0 +1,26 @@
+{
+  "name": "homora-v2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "devDependencies": {
+    "prettier": "2.2.0",
+    "prettier-plugin-solidity": "^1.0.0-alpha.59"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlphaFinanceLab/homora-v2.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AlphaFinanceLab/homora-v2/issues"
+  },
+  "homepage": "https://github.com/AlphaFinanceLab/homora-v2#readme"
+}
