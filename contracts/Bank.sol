@@ -44,6 +44,7 @@ contract Bank is Initializable, IBank {
   using VaultStatus for VaultStatus.T;
 
   uint public constant MAX_ASSET_COUNT = 10;
+  uint public constant MAX_DEBT_COUNT = 10;
 
   uint private constant _NOT_ENTERED = 1;
   uint private constant _ENTERED = 2;
@@ -66,15 +67,15 @@ contract Bank is Initializable, IBank {
     uint totalValue;
     uint totalDebt;
     uint totalDebtShare;
-    mapping(address => uint) debtShareOf;
   }
 
-  address[] public allTokens;
   mapping(address => bool) public goblinOk;
   mapping(address => Vault) public vaults;
 
   mapping(address => address[]) public assetsOf;
   mapping(address => mapping(address => uint)) public assetAmountOf;
+  mapping(address => address[]) public debtsOf;
+  mapping(address => mapping(address => uint)) public debtShareOf;
 
   /// @dev Reentrancy lock guard.
   modifier lock() {
@@ -112,14 +113,14 @@ contract Bank is Initializable, IBank {
     oracle = _oracle;
   }
 
-  /// @dev Return the length of the vault token list.
-  function allTokensLength() public view returns (uint) {
-    return allTokens.length;
-  }
-
   /// @dev Return the length of the assets of the given user.
   function assetsLength(address user) public view returns (uint) {
     return assetsOf[user].length;
+  }
+
+  /// @dev Return the length of the debts of the given user.
+  function debtsLength(address user) public view returns (uint) {
+    return debtsOf[user].length;
   }
 
   /// @dev Trigger interest accrual for the given vault.
@@ -138,11 +139,11 @@ contract Bank is Initializable, IBank {
     }
   }
 
-  /// @dev Convenient function to trigger interest accrual for all vaults.
-  function accrueAll() public {
-    uint length = allTokens.length;
-    for (uint idx = 0; idx < length; idx++) {
-      accrue(allTokens[idx]);
+  /// @dev Convenient function to trigger interest accrual for the list of vaults.
+  /// @param tokens The list of vaults to trigger interest accrual.
+  function accrueAll(address[] memory tokens) public {
+    for (uint idx = 0; idx < tokens.length; idx++) {
+      accrue(tokens[idx]);
     }
   }
 
@@ -162,15 +163,13 @@ contract Bank is Initializable, IBank {
   /// @param user The user to query for the borrow value.
   function getBorrowETHValue(address user) public view returns (uint) {
     uint value = 0;
-    uint length = allTokens.length;
+    uint length = debtsOf[user].length;
     for (uint idx = 0; idx < length; idx++) {
-      address token = allTokens[idx];
+      address token = debtsOf[user][idx];
+      uint share = debtShareOf[user][token];
       Vault storage v = vaults[token];
-      uint share = v.debtShareOf[user];
-      if (share > 0) {
-        uint debt = share.mul(v.totalDebt).div(v.totalDebtShare);
-        value = value.add(oracle.asETHBorrow(token, debt));
-      }
+      uint debt = share.mul(v.totalDebt).div(v.totalDebtShare);
+      value = value.add(oracle.asETHBorrow(token, debt));
     }
     return value;
   }
@@ -189,29 +188,19 @@ contract Bank is Initializable, IBank {
     governor = msg.sender;
   }
 
-  /// @dev Add a new token to the set of vaults for depositing and borrowing.
-  /// @param token The ERC-20 address of the token to become part of the vault.
-  /// @param status The initial statue of the newly created vault.
-  function addVault(address token, VaultStatus.T status) public lock {
-    require(msg.sender == governor, 'not the governor');
-    require(status.valid(), 'invalid status');
-    Vault storage v = vaults[token];
-    require(!v.status.valid(), 'vault already exists');
-    v.status = status;
-    v.ib = new IbToken(token);
-    v.lastAccrueTime = now;
-    allTokens.push(token);
-  }
-
-  /// @dev Set vault status for the given set of vaults.
+  /// @dev Set vault status for the given set of vaults. Create new IB tokens for new vaults.
   /// @param tokens The set of vault tokens to update the vault status.
   /// @param status The new vault status to set.
   function setVaultStatus(address[] memory tokens, VaultStatus.T status) public lock {
     require(msg.sender == governor, 'not the governor');
     require(status.valid(), 'invalid status');
     for (uint idx = 0; idx < tokens.length; idx++) {
-      Vault storage v = vaults[tokens[idx]];
-      require(v.status.valid(), 'vault does not exist');
+      address token = tokens[idx];
+      Vault storage v = vaults[token];
+      if (!v.status.valid()) {
+        v.ib = new IbToken(token);
+        v.lastAccrueTime = now;
+      }
       v.status = status;
     }
   }
@@ -279,23 +268,19 @@ contract Bank is Initializable, IBank {
     uint amountCall
   ) public lock {
     Vault storage v = vaults[debtToken];
-    require(v.status.acceptRepay(), 'not accept repay');
+    require(oracle.support(collateralToken), 'collateral token not supported');
     uint collateralValue = getCollateralETHValue(user);
     uint borrowValue = getBorrowETHValue(user);
     require(collateralValue < borrowValue, 'account still healthy');
-    uint amount = doTransferIn(debtToken, amountCall);
-    uint debtShare = amount.mul(v.totalDebtShare).div(v.totalDebt);
-    v.totalDebt = v.totalDebt.sub(amount);
-    v.totalDebtShare = v.totalDebtShare.sub(debtShare);
-    v.debtShareOf[user] = v.debtShareOf[user].sub(debtShare);
-    uint reward = (oracle.convert(debtToken, collateralToken, amount) * 105) / 100; // 5% bonus
+    uint amountPaid = repayInternal(user, debtToken, amountCall);
+    uint bounty = oracle.convert(debtToken, collateralToken, amountPaid);
     uint oldAmount = assetAmountOf[user][collateralToken];
-    uint newAmount = oldAmount.sub(amount);
+    uint newAmount = oldAmount.sub(bounty);
     if (oldAmount != 0 && newAmount == 0) {
       remove(assetsOf[user], collateralToken);
     }
     assetAmountOf[user][collateralToken] = newAmount;
-    IERC20(collateralToken).transfer(msg.sender, reward);
+    IERC20(collateralToken).transfer(msg.sender, bounty);
   }
 
   /// @dev Execute the action via goblin, calling its work function with the supplied data.
@@ -320,15 +305,16 @@ contract Bank is Initializable, IBank {
   function borrow(address token, uint amount) public override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptBorrow(), 'not accept borrow');
-    uint fee = amount / 1000; // 0.1% origination fee
-    uint reserve = fee / 10; // 10% of fee to reserve
-    uint debt = amount.add(fee);
-    uint debtShare = v.totalDebt == 0 ? debt : debt.mul(v.totalDebtShare).div(v.totalDebt);
-    v.totalDebt = v.totalDebt.add(debt);
-    v.totalDebtShare = v.totalDebtShare.add(debtShare);
-    v.debtShareOf[_EXECUTOR] = v.debtShareOf[_EXECUTOR].add(debtShare);
-    v.reserve = v.reserve.add(reserve);
-    v.totalValue = v.totalValue.add(fee.sub(reserve));
+    uint share = v.totalDebt == 0 ? amount : amount.mul(v.totalDebtShare).div(v.totalDebt);
+    v.totalDebt = v.totalDebt.add(amount);
+    v.totalDebtShare = v.totalDebtShare.add(share);
+    uint oldShare = debtShareOf[_EXECUTOR][token];
+    uint newShare = oldShare.add(share);
+    if (oldShare == 0 && newShare != 0) {
+      debtsOf[_EXECUTOR].push(token);
+      require(debtsOf[_EXECUTOR].length <= MAX_DEBT_COUNT);
+    }
+    debtShareOf[_EXECUTOR][token] = newShare;
     IERC20(token).safeTransfer(msg.sender, amount);
   }
 
@@ -336,20 +322,38 @@ contract Bank is Initializable, IBank {
   /// @param token The token to repay to the vault.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) public override inExec poke(token) {
+    repayInternal(_EXECUTOR, token, amountCall);
+  }
+
+  /// @dev Perform repay action. Return the amount actually taken. Refund rest to msg.sender.
+  /// @param user The user to repay debts to.
+  /// @param token The vault token to pay the debt.
+  /// @param amountCall The amount to repay by calling transferFrom.
+  function repayInternal(
+    address user,
+    address token,
+    uint amountCall
+  ) internal returns (uint) {
     Vault storage v = vaults[token];
     require(v.status.acceptRepay(), 'not accept repay');
     uint amount = doTransferIn(token, amountCall);
-    uint debtShare = amount.mul(v.totalDebtShare).div(v.totalDebt);
-    if (debtShare > v.debtShareOf[_EXECUTOR]) {
-      uint excessShare = debtShare.sub(v.debtShareOf[_EXECUTOR]);
-      uint excessToken = excessShare.mul(v.totalDebt).div(v.totalDebtShare);
-      IERC20(token).safeTransfer(msg.sender, excessToken);
-      debtShare = debtShare.sub(excessShare);
-      amount = amount.sub(excessToken);
+    uint oldDebtShare = debtShareOf[user][token];
+    uint oldDebt = oldDebtShare.mul(v.totalDebt).div(v.totalDebtShare);
+    uint subDebtShare;
+    if (amount > oldDebt) {
+      IERC20(token).transfer(msg.sender, amount.sub(oldDebt));
+      amount = oldDebt;
+      subDebtShare = oldDebtShare;
+    } else {
+      subDebtShare = amount.mul(v.totalDebtShare).div(v.totalDebt);
     }
     v.totalDebt = v.totalDebt.sub(amount);
-    v.totalDebtShare = v.totalDebtShare.sub(debtShare);
-    v.debtShareOf[_EXECUTOR] = v.debtShareOf[_EXECUTOR].sub(debtShare);
+    v.totalDebtShare = v.totalDebtShare.sub(subDebtShare);
+    uint newDebtShare = oldDebtShare.sub(subDebtShare);
+    if (oldDebtShare != 0 && newDebtShare == 0) {
+      remove(debtsOf[user], token);
+    }
+    return amount;
   }
 
   /// @dev Transmit user assets to the goblin, so users only need to approve Bank for spending.
@@ -399,17 +403,20 @@ contract Bank is Initializable, IBank {
     return balanceAfter.sub(balanceBefore);
   }
 
-  function remove(address[] storage tokens, address token) internal {
-    uint length = tokens.length;
+  /// @dev Remove the given address from the storage list. The item must exist in the list.
+  /// @param list The storage list to remove an address.
+  /// @param addr The address to be removed from the list.
+  function remove(address[] storage list, address addr) internal {
+    uint length = list.length;
     bool found = false;
     for (uint idx = 0; idx < length; idx++) {
-      if (tokens[idx] == token) {
-        tokens[idx] = tokens[length - 1];
+      if (list[idx] == addr) {
+        list[idx] = list[length - 1];
         found = true;
         break;
       }
     }
     assert(found);
-    tokens.pop();
+    list.pop();
   }
 }
