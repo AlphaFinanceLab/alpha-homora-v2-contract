@@ -7,7 +7,6 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.
 
 import './IbToken.sol';
 import '../interfaces/IBank.sol';
-import '../interfaces/IGoblin.sol';
 import '../interfaces/IOracle.sol';
 
 library VaultStatus {
@@ -44,14 +43,16 @@ contract Bank is Initializable, IBank {
   using SafeERC20 for IERC20;
   using VaultStatus for VaultStatus.T;
 
+  uint public constant MAX_ASSET_COUNT = 10;
+
   uint private constant _NOT_ENTERED = 1;
   uint private constant _ENTERED = 2;
   address private constant _NO_ADDRESS = address(1);
 
-  uint private _GENERAL_LOCK;
-  uint private _IN_EXEC_LOCK;
-  address private _EXECUTOR;
-  address private _GOBLIN;
+  uint public _GENERAL_LOCK;
+  uint public _IN_EXEC_LOCK;
+  address public _EXECUTOR;
+  address public _GOBLIN;
 
   address public governor;
   address public pendingGovernor;
@@ -71,7 +72,6 @@ contract Bank is Initializable, IBank {
   address[] public allTokens;
   mapping(address => bool) public goblinOk;
   mapping(address => Vault) public vaults;
-
   mapping(address => address[]) public assetsOf;
   mapping(address => mapping(address => uint)) public assetAmountOf;
 
@@ -212,13 +212,18 @@ contract Bank is Initializable, IBank {
     }
   }
 
-  /// @dev Set goblin ok status for the given set of goblins.
+  /// @dev Set goblin ok status. BE CAREFUL! DO NOT SET TOKEN CONTRACTS OR SELF AS GOBLINS. EVER.
   /// @param goblins The set of goblins to update status.
   /// @param ok Whether to set those goblins is ok or not.
   function setGoblinOk(address[] memory goblins, bool ok) public lock {
     require(msg.sender == governor, 'not the governor');
     for (uint idx = 0; idx < goblins.length; idx++) {
-      goblinOk[goblins[idx]] = ok;
+      address goblin = goblins[idx];
+      require(goblin != address(this), 'DO NOT SET SELF AS GOBLIN');
+      try IERC20(goblin).totalSupply() returns (uint) {
+        revert('DO NOT SET TOKEN CONTRACT AS GOBLIN');
+      } catch {}
+      goblinOk[goblin] = ok;
     }
   }
 
@@ -245,7 +250,7 @@ contract Bank is Initializable, IBank {
     uint amount = share.mul(v.totalValue).div(totalShare);
     v.totalValue = v.totalValue.sub(amount);
     v.ib.burn(msg.sender, share);
-    doTransferOut(token, amount);
+    IERC20(token).safeTransfer(msg.sender, amount);
   }
 
   /// @dev Withdraw the reserve portion of the vault.
@@ -255,7 +260,15 @@ contract Bank is Initializable, IBank {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     v.reserve = v.reserve.sub(amount);
-    doTransferOut(token, amount);
+    IERC20(token).safeTransfer(msg.sender, amount);
+  }
+
+  function liquidate(
+    address user,
+    address debtToken,
+    address collateralToen
+  ) public lock {
+    // TODO
   }
 
   /// @dev Execute the action via goblin, calling its work function with the supplied data.
@@ -265,7 +278,8 @@ contract Bank is Initializable, IBank {
     require(goblinOk[goblin], 'not ok goblin');
     _EXECUTOR = msg.sender;
     _GOBLIN = goblin;
-    IGoblin(goblin).work(msg.sender, data);
+    (bool ok, ) = goblin.call(data);
+    require(ok, 'bad goblin call');
     uint colleteralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
     require(colleteralValue >= borrowValue, 'insufficient collateral');
@@ -279,7 +293,7 @@ contract Bank is Initializable, IBank {
   function borrow(address token, uint amount) public override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptBorrow(), 'not accept borrow');
-    uint fee = amount / 1000; // 0.10% origination fee
+    uint fee = amount / 1000; // 0.1% origination fee
     uint reserve = fee / 10; // 10% of fee to reserve
     uint debt = amount.add(fee);
     uint debtShare = v.totalDebt == 0 ? debt : debt.mul(v.totalDebtShare).div(v.totalDebt);
@@ -288,7 +302,7 @@ contract Bank is Initializable, IBank {
     v.debtShareOf[_EXECUTOR] = v.debtShareOf[_EXECUTOR].add(debtShare);
     v.reserve = v.reserve.add(reserve);
     v.totalValue = v.totalValue.add(fee.sub(reserve));
-    doTransferOut(token, amount);
+    IERC20(token).safeTransfer(msg.sender, amount);
   }
 
   /// @dev Repays tokens to the vault. Must only be called from the goblin while under execution.
@@ -299,9 +313,16 @@ contract Bank is Initializable, IBank {
     require(v.status.acceptRepay(), 'not accept repay');
     uint amount = doTransferIn(token, amountCall);
     uint debtShare = amount.mul(v.totalDebtShare).div(v.totalDebt);
+    if (debtShare > v.debtShareOf[_EXECUTOR]) {
+      uint excessShare = debtShare.sub(v.debtShareOf[_EXECUTOR]);
+      uint excessToken = excessShare.mul(v.totalDebt).div(v.totalDebtShare);
+      IERC20(token).safeTransfer(msg.sender, excessToken);
+      debtShare = debtShare.sub(excessShare);
+      amount = amount.sub(excessToken);
+    }
     v.totalDebt = v.totalDebt.sub(amount);
     v.totalDebtShare = v.totalDebtShare.sub(debtShare);
-    v.debtShareOf[_EXECUTOR] = v.debtShareOf[_EXECUTOR].sub(debtShare); // TODO: Handle too big debtShare
+    v.debtShareOf[_EXECUTOR] = v.debtShareOf[_EXECUTOR].sub(debtShare);
   }
 
   /// @dev Transmit user assets to the goblin, so users only need to approve Bank for spending.
@@ -322,6 +343,7 @@ contract Bank is Initializable, IBank {
     uint newAmount = oldAmount.add(amount);
     if (oldAmount == 0 && newAmount != 0) {
       assetsOf[_EXECUTOR].push(token);
+      require(assetsOf[_EXECUTOR].length <= MAX_ASSET_COUNT, 'too many collateral assets');
     }
     assetAmountOf[_EXECUTOR][token] = newAmount;
   }
@@ -354,12 +376,5 @@ contract Bank is Initializable, IBank {
     IERC20(token).safeTransferFrom(msg.sender, address(this), amountCall);
     uint balanceAfter = IERC20(token).balanceOf(address(this));
     return balanceAfter.sub(balanceBefore);
-  }
-
-  /// @dev Internal function to perform transfer out safely.
-  /// @param token The token to perform transfer action.
-  /// @param amount The amount use in the transfer call.
-  function doTransferOut(address token, uint amount) internal {
-    IERC20(token).safeTransfer(msg.sender, amount);
   }
 }
