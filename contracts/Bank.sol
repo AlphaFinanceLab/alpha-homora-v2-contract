@@ -357,9 +357,10 @@ contract Bank is Initializable, IBank {
     uint newAmount = oldAmount.sub(amount);
     if (oldAmount != 0 && newAmount == 0) {
       address[] storage assets = assetsOf[_EXECUTOR];
-      for (uint idx = 0; idx < assets.length - 1; idx++) {
+      uint assetsLength = assets.length;
+      for (uint idx = 0; idx < assetsLength - 1; idx++) {
         if (assets[idx] == token) {
-          assets[idx] = assets[assets.length - 1];
+          assets[idx] = assets[assetsLength - 1];
           break;
         }
       }
