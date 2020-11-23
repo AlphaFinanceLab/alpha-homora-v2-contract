@@ -263,12 +263,43 @@ contract Bank is Initializable, IBank {
     IERC20(token).safeTransfer(msg.sender, amount);
   }
 
+  /// @dev TODO
+  /// @param user TODO
+  /// @param collateralToken TODO
+  /// @param debtToken TODO
+  /// @param amountCall TODO
   function liquidate(
     address user,
+    address collateralToken,
     address debtToken,
-    address collateralToen
+    uint amountCall
   ) public lock {
-    // TODO
+    Vault storage v = vaults[debtToken];
+    require(v.status.acceptRepay(), 'not accept repay');
+    uint collateralValue = getCollateralETHValue(user);
+    uint borrowValue = getBorrowETHValue(user);
+    require(collateralValue < borrowValue, 'account still healthy');
+    uint amount = doTransferIn(debtToken, amountCall);
+    uint debtShare = amount.mul(v.totalDebtShare).div(v.totalDebt);
+    v.totalDebt = v.totalDebt.sub(amount);
+    v.totalDebtShare = v.totalDebtShare.sub(debtShare);
+    v.debtShareOf[user] = v.debtShareOf[user].sub(debtShare);
+    uint reward = (oracle.convert(debtToken, collateralToken, amount) * 105) / 100; // 5% bonus
+    uint oldAssetAmount = assetAmountOf[user][collateralToken];
+    uint newAssetAmount = oldAssetAmount.sub(reward);
+    if (oldAssetAmount != 0 && newAssetAmount == 0) {
+      address[] storage assets = assetsOf[user];
+      uint assetsLength = assets.length;
+      for (uint idx = 0; idx < assetsLength - 1; idx++) {
+        if (assets[idx] == collateralToken) {
+          assets[idx] = assets[assetsLength - 1];
+          break;
+        }
+      }
+      assets.pop();
+    }
+    assetAmountOf[user][collateralToken] = newAssetAmount;
+    IERC20(collateralToken).transfer(msg.sender, reward);
   }
 
   /// @dev Execute the action via goblin, calling its work function with the supplied data.
@@ -280,9 +311,9 @@ contract Bank is Initializable, IBank {
     _GOBLIN = goblin;
     (bool ok, ) = goblin.call(data);
     require(ok, 'bad goblin call');
-    uint colleteralValue = getCollateralETHValue(msg.sender);
+    uint collateralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
-    require(colleteralValue >= borrowValue, 'insufficient collateral');
+    require(collateralValue >= borrowValue, 'insufficient collateral');
     _EXECUTOR = _NO_ADDRESS;
     _GOBLIN = _NO_ADDRESS;
   }
