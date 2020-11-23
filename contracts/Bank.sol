@@ -87,7 +87,7 @@ contract Bank is Initializable, IBank {
 
   /// @dev Ensure that the function is called from an approved goblin within execution scope.
   modifier inExec() {
-    require(_EXECUTOR != address(-1), 'not within execution');
+    require(_EXECUTOR != _NO_ADDRESS, 'not within execution');
     require(_GOBLIN != msg.sender, 'bad caller');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
