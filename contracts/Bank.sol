@@ -72,6 +72,7 @@ contract Bank is Initializable, IBank {
   address[] public allTokens;
   mapping(address => bool) public goblinOk;
   mapping(address => Vault) public vaults;
+
   mapping(address => address[]) public assetsOf;
   mapping(address => mapping(address => uint)) public assetAmountOf;
 
@@ -130,7 +131,7 @@ contract Bank is Initializable, IBank {
       uint timeElapsed = now - v.lastAccrueTime;
       uint interest = v.totalDebt.mul(timeElapsed).div(3650 days); // TODO: Make it better than 10% per year
       uint reserve = interest / 10; // 10% of fee to reserve
-      v.totalDebtShare = v.totalDebt.add(interest);
+      v.totalDebt = v.totalDebt.add(interest);
       v.reserve = v.reserve.add(reserve);
       v.totalValue = v.totalValue.add(interest.sub(reserve));
       v.lastAccrueTime = now;
@@ -139,7 +140,8 @@ contract Bank is Initializable, IBank {
 
   /// @dev Convenient function to trigger interest accrual for all vaults.
   function accrueAll() public {
-    for (uint idx = 0; idx < allTokens.length; idx++) {
+    uint length = allTokens.length;
+    for (uint idx = 0; idx < length; idx++) {
       accrue(allTokens[idx]);
     }
   }
@@ -148,7 +150,8 @@ contract Bank is Initializable, IBank {
   /// @param user The user to query for the collateral value.
   function getCollateralETHValue(address user) public view returns (uint) {
     uint value = 0;
-    for (uint idx = 0; idx < assetsOf[user].length; idx++) {
+    uint length = assetsOf[user].length;
+    for (uint idx = 0; idx < length; idx++) {
       address token = assetsOf[user][idx];
       value = value.add(oracle.asETHCollateral(token, assetAmountOf[user][token]));
     }
@@ -159,7 +162,8 @@ contract Bank is Initializable, IBank {
   /// @param user The user to query for the borrow value.
   function getBorrowETHValue(address user) public view returns (uint) {
     uint value = 0;
-    for (uint idx = 0; idx < allTokens.length; idx++) {
+    uint length = allTokens.length;
+    for (uint idx = 0; idx < length; idx++) {
       address token = allTokens[idx];
       Vault storage v = vaults[token];
       uint share = v.debtShareOf[user];
@@ -263,11 +267,11 @@ contract Bank is Initializable, IBank {
     IERC20(token).safeTransfer(msg.sender, amount);
   }
 
-  /// @dev TODO
-  /// @param user TODO
-  /// @param collateralToken TODO
-  /// @param debtToken TODO
-  /// @param amountCall TODO
+  /// @dev Liquidate a position. Paying debt for its owner and take the collateral.
+  /// @param user The user position to perform liquidation on.
+  /// @param collateralToken The collateral token to take in exchange for clearing debts.
+  /// @param debtToken The debt token to repay.
+  /// @param amountCall The amount to repay when doing transferFrom call.
   function liquidate(
     address user,
     address collateralToken,
@@ -285,20 +289,12 @@ contract Bank is Initializable, IBank {
     v.totalDebtShare = v.totalDebtShare.sub(debtShare);
     v.debtShareOf[user] = v.debtShareOf[user].sub(debtShare);
     uint reward = (oracle.convert(debtToken, collateralToken, amount) * 105) / 100; // 5% bonus
-    uint oldAssetAmount = assetAmountOf[user][collateralToken];
-    uint newAssetAmount = oldAssetAmount.sub(reward);
-    if (oldAssetAmount != 0 && newAssetAmount == 0) {
-      address[] storage assets = assetsOf[user];
-      uint assetsLength = assets.length;
-      for (uint idx = 0; idx < assetsLength - 1; idx++) {
-        if (assets[idx] == collateralToken) {
-          assets[idx] = assets[assetsLength - 1];
-          break;
-        }
-      }
-      assets.pop();
+    uint oldAmount = assetAmountOf[user][collateralToken];
+    uint newAmount = oldAmount.sub(amount);
+    if (oldAmount != 0 && newAmount == 0) {
+      remove(assetsOf[user], collateralToken);
     }
-    assetAmountOf[user][collateralToken] = newAssetAmount;
+    assetAmountOf[user][collateralToken] = newAmount;
     IERC20(collateralToken).transfer(msg.sender, reward);
   }
 
@@ -387,17 +383,10 @@ contract Bank is Initializable, IBank {
     uint oldAmount = assetAmountOf[_EXECUTOR][token];
     uint newAmount = oldAmount.sub(amount);
     if (oldAmount != 0 && newAmount == 0) {
-      address[] storage assets = assetsOf[_EXECUTOR];
-      uint assetsLength = assets.length;
-      for (uint idx = 0; idx < assetsLength - 1; idx++) {
-        if (assets[idx] == token) {
-          assets[idx] = assets[assetsLength - 1];
-          break;
-        }
-      }
-      assets.pop();
+      remove(assetsOf[_EXECUTOR], token);
     }
     assetAmountOf[_EXECUTOR][token] = newAmount;
+    IERC20(token).transfer(msg.sender, amount);
   }
 
   /// @dev Internal function to perform token transfer in and return amount actually received.
@@ -408,5 +397,19 @@ contract Bank is Initializable, IBank {
     IERC20(token).safeTransferFrom(msg.sender, address(this), amountCall);
     uint balanceAfter = IERC20(token).balanceOf(address(this));
     return balanceAfter.sub(balanceBefore);
+  }
+
+  function remove(address[] storage tokens, address token) internal {
+    uint length = tokens.length;
+    bool found = false;
+    for (uint idx = 0; idx < length; idx++) {
+      if (tokens[idx] == token) {
+        tokens[idx] = tokens[length - 1];
+        found = true;
+        break;
+      }
+    }
+    assert(found);
+    tokens.pop();
   }
 }
