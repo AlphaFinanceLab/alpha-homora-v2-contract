@@ -224,7 +224,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param token The underlying token for the vault.
   /// @param status The initial vault status.
   /// @param ir The initial interest rate model.
-  function setVaultStatus(
+  function addVault(
     address token,
     uint8 status,
     IInterestRateModel ir
@@ -232,7 +232,9 @@ contract HomoraBank is Initializable, IBank {
     require(msg.sender == governor, 'not the governor');
     Vault storage v = vaults[token];
     require(!v.status.valid(), 'vault already exists');
+    require(status.valid(), 'invalid status');
     v.ib = new IbTokenV2(token);
+    v.status = status;
     v.ir = ir;
     v.lastAccrueTime = now;
   }
