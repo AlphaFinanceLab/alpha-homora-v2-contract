@@ -56,7 +56,7 @@ contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
   /// @param data The data using in the call.
-  function cast(address target, bytes memory data) public payable {
+  function cast(address target, bytes calldata data) external payable {
     (bool ok, ) = target.call{value: msg.value}(data);
     require(ok, 'bad cast call');
   }
@@ -76,8 +76,8 @@ contract HomoraBank is Initializable, IBank {
 
   uint public _GENERAL_LOCK;
   uint public _IN_EXEC_LOCK;
-  address public _EXECUTOR;
-  address public _TARGET;
+  address public override EXECUTOR;
+  address public override TARGET;
 
   address public caster;
   address public governor;
@@ -111,8 +111,8 @@ contract HomoraBank is Initializable, IBank {
 
   /// @dev Ensure that the function is called from within the execution scope.
   modifier inExec() {
-    require(_EXECUTOR != _NO_ADDRESS, 'not within execution');
-    require(_TARGET == msg.sender, 'not from target');
+    require(EXECUTOR != _NO_ADDRESS, 'not within execution');
+    require(TARGET == msg.sender, 'not from target');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
     _;
@@ -130,8 +130,8 @@ contract HomoraBank is Initializable, IBank {
   function initialize(IOracle _oracle) public initializer {
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
-    _EXECUTOR = _NO_ADDRESS;
-    _TARGET = _NO_ADDRESS;
+    EXECUTOR = _NO_ADDRESS;
+    TARGET = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     governor = msg.sender;
     pendingGovernor = address(0);
@@ -150,6 +150,7 @@ contract HomoraBank is Initializable, IBank {
 
   /// @dev Return the interest-bearing token of the given underlying token.
   function ibTokenOf(address token) public view override returns (address) {
+    require(vaults[token].status.valid(), 'vault does not exist');
     return address(vaults[token].ib);
   }
 
@@ -161,7 +162,7 @@ contract HomoraBank is Initializable, IBank {
     if (now > v.lastAccrueTime) {
       uint timeElapsed = now - v.lastAccrueTime;
       uint rate = v.ir.getBorrowRate(token, v.totalValue, v.totalDebt, v.reserve);
-      uint interest = v.totalDebt.mul(rate).mul(timeElapsed).div(1000 * 365 days);
+      uint interest = v.totalDebt.mul(rate).mul(timeElapsed).div(10000 * 365 days);
       uint reserve = interest / 10; // 10% of fee to reserve
       v.totalDebt = v.totalDebt.add(interest);
       v.reserve = v.reserve.add(reserve);
@@ -317,14 +318,14 @@ contract HomoraBank is Initializable, IBank {
   /// @param target The target to invoke the execution via HomoraCaster.
   /// @param data Extra data to pass to the target for the execution.
   function execute(address target, bytes memory data) external payable lock {
-    _EXECUTOR = msg.sender;
-    _TARGET = target;
+    EXECUTOR = msg.sender;
+    TARGET = target;
     HomoraCaster(caster).cast{value: msg.value}(target, data);
     uint collateralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
     require(collateralValue >= borrowValue, 'insufficient collateral');
-    _EXECUTOR = _NO_ADDRESS;
-    _TARGET = _NO_ADDRESS;
+    EXECUTOR = _NO_ADDRESS;
+    TARGET = _NO_ADDRESS;
   }
 
   /// @dev Borrow tokens from the vault. Must only be called while under execution.
@@ -333,7 +334,7 @@ contract HomoraBank is Initializable, IBank {
   function borrow(address token, uint amount) external override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptBorrow(), 'not accept borrow');
-    address executor = _EXECUTOR;
+    address executor = EXECUTOR;
     uint share = v.totalDebt == 0 ? amount : amount.mul(v.totalDebtShare).div(v.totalDebt);
     v.totalDebt = v.totalDebt.add(amount);
     v.totalDebtShare = v.totalDebtShare.add(share);
@@ -351,7 +352,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param token The token to repay to the vault.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
-    repayInternal(_EXECUTOR, token, amountCall);
+    repayInternal(EXECUTOR, token, amountCall);
   }
 
   /// @dev Perform repay action. Return the amount actually taken. Refund rest to msg.sender.
@@ -390,7 +391,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param amount The amount to transfer.
   function transmit(address token, uint amount) external override inExec {
     require(oracle.support(token), 'token not supported');
-    IERC20(token).safeTransferFrom(_EXECUTOR, msg.sender, amount);
+    IERC20(token).safeTransferFrom(EXECUTOR, msg.sender, amount);
   }
 
   /// @dev Put more collateral for users. Must only be called during execution.
@@ -398,7 +399,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param amountCall The amount of tokens to put via transferFrom.
   function putCollateral(address token, uint amountCall) external override inExec {
     require(oracle.support(token), 'token not supported');
-    address executor = _EXECUTOR;
+    address executor = EXECUTOR;
     uint amount = doTransferIn(token, amountCall);
     uint oldAmount = assetAmountOf[executor][token];
     uint newAmount = oldAmount.add(amount);
@@ -414,7 +415,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param amount The amount of tokens to take back via transfer.
   function takeCollateral(address token, uint amount) external override inExec {
     require(oracle.support(token), 'token not supported');
-    address executor = _EXECUTOR;
+    address executor = EXECUTOR;
     uint oldAmount = assetAmountOf[executor][token];
     uint newAmount = oldAmount.sub(amount);
     if (oldAmount != 0 && newAmount == 0) {

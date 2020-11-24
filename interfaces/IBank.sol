@@ -1,6 +1,13 @@
 pragma solidity 0.6.12;
 
 interface IBank {
+  /// @dev Return the current executor while under execution.
+  function EXECUTOR() external view returns (address);
+
+  /// @dev Return the current target while under execution.
+  function TARGET() external view returns (address);
+
+  /// @dev Return the address of the interest bearing token of the underlying token.
   function ibTokenOf(address token) external view returns (address);
 
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.

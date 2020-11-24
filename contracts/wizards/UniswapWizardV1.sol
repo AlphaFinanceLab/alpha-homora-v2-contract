@@ -18,9 +18,38 @@ contract UniswapV2WizardV1 {
     weth = IWETH(_router.WETH());
   }
 
-  function addLiquidity(address tokenA, address tokenB) public payable {
+  function addLiquidity(
+    address tokenA,
+    address tokenB,
+    uint amountAUser,
+    uint amountBUser,
+    uint amountABorrow,
+    uint amountBBorrow,
+    uint amountAMin,
+    uint amountBMin,
+    uint deadline
+  ) public payable {
     address lpToken = factory.getPair(tokenA, tokenB);
     require(lpToken != address(0), 'lp token does not exist');
+
+    // function addLiquidity(
+    //   address tokenA,
+    //   address tokenB,
+    //   uint amountADesired,
+    //   uint amountBDesired,
+    //   uint amountAMin,
+    //   uint amountBMin,
+    //   address to,
+    //   uint deadline
+    // )
+    //   external
+    //   returns (
+    //     uint amountA,
+    //     uint amountB,
+    //     uint liquidity
+    //   );
+
+    // router.addLiquidity()
     // TODO
   }
 
