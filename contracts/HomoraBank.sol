@@ -289,7 +289,7 @@ contract HomoraBank is Initializable, IBank {
     doTransferOut(token, amount);
   }
 
-  /// @dev Liquidate a position. Paying debt for its owner and take the collateral.
+  /// @dev Liquidate a position. Pay debt for its owner and take the collateral.
   /// @param user The user position to perform liquidation on.
   /// @param collateralToken The collateral token to take in exchange for clearing debts.
   /// @param debtToken The debt token to repay.
