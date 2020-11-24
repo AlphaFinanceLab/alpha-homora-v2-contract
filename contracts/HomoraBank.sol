@@ -133,8 +133,8 @@ contract HomoraBank is Initializable, IBank {
   }
 
   /// @dev Return the interest-bearing token of the given underlying token.
-  function ibTokenOf(address token) public view returns (IbTokenV2) {
-    return vaults[token].ib;
+  function ibTokenOf(address token) public view override returns (address) {
+    return address(vaults[token].ib);
   }
 
   /// @dev Trigger interest accrual for the given vault.
@@ -192,13 +192,13 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Set the pending governor, which will be the governor once accepted.
   /// @param _pendingGovernor The address to become the pending governor.
   function setPendingGovernor(address _pendingGovernor) public {
-    require(msg.sender == governor, '!governor');
+    require(msg.sender == governor, 'not the governor');
     pendingGovernor = _pendingGovernor;
   }
 
   /// @dev Accept to become the new governor. Must be called by the pending governor.
   function acceptGovernor() public {
-    require(msg.sender == pendingGovernor, '!governor');
+    require(msg.sender == pendingGovernor, 'not the pending governor');
     pendingGovernor = address(0);
     governor = msg.sender;
   }

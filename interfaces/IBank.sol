@@ -1,6 +1,8 @@
 pragma solidity 0.6.12;
 
 interface IBank {
+  function ibTokenOf(address token) external view returns (address);
+
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
   function deposit(address token, uint amountCall) external;
 
