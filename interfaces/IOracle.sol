@@ -5,10 +5,10 @@ interface IOracle {
   /// @param token The ERC-20 token to check the acceptence.
   function support(address token) external view returns (bool);
 
-  /// @dev TODO
-  /// @param tokenIn TODO
-  /// @param tokenOut TODO
-  /// @param amountIn TODO
+  /// @dev Return the amount of token out as liquidation reward for liquidating token in.
+  /// @param tokenIn The token that gets liquidated.
+  /// @param tokenOut The token to pay as reward.
+  /// @param amountIn The amount of liquidating tokens.
   function convertForLiquidation(
     address tokenIn,
     address tokenOut,
