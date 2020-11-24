@@ -343,7 +343,7 @@ contract HomoraBank is Initializable, IBank {
     uint newShare = oldShare.add(share);
     if (oldShare == 0 && newShare != 0) {
       debtsOf[executor].push(token);
-      require(debtsOf[executor].length <= MAX_DEBT_COUNT);
+      require(debtsOf[executor].length <= MAX_DEBT_COUNT, 'too many borrow assets');
     }
     debtShareOf[executor][token] = newShare;
     doTransferOut(token, amount);
