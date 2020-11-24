@@ -9,7 +9,7 @@ interface IOracle {
   /// @param tokenIn TODO
   /// @param tokenOut TODO
   /// @param amountIn TODO
-  function convert(
+  function convertForLiquidation(
     address tokenIn,
     address tokenOut,
     uint amountIn

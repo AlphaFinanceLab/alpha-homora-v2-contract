@@ -7,6 +7,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.
 
 import './IbTokenV2.sol';
 import '../interfaces/IBank.sol';
+import '../interfaces/IInterestRateModel.sol';
 import '../interfaces/IOracle.sol';
 
 library VaultStatus {
@@ -72,6 +73,7 @@ contract HomoraBank is Initializable, IBank {
   struct Vault {
     VaultStatus.T status;
     IbTokenV2 ib;
+    IInterestRateModel ir;
     uint lastAccrueTime;
     uint reserve;
     uint totalValue;
@@ -142,7 +144,8 @@ contract HomoraBank is Initializable, IBank {
     require(v.status.valid(), 'vault does not exist');
     if (now > v.lastAccrueTime) {
       uint timeElapsed = now - v.lastAccrueTime;
-      uint interest = v.totalDebt.mul(timeElapsed).div(3650 days); // TODO: Make it better than 10% per year
+      uint rate = v.ir.getBorrowRate(token, v.totalValue, v.totalDebt, v.reserve);
+      uint interest = v.totalDebt.mul(rate).mul(timeElapsed).div(1000 * 365 days);
       uint reserve = interest / 10; // 10% of fee to reserve
       v.totalDebt = v.totalDebt.add(interest);
       v.reserve = v.reserve.add(reserve);
@@ -200,19 +203,33 @@ contract HomoraBank is Initializable, IBank {
     governor = msg.sender;
   }
 
+  /// @dev Add a new vault to the bank.
+  /// @param token The underlying token for the vault.
+  /// @param status The initial vault status.
+  /// @param ir The initial interest rate model.
+  function setVaultStatus(
+    address token,
+    VaultStatus.T status,
+    IInterestRateModel ir
+  ) public {
+    require(msg.sender == governor, 'not the governor');
+    Vault storage v = vaults[token];
+    require(!v.status.valid(), 'vault already exists');
+    v.ib = new IbTokenV2(token);
+    v.ir = ir;
+    v.lastAccrueTime = now;
+  }
+
   /// @dev Set vault status for the given set of vaults. Create new ib tokens for new vaults.
   /// @param tokens The set of vault tokens to update the vault status.
   /// @param status The new vault status to set.
-  function setVaultStatus(address[] memory tokens, VaultStatus.T status) public lock {
+  function setVaultStatus(address[] memory tokens, VaultStatus.T status) public {
     require(msg.sender == governor, 'not the governor');
     require(status.valid(), 'invalid status');
     for (uint idx = 0; idx < tokens.length; idx++) {
       address token = tokens[idx];
       Vault storage v = vaults[token];
-      if (!v.status.valid()) {
-        v.ib = new IbTokenV2(token);
-        v.lastAccrueTime = now;
-      }
+      require(v.status.valid(), 'vault does not exist');
       v.status = status;
     }
   }
@@ -220,7 +237,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
   /// @param token The vault token to deposit.
   /// @param amountCall The amount to call transferFrom.
-  function deposit(address token, uint amountCall) public override lock poke(token) {
+  function deposit(address token, uint amountCall) external override lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptDeposit(), 'not accept deposit');
     uint totalShare = v.ib.totalSupply();
@@ -233,7 +250,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Withdraw tokens from the vault by burning the interest-bearing tokens.
   /// @param token The vault token to withdraw.
   /// @param share The amount of share to burn.
-  function withdraw(address token, uint share) public override lock poke(token) {
+  function withdraw(address token, uint share) external override lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     uint totalShare = v.ib.totalSupply();
@@ -263,14 +280,14 @@ contract HomoraBank is Initializable, IBank {
     address collateralToken,
     address debtToken,
     uint amountCall
-  ) public lock {
+  ) external lock {
     Vault storage v = vaults[debtToken];
     require(oracle.support(collateralToken), 'collateral token not supported');
     uint collateralValue = getCollateralETHValue(user);
     uint borrowValue = getBorrowETHValue(user);
     require(collateralValue < borrowValue, 'account still healthy');
     uint amountPaid = repayInternal(user, debtToken, amountCall);
-    uint bounty = oracle.convert(debtToken, collateralToken, amountPaid);
+    uint bounty = oracle.convertForLiquidation(debtToken, collateralToken, amountPaid);
     uint oldAmount = assetAmountOf[user][collateralToken];
     uint newAmount = oldAmount.sub(bounty);
     if (oldAmount != 0 && newAmount == 0) {
@@ -283,7 +300,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
   /// @param target The target to invoke the execution via HomoraCaster.
   /// @param data Extra data to pass to the target for the execution.
-  function execute(address target, bytes memory data) public payable lock {
+  function execute(address target, bytes memory data) external payable lock {
     _EXECUTOR = msg.sender;
     HomoraCaster(caster).aloibra{value: msg.value}(target, data);
     uint collateralValue = getCollateralETHValue(msg.sender);
@@ -295,7 +312,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Borrow tokens from the vault. Must only be called while under execution.
   /// @param token The token to borrow from the vault
   /// @param amount The amount of tokens to borrow.
-  function borrow(address token, uint amount) public override inExec poke(token) {
+  function borrow(address token, uint amount) external override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptBorrow(), 'not accept borrow');
     address executor = _EXECUTOR;
@@ -315,7 +332,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Repays tokens to the vault. Must only be called while under execution.
   /// @param token The token to repay to the vault.
   /// @param amountCall The amount of tokens to repay via transferFrom.
-  function repay(address token, uint amountCall) public override inExec poke(token) {
+  function repay(address token, uint amountCall) external override inExec poke(token) {
     repayInternal(_EXECUTOR, token, amountCall);
   }
 
@@ -353,7 +370,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Transmit user assets to the caller, so users only need to approve Bank for spending.
   /// @param token The token to transfer from user to the caller.
   /// @param amount The amount to transfer.
-  function transmit(address token, uint amount) public override inExec {
+  function transmit(address token, uint amount) external override inExec {
     require(oracle.support(token), 'token not supported');
     IERC20(token).safeTransferFrom(_EXECUTOR, msg.sender, amount);
   }
@@ -361,7 +378,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Put more collateral for users. Must only be called during execution.
   /// @param token The token to put as collateral.
   /// @param amountCall The amount of tokens to put via transferFrom.
-  function putCollateral(address token, uint amountCall) public override inExec {
+  function putCollateral(address token, uint amountCall) external override inExec {
     require(oracle.support(token), 'token not supported');
     address executor = _EXECUTOR;
     uint amount = doTransferIn(token, amountCall);
@@ -377,7 +394,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Take some collateral back. Must only be called during execution.
   /// @param token The token to take back from being collateral.
   /// @param amount The amount of tokens to take back via transfer.
-  function takeCollateral(address token, uint amount) public override inExec {
+  function takeCollateral(address token, uint amount) external override inExec {
     require(oracle.support(token), 'token not supported');
     address executor = _EXECUTOR;
     uint oldAmount = assetAmountOf[executor][token];
