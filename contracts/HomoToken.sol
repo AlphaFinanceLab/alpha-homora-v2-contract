@@ -46,7 +46,7 @@ library ERC20DetailedSafe {
   }
 }
 
-contract IbToken is ERC20, Ownable {
+contract HomoToken is ERC20, Ownable {
   using ERC20DetailedSafe for address;
   address public base; /// The address of the base token.
 

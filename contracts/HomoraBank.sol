@@ -5,7 +5,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC2
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
-import './IbToken.sol';
+import './HomoToken.sol';
 import '../interfaces/IBank.sol';
 import '../interfaces/IOracle.sol';
 
@@ -38,7 +38,15 @@ library VaultStatus {
   }
 }
 
-contract Bank is Initializable, IBank {
+contract HomoraCaster {
+  // TODO
+  function alohomora(address target, bytes memory data) public payable {
+    (bool ok, ) = target.call(data);
+    require(ok, 'bad alohomora call');
+  }
+}
+
+contract HomoraBank is Initializable, IBank {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
   using VaultStatus for VaultStatus.T;
@@ -55,13 +63,14 @@ contract Bank is Initializable, IBank {
   address public _EXECUTOR;
   address public _GOBLIN;
 
+  address public caster;
   address public governor;
   address public pendingGovernor;
   IOracle public oracle;
 
   struct Vault {
     VaultStatus.T status;
-    IbToken ib;
+    HomoToken homo;
     uint lastAccrueTime;
     uint reserve;
     uint totalValue;
@@ -108,6 +117,7 @@ contract Bank is Initializable, IBank {
     _IN_EXEC_LOCK = _NOT_ENTERED;
     _EXECUTOR = _NO_ADDRESS;
     _GOBLIN = _NO_ADDRESS;
+    caster = address(new HomoraCaster());
     governor = msg.sender;
     pendingGovernor = address(0);
     oracle = _oracle;
@@ -188,7 +198,7 @@ contract Bank is Initializable, IBank {
     governor = msg.sender;
   }
 
-  /// @dev Set vault status for the given set of vaults. Create new IB tokens for new vaults.
+  /// @dev Set vault status for the given set of vaults. Create new homo tokens for new vaults.
   /// @param tokens The set of vault tokens to update the vault status.
   /// @param status The new vault status to set.
   function setVaultStatus(address[] memory tokens, VaultStatus.T status) public lock {
@@ -198,7 +208,7 @@ contract Bank is Initializable, IBank {
       address token = tokens[idx];
       Vault storage v = vaults[token];
       if (!v.status.valid()) {
-        v.ib = new IbToken(token);
+        v.homo = new HomoToken(token);
         v.lastAccrueTime = now;
       }
       v.status = status;
@@ -226,11 +236,11 @@ contract Bank is Initializable, IBank {
   function deposit(address token, uint amountCall) public lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptDeposit(), 'not accept deposit');
-    uint totalShare = v.ib.totalSupply();
+    uint totalShare = v.homo.totalSupply();
     uint amount = doTransferIn(token, amountCall);
     uint share = v.totalValue == 0 ? amount : amount.mul(totalShare).div(v.totalValue);
     v.totalValue = v.totalValue.add(amount);
-    v.ib.mint(msg.sender, share);
+    v.homo.mint(msg.sender, share);
   }
 
   /// @dev Withdraw tokens from the vault by burning the interest-bearing tokens.
@@ -239,10 +249,10 @@ contract Bank is Initializable, IBank {
   function withdraw(address token, uint share) public lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
-    uint totalShare = v.ib.totalSupply();
+    uint totalShare = v.homo.totalSupply();
     uint amount = share.mul(v.totalValue).div(totalShare);
     v.totalValue = v.totalValue.sub(amount);
-    v.ib.burn(msg.sender, share);
+    v.homo.burn(msg.sender, share);
     IERC20(token).safeTransfer(msg.sender, amount);
   }
 
@@ -290,6 +300,7 @@ contract Bank is Initializable, IBank {
     require(goblinOk[goblin], 'not ok goblin');
     _EXECUTOR = msg.sender;
     _GOBLIN = goblin;
+    HomoraCaster(caster).alohomora(goblin, data);
     (bool ok, ) = goblin.call(data);
     require(ok, 'bad goblin call');
     uint collateralValue = getCollateralETHValue(msg.sender);
