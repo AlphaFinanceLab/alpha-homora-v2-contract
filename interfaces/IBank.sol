@@ -5,7 +5,7 @@ interface IBank {
   function EXECUTOR() external view returns (address);
 
   /// @dev Return the current target while under execution.
-  function TARGET() external view returns (address);
+  function SPELL() external view returns (address);
 
   /// @dev Return the address of the interest bearing token of the underlying token.
   function ibTokenOf(address token) external view returns (address);

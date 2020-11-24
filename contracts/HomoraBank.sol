@@ -77,7 +77,7 @@ contract HomoraBank is Initializable, IBank {
   uint public _GENERAL_LOCK;
   uint public _IN_EXEC_LOCK;
   address public override EXECUTOR;
-  address public override TARGET;
+  address public override SPELL;
 
   address public caster;
   address public governor;
@@ -112,7 +112,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Ensure that the function is called from within the execution scope.
   modifier inExec() {
     require(EXECUTOR != _NO_ADDRESS, 'not within execution');
-    require(TARGET == msg.sender, 'not from target');
+    require(SPELL == msg.sender, 'not from spell');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
     _;
@@ -131,7 +131,7 @@ contract HomoraBank is Initializable, IBank {
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
     EXECUTOR = _NO_ADDRESS;
-    TARGET = _NO_ADDRESS;
+    SPELL = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     governor = msg.sender;
     pendingGovernor = address(0);
@@ -299,7 +299,7 @@ contract HomoraBank is Initializable, IBank {
     address collateralToken,
     address debtToken,
     uint amountCall
-  ) external lock poke(token) {
+  ) external lock poke(debtToken) {
     require(oracle.support(collateralToken), 'collateral token not supported');
     uint collateralValue = getCollateralETHValue(user);
     uint borrowValue = getBorrowETHValue(user);
@@ -316,17 +316,17 @@ contract HomoraBank is Initializable, IBank {
   }
 
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
-  /// @param target The target to invoke the execution via HomoraCaster.
+  /// @param spell The target spell to invoke the execution via HomoraCaster.
   /// @param data Extra data to pass to the target for the execution.
-  function execute(address target, bytes memory data) external payable lock {
+  function execute(address spell, bytes memory data) external payable lock {
     EXECUTOR = msg.sender;
-    TARGET = target;
-    HomoraCaster(caster).cast{value: msg.value}(target, data);
+    SPELL = spell;
+    HomoraCaster(caster).cast{value: msg.value}(spell, data);
     uint collateralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
     require(collateralValue >= borrowValue, 'insufficient collateral');
     EXECUTOR = _NO_ADDRESS;
-    TARGET = _NO_ADDRESS;
+    SPELL = _NO_ADDRESS;
   }
 
   /// @dev Borrow tokens from the vault. Must only be called while under execution.
