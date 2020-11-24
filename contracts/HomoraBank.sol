@@ -5,7 +5,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC2
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
-import './HomoToken.sol';
+import './IbTokenV2.sol';
 import '../interfaces/IBank.sol';
 import '../interfaces/IOracle.sol';
 
@@ -42,9 +42,9 @@ contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
   /// @param data The data using in the call.
-  function alohomora(address target, bytes memory data) public payable {
+  function aloibra(address target, bytes memory data) public payable {
     (bool ok, ) = target.call{value: msg.value}(data);
-    require(ok, 'bad alohomora call');
+    require(ok, 'bad aloibra call');
   }
 }
 
@@ -71,7 +71,7 @@ contract HomoraBank is Initializable, IBank {
 
   struct Vault {
     VaultStatus.T status;
-    HomoToken homo;
+    IbTokenV2 ib;
     uint lastAccrueTime;
     uint reserve;
     uint totalValue;
@@ -131,8 +131,8 @@ contract HomoraBank is Initializable, IBank {
   }
 
   /// @dev Return the interest-bearing token of the given underlying token.
-  function homoTokenOf(address token) public view returns (HomoToken) {
-    return vaults[token].homo;
+  function ibTokenOf(address token) public view returns (IbTokenV2) {
+    return vaults[token].ib;
   }
 
   /// @dev Trigger interest accrual for the given vault.
@@ -200,7 +200,7 @@ contract HomoraBank is Initializable, IBank {
     governor = msg.sender;
   }
 
-  /// @dev Set vault status for the given set of vaults. Create new homo tokens for new vaults.
+  /// @dev Set vault status for the given set of vaults. Create new ib tokens for new vaults.
   /// @param tokens The set of vault tokens to update the vault status.
   /// @param status The new vault status to set.
   function setVaultStatus(address[] memory tokens, VaultStatus.T status) public lock {
@@ -210,7 +210,7 @@ contract HomoraBank is Initializable, IBank {
       address token = tokens[idx];
       Vault storage v = vaults[token];
       if (!v.status.valid()) {
-        v.homo = new HomoToken(token);
+        v.ib = new IbTokenV2(token);
         v.lastAccrueTime = now;
       }
       v.status = status;
@@ -223,11 +223,11 @@ contract HomoraBank is Initializable, IBank {
   function deposit(address token, uint amountCall) public override lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptDeposit(), 'not accept deposit');
-    uint totalShare = v.homo.totalSupply();
+    uint totalShare = v.ib.totalSupply();
     uint amount = doTransferIn(token, amountCall);
     uint share = v.totalValue == 0 ? amount : amount.mul(totalShare).div(v.totalValue);
     v.totalValue = v.totalValue.add(amount);
-    v.homo.mint(msg.sender, share);
+    v.ib.mint(msg.sender, share);
   }
 
   /// @dev Withdraw tokens from the vault by burning the interest-bearing tokens.
@@ -236,10 +236,10 @@ contract HomoraBank is Initializable, IBank {
   function withdraw(address token, uint share) public override lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
-    uint totalShare = v.homo.totalSupply();
+    uint totalShare = v.ib.totalSupply();
     uint amount = share.mul(v.totalValue).div(totalShare);
     v.totalValue = v.totalValue.sub(amount);
-    v.homo.burn(msg.sender, share);
+    v.ib.burn(msg.sender, share);
     doTransferOut(token, amount);
   }
 
@@ -285,7 +285,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param data Extra data to pass to the target for the execution.
   function execute(address target, bytes memory data) public payable lock {
     _EXECUTOR = msg.sender;
-    HomoraCaster(caster).alohomora{value: msg.value}(target, data);
+    HomoraCaster(caster).aloibra{value: msg.value}(target, data);
     uint collateralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
     require(collateralValue >= borrowValue, 'insufficient collateral');
@@ -298,17 +298,18 @@ contract HomoraBank is Initializable, IBank {
   function borrow(address token, uint amount) public override inExec poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptBorrow(), 'not accept borrow');
+    address executor = _EXECUTOR;
     uint share = v.totalDebt == 0 ? amount : amount.mul(v.totalDebtShare).div(v.totalDebt);
     v.totalDebt = v.totalDebt.add(amount);
     v.totalDebtShare = v.totalDebtShare.add(share);
-    uint oldShare = debtShareOf[_EXECUTOR][token];
+    uint oldShare = debtShareOf[executor][token];
     uint newShare = oldShare.add(share);
     if (oldShare == 0 && newShare != 0) {
-      debtsOf[_EXECUTOR].push(token);
-      require(debtsOf[_EXECUTOR].length <= MAX_DEBT_COUNT);
+      debtsOf[executor].push(token);
+      require(debtsOf[executor].length <= MAX_DEBT_COUNT);
     }
-    debtShareOf[_EXECUTOR][token] = newShare;
-    IERC20(token).safeTransfer(msg.sender, amount);
+    debtShareOf[executor][token] = newShare;
+    doTransferOut(token, amount);
   }
 
   /// @dev Repays tokens to the vault. Must only be called while under execution.

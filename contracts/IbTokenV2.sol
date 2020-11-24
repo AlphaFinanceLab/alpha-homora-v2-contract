@@ -46,7 +46,7 @@ library ERC20DetailedSafe {
   }
 }
 
-contract HomoToken is ERC20, Ownable {
+contract IbTokenV2 is ERC20, Ownable {
   using ERC20DetailedSafe for address;
   address public base; /// The address of the base token.
 
@@ -55,8 +55,8 @@ contract HomoToken is ERC20, Ownable {
   constructor(address _base)
     public
     ERC20(
-      string(abi.encodePacked('Interest Bearing ', _base.safeName())),
-      string(abi.encodePacked('ib', _base.safeSymbol()))
+      string(abi.encodePacked('Interest Bearing ', _base.safeName(), ' V2')),
+      string(abi.encodePacked('ib', _base.safeSymbol(), 'V2'))
     )
   {
     _setupDecimals(_base.safeDecimals());
