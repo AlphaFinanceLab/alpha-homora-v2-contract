@@ -299,7 +299,7 @@ contract HomoraBank is Initializable, IBank {
     address collateralToken,
     address debtToken,
     uint amountCall
-  ) external lock {
+  ) external lock poke(token) {
     require(oracle.support(collateralToken), 'collateral token not supported');
     uint collateralValue = getCollateralETHValue(user);
     uint borrowValue = getBorrowETHValue(user);
