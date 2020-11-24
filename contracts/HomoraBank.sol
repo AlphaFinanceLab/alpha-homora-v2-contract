@@ -121,13 +121,18 @@ contract HomoraBank is Initializable, IBank {
   }
 
   /// @dev Return the length of the assets of the given user.
-  function assetsLength(address user) public view returns (uint) {
+  function assetsLengthOf(address user) public view returns (uint) {
     return assetsOf[user].length;
   }
 
   /// @dev Return the length of the debts of the given user.
-  function debtsLength(address user) public view returns (uint) {
+  function debtsLengthOf(address user) public view returns (uint) {
     return debtsOf[user].length;
+  }
+
+  /// @dev Return the interest-bearing token of the given underlying token.
+  function homoTokenOf(address token) public view returns (HomoToken) {
+    return vaults[token].homo;
   }
 
   /// @dev Trigger interest accrual for the given vault.
@@ -215,7 +220,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
   /// @param token The vault token to deposit.
   /// @param amountCall The amount to call transferFrom.
-  function deposit(address token, uint amountCall) public lock poke(token) {
+  function deposit(address token, uint amountCall) public override lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptDeposit(), 'not accept deposit');
     uint totalShare = v.homo.totalSupply();
@@ -228,7 +233,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Withdraw tokens from the vault by burning the interest-bearing tokens.
   /// @param token The vault token to withdraw.
   /// @param share The amount of share to burn.
-  function withdraw(address token, uint share) public lock poke(token) {
+  function withdraw(address token, uint share) public override lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     uint totalShare = v.homo.totalSupply();
