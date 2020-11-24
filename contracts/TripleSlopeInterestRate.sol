@@ -12,9 +12,9 @@ contract TripleSlopeInterestRate is IInterestRateModel {
   struct SlopeData {
     uint8 exists; // 1 if exists, 0 if not.
     uint32 R0; // The base interest rate basis point per year.
-    uint32 R1; // The level 1 slope, growing from 0 to R1 as utilization goes from 0 to U1.
+    uint32 R1; // The level 1 slope, growing from 0 to R1 as utilization goes from 0% to U1.
     uint32 R2; // The level 2 slope, growing from 0 to R2 as utilization goes from U1 to U2.
-    uint32 R3; // The level 3 slope, growing from 0 to R3 as utilization goes from U2 to 100.
+    uint32 R3; // The level 3 slope, growing from 0 to R3 as utilization goes from U2 to 100%.
     uint32 U1; // Utilization stop 1.
     uint32 U2; // Utilization stop 2.
   }
@@ -53,7 +53,7 @@ contract TripleSlopeInterestRate is IInterestRateModel {
     require(slope.R2 <= 1000000, 'bad R2 data'); // sanity cap at 10000% per year.
     require(0 < slope.U1, 'U1 must not be zero');
     require(slope.U1 < slope.U2, 'U1 must be less than U2');
-    require(slope.U2 < 10000, 'U1 must be less than 100%');
+    require(slope.U2 < 10000, 'U2 must be less than 100%');
     slopes[token] = slope;
   }
 
@@ -63,7 +63,7 @@ contract TripleSlopeInterestRate is IInterestRateModel {
     require(msg.sender == governor, 'not the governor');
     for (uint idx = 0; idx < tokens.length; idx++) {
       address token = tokens[idx];
-      require(slopes[token].exists == 1, 'slope not exists');
+      require(slopes[token].exists == 1, 'slope does not exist');
       slopes[token].exists = 0;
     }
   }
@@ -80,7 +80,7 @@ contract TripleSlopeInterestRate is IInterestRateModel {
     uint reserve
   ) public view override returns (uint) {
     SlopeData memory slope = slopes[token];
-    require(slope.exists == 1, 'slope not exists');
+    require(slope.exists == 1, 'slope does not exist');
     uint utilization = borrow.mul(10000).div(supply.add(reserve));
     if (utilization <= slope.U1) {
       uint extra = (utilization * slope.R1) / slope.U1;
@@ -89,7 +89,7 @@ contract TripleSlopeInterestRate is IInterestRateModel {
       uint extra = ((utilization - slope.U1) * slope.R2) / (slope.U2 - slope.U1);
       return slope.R0 + slope.R1 + extra;
     } else if (utilization <= 10000) {
-      uint extra = ((utilization - slope.U2) * slope.R3) / (10000 - slope.U1);
+      uint extra = ((utilization - slope.U2) * slope.R3) / (10000 - slope.U2);
       return slope.R0 + slope.R1 + slope.R2 + extra;
     } else {
       return slope.R0 + slope.R1 + slope.R2 + slope.R3;
