@@ -39,9 +39,11 @@ library VaultStatus {
 }
 
 contract HomoraCaster {
-  // TODO
+  /// @dev Call to the target using the given data.
+  /// @param target The address target to call.
+  /// @param data The data using in the call.
   function alohomora(address target, bytes memory data) public payable {
-    (bool ok, ) = target.call(data);
+    (bool ok, ) = target.call{value: msg.value}(data);
     require(ok, 'bad alohomora call');
   }
 }
@@ -61,7 +63,6 @@ contract HomoraBank is Initializable, IBank {
   uint public _GENERAL_LOCK;
   uint public _IN_EXEC_LOCK;
   address public _EXECUTOR;
-  address public _GOBLIN;
 
   address public caster;
   address public governor;
@@ -78,9 +79,7 @@ contract HomoraBank is Initializable, IBank {
     uint totalDebtShare;
   }
 
-  mapping(address => bool) public goblinOk;
   mapping(address => Vault) public vaults;
-
   mapping(address => address[]) public assetsOf;
   mapping(address => mapping(address => uint)) public assetAmountOf;
   mapping(address => address[]) public debtsOf;
@@ -94,10 +93,9 @@ contract HomoraBank is Initializable, IBank {
     _GENERAL_LOCK = _NOT_ENTERED;
   }
 
-  /// @dev Ensure that the function is called from an approved goblin within execution scope.
+  /// @dev Ensure that the function is called from within the execution scope.
   modifier inExec() {
     require(_EXECUTOR != _NO_ADDRESS, 'not within execution');
-    require(_GOBLIN != msg.sender, 'bad caller');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
     _;
@@ -116,7 +114,6 @@ contract HomoraBank is Initializable, IBank {
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
     _EXECUTOR = _NO_ADDRESS;
-    _GOBLIN = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     governor = msg.sender;
     pendingGovernor = address(0);
@@ -215,21 +212,6 @@ contract HomoraBank is Initializable, IBank {
     }
   }
 
-  /// @dev Set goblin ok status. BE CAREFUL! DO NOT SET TOKEN CONTRACTS OR SELF AS GOBLINS. EVER.
-  /// @param goblins The set of goblins to update status.
-  /// @param ok Whether to set those goblins is ok or not.
-  function setGoblinOk(address[] memory goblins, bool ok) public lock {
-    require(msg.sender == governor, 'not the governor');
-    for (uint idx = 0; idx < goblins.length; idx++) {
-      address goblin = goblins[idx];
-      require(goblin != address(this), 'DO NOT SET SELF AS GOBLIN');
-      try IERC20(goblin).totalSupply() returns (uint) {
-        revert('DO NOT SET TOKEN CONTRACT AS GOBLIN');
-      } catch {}
-      goblinOk[goblin] = ok;
-    }
-  }
-
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
   /// @param token The vault token to deposit.
   /// @param amountCall The amount to call transferFrom.
@@ -253,7 +235,7 @@ contract HomoraBank is Initializable, IBank {
     uint amount = share.mul(v.totalValue).div(totalShare);
     v.totalValue = v.totalValue.sub(amount);
     v.homo.burn(msg.sender, share);
-    IERC20(token).safeTransfer(msg.sender, amount);
+    doTransferOut(token, amount);
   }
 
   /// @dev Withdraw the reserve portion of the vault.
@@ -263,7 +245,7 @@ contract HomoraBank is Initializable, IBank {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     v.reserve = v.reserve.sub(amount);
-    IERC20(token).safeTransfer(msg.sender, amount);
+    doTransferOut(token, amount);
   }
 
   /// @dev Liquidate a position. Paying debt for its owner and take the collateral.
@@ -290,28 +272,23 @@ contract HomoraBank is Initializable, IBank {
       remove(assetsOf[user], collateralToken);
     }
     assetAmountOf[user][collateralToken] = newAmount;
-    IERC20(collateralToken).transfer(msg.sender, bounty);
+    doTransferOut(collateralToken, bounty);
   }
 
-  /// @dev Execute the action via goblin, calling its work function with the supplied data.
-  /// @param goblin The goblin to invoke the execution on.
-  /// @param data Extra data to pass to the goblin for the execution.
-  function execute(address goblin, bytes memory data) public lock {
-    require(goblinOk[goblin], 'not ok goblin');
+  /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
+  /// @param target The target to invoke the execution via HomoraCaster.
+  /// @param data Extra data to pass to the target for the execution.
+  function execute(address target, bytes memory data) public payable lock {
     _EXECUTOR = msg.sender;
-    _GOBLIN = goblin;
-    HomoraCaster(caster).alohomora(goblin, data);
-    (bool ok, ) = goblin.call(data);
-    require(ok, 'bad goblin call');
+    HomoraCaster(caster).alohomora{value: msg.value}(target, data);
     uint collateralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
     require(collateralValue >= borrowValue, 'insufficient collateral');
     _EXECUTOR = _NO_ADDRESS;
-    _GOBLIN = _NO_ADDRESS;
   }
 
-  /// @dev Borrow tokens from the vault. Must only be called from the goblin while under execution.
-  /// @param token The token to borrow from the vault.
+  /// @dev Borrow tokens from the vault. Must only be called while under execution.
+  /// @param token The token to borrow from the vault
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) public override inExec poke(token) {
     Vault storage v = vaults[token];
@@ -329,7 +306,7 @@ contract HomoraBank is Initializable, IBank {
     IERC20(token).safeTransfer(msg.sender, amount);
   }
 
-  /// @dev Repays tokens to the vault. Must only be called from the goblin while under execution.
+  /// @dev Repays tokens to the vault. Must only be called while under execution.
   /// @param token The token to repay to the vault.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) public override inExec poke(token) {
@@ -352,7 +329,7 @@ contract HomoraBank is Initializable, IBank {
     uint oldDebt = oldDebtShare.mul(v.totalDebt).div(v.totalDebtShare);
     uint subDebtShare;
     if (amount > oldDebt) {
-      IERC20(token).transfer(msg.sender, amount.sub(oldDebt));
+      doTransferOut(token, amount.sub(oldDebt));
       amount = oldDebt;
       subDebtShare = oldDebtShare;
     } else {
@@ -367,41 +344,43 @@ contract HomoraBank is Initializable, IBank {
     return amount;
   }
 
-  /// @dev Transmit user assets to the goblin, so users only need to approve Bank for spending.
-  /// @param token The token to transfer from user to the goblin.
+  /// @dev Transmit user assets to the caller, so users only need to approve Bank for spending.
+  /// @param token The token to transfer from user to the caller.
   /// @param amount The amount to transfer.
   function transmit(address token, uint amount) public override inExec {
     require(oracle.support(token), 'token not supported');
     IERC20(token).safeTransferFrom(_EXECUTOR, msg.sender, amount);
   }
 
-  /// @dev Put more collateral for users. Must only be called during execution by the goblin.
+  /// @dev Put more collateral for users. Must only be called during execution.
   /// @param token The token to put as collateral.
   /// @param amountCall The amount of tokens to put via transferFrom.
   function putCollateral(address token, uint amountCall) public override inExec {
     require(oracle.support(token), 'token not supported');
+    address executor = _EXECUTOR;
     uint amount = doTransferIn(token, amountCall);
-    uint oldAmount = assetAmountOf[_EXECUTOR][token];
+    uint oldAmount = assetAmountOf[executor][token];
     uint newAmount = oldAmount.add(amount);
     if (oldAmount == 0 && newAmount != 0) {
-      assetsOf[_EXECUTOR].push(token);
-      require(assetsOf[_EXECUTOR].length <= MAX_ASSET_COUNT, 'too many collateral assets');
+      assetsOf[executor].push(token);
+      require(assetsOf[executor].length <= MAX_ASSET_COUNT, 'too many collateral assets');
     }
-    assetAmountOf[_EXECUTOR][token] = newAmount;
+    assetAmountOf[executor][token] = newAmount;
   }
 
-  /// @dev Take some collateral back. Must only be called during execution by the goblin.
+  /// @dev Take some collateral back. Must only be called during execution.
   /// @param token The token to take back from being collateral.
   /// @param amount The amount of tokens to take back via transfer.
   function takeCollateral(address token, uint amount) public override inExec {
     require(oracle.support(token), 'token not supported');
-    uint oldAmount = assetAmountOf[_EXECUTOR][token];
+    address executor = _EXECUTOR;
+    uint oldAmount = assetAmountOf[executor][token];
     uint newAmount = oldAmount.sub(amount);
     if (oldAmount != 0 && newAmount == 0) {
-      remove(assetsOf[_EXECUTOR], token);
+      remove(assetsOf[executor], token);
     }
-    assetAmountOf[_EXECUTOR][token] = newAmount;
-    IERC20(token).transfer(msg.sender, amount);
+    assetAmountOf[executor][token] = newAmount;
+    doTransferOut(token, amount);
   }
 
   /// @dev Internal function to perform token transfer in and return amount actually received.
@@ -412,6 +391,13 @@ contract HomoraBank is Initializable, IBank {
     IERC20(token).safeTransferFrom(msg.sender, address(this), amountCall);
     uint balanceAfter = IERC20(token).balanceOf(address(this));
     return balanceAfter.sub(balanceBefore);
+  }
+
+  /// @dev Internal function to perform token transfer out to msg.sender.
+  /// @param token The token to perform transfer action.
+  /// @param amount The amount use in the transfer call.
+  function doTransferOut(address token, uint amount) internal {
+    IERC20(token).safeTransfer(msg.sender, amount);
   }
 
   /// @dev Remove the given address from the storage list. The item must exist in the list.
