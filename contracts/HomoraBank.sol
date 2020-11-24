@@ -43,9 +43,9 @@ contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
   /// @param data The data using in the call.
-  function aloibra(address target, bytes memory data) public payable {
+  function cast(address target, bytes memory data) public payable {
     (bool ok, ) = target.call{value: msg.value}(data);
-    require(ok, 'bad aloibra call');
+    require(ok, 'bad cast call');
   }
 }
 
@@ -64,6 +64,7 @@ contract HomoraBank is Initializable, IBank {
   uint public _GENERAL_LOCK;
   uint public _IN_EXEC_LOCK;
   address public _EXECUTOR;
+  address public _TARGET;
 
   address public caster;
   address public governor;
@@ -98,6 +99,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Ensure that the function is called from within the execution scope.
   modifier inExec() {
     require(_EXECUTOR != _NO_ADDRESS, 'not within execution');
+    require(_TARGET == msg.sender, 'not from target');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
     _;
@@ -116,6 +118,7 @@ contract HomoraBank is Initializable, IBank {
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
     _EXECUTOR = _NO_ADDRESS;
+    _TARGET = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     governor = msg.sender;
     pendingGovernor = address(0);
@@ -302,11 +305,13 @@ contract HomoraBank is Initializable, IBank {
   /// @param data Extra data to pass to the target for the execution.
   function execute(address target, bytes memory data) external payable lock {
     _EXECUTOR = msg.sender;
-    HomoraCaster(caster).aloibra{value: msg.value}(target, data);
+    _TARGET = target;
+    HomoraCaster(caster).cast{value: msg.value}(target, data);
     uint collateralValue = getCollateralETHValue(msg.sender);
     uint borrowValue = getBorrowETHValue(msg.sender);
     require(collateralValue >= borrowValue, 'insufficient collateral');
     _EXECUTOR = _NO_ADDRESS;
+    _TARGET = _NO_ADDRESS;
   }
 
   /// @dev Borrow tokens from the vault. Must only be called while under execution.
