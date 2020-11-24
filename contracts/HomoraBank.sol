@@ -11,31 +11,44 @@ import '../interfaces/IInterestRateModel.sol';
 import '../interfaces/IOracle.sol';
 
 library VaultStatus {
-  enum T {
-    INVALID, // The vault does not exist.
-    FROZEN, // The vault is frozen for any action.
-    NOMOREDEBT, // The vault does not accept more loans.
-    ACTIVE // The vault is fully operational.
+  uint8 public constant VALID_BIT = 1 << 0;
+  uint8 public constant DEPOSIT_BIT = 1 << 1;
+  uint8 public constant WITHDRAW_BIT = 1 << 2;
+  uint8 public constant BORROW_BIT = 1 << 3;
+  uint8 public constant REPAY_BIT = 1 << 4;
+
+  /// The vault is frozen from any action.
+  uint8 public constant FROZEN = VALID_BIT;
+  /// The vault does not accept any more loans.
+  uint8 public constant NO_DEBT = VALID_BIT | DEPOSIT_BIT | WITHDRAW_BIT | REPAY_BIT;
+  /// The vault does not accept any operations that reduce its funds.
+  uint8 public constant NO_REDUCE = VALID_BIT | DEPOSIT_BIT | REPAY_BIT;
+  /// The vault is fully operational.
+  uint8 public constant ACTIVE = VALID_BIT | DEPOSIT_BIT | WITHDRAW_BIT | BORROW_BIT | REPAY_BIT;
+
+  /// @dev Return whether the given status is valid, as specified by the valid bit.
+  function valid(uint8 status) internal pure returns (bool) {
+    return (status & VALID_BIT) != 0;
   }
 
-  function valid(T status) internal pure returns (bool) {
-    return status == T.FROZEN || status == T.NOMOREDEBT || status == T.ACTIVE;
+  /// @dev Return whether the vault accepts deposit actions, as specified by the deposit bit.
+  function acceptDeposit(uint8 status) internal pure returns (bool) {
+    return (status & DEPOSIT_BIT) != 0;
   }
 
-  function acceptDeposit(T status) internal pure returns (bool) {
-    return true;
+  /// @dev Return whether the vault accepts withdraw actions, as specified by the withdraw bit.
+  function acceptWithdraw(uint8 status) internal pure returns (bool) {
+    return (status & WITHDRAW_BIT) != 0;
   }
 
-  function acceptWithdraw(T status) internal pure returns (bool) {
-    return true;
+  /// @dev Return whether the vault accepts borrow actions, as specified by the borrow bit.
+  function acceptBorrow(uint8 status) internal pure returns (bool) {
+    return (status & BORROW_BIT) != 0;
   }
 
-  function acceptBorrow(T status) internal pure returns (bool) {
-    return true;
-  }
-
-  function acceptRepay(T status) internal pure returns (bool) {
-    return true;
+  /// @dev Return whether the vault accepts repay actions, as specified by the repay bit.
+  function acceptRepay(uint8 status) internal pure returns (bool) {
+    return (status & REPAY_BIT) != 0;
   }
 }
 
@@ -50,9 +63,9 @@ contract HomoraCaster {
 }
 
 contract HomoraBank is Initializable, IBank {
+  using VaultStatus for uint8;
   using SafeMath for uint;
   using SafeERC20 for IERC20;
-  using VaultStatus for VaultStatus.T;
 
   uint public constant MAX_ASSET_COUNT = 10;
   uint public constant MAX_DEBT_COUNT = 10;
@@ -72,7 +85,7 @@ contract HomoraBank is Initializable, IBank {
   IOracle public oracle;
 
   struct Vault {
-    VaultStatus.T status;
+    uint8 status;
     IbTokenV2 ib;
     IInterestRateModel ir;
     uint lastAccrueTime;
@@ -212,7 +225,7 @@ contract HomoraBank is Initializable, IBank {
   /// @param ir The initial interest rate model.
   function setVaultStatus(
     address token,
-    VaultStatus.T status,
+    uint8 status,
     IInterestRateModel ir
   ) public {
     require(msg.sender == governor, 'not the governor');
@@ -226,7 +239,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Set vault status for the given set of vaults. Create new ib tokens for new vaults.
   /// @param tokens The set of vault tokens to update the vault status.
   /// @param status The new vault status to set.
-  function setVaultStatus(address[] memory tokens, VaultStatus.T status) public {
+  function setVaultStatus(address[] memory tokens, uint8 status) public {
     require(msg.sender == governor, 'not the governor');
     require(status.valid(), 'invalid status');
     for (uint idx = 0; idx < tokens.length; idx++) {
