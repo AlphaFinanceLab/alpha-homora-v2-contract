@@ -29,6 +29,7 @@ contract HomoraETHRouter {
   }
 
   /// @dev Withdraw ibETH for the caller and return back the ETH.
+  /// @param share The amount of share to withdraw and convert back to ETH.
   function withdraw(uint share) public {
     ib.transferFrom(msg.sender, address(this), share);
     bank.withdraw(address(weth), share);
