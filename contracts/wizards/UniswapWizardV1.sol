@@ -1,78 +1,141 @@
 pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
+import './BasicWizard.sol';
 import '../../interfaces/IBank.sol';
 import '../../interfaces/IWETH.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
 
-// function
-
-contract UniswapV2WizardV1 {
+contract UniswapV2WizardV1 is BasicWizard {
   using SafeMath for uint;
 
-  IBank public bank;
   IUniswapV2Factory public factory;
   IUniswapV2Router02 public router;
-  IWETH public weth;
 
-  constructor(IBank _bank, IUniswapV2Router02 _router) public {
-    bank = _bank;
+  constructor(IBank _bank, IUniswapV2Router02 _router) public BasicWizard(_bank, _router.WETH()) {
     router = _router;
     factory = IUniswapV2Factory(_router.factory());
-    weth = IWETH(_router.WETH());
   }
 
-  // function approvePair(address tokenA, address tokenB) public {
-  //   address lpToken = factory.getPair(tokenA, tokenB);
-  //   require(lpToken != address(0), 'lp token does not exist');
-  //   IERC20(tokenA).approve(router, uint(0));
-  //   IERC20(tokenA).approve(router, uint(-1));
-  //   IERC20(tokenB).approve(router, uint(0));
-  //   IERC20(tokenB).approve(router, uint(-1));
-  //   IERC20(lpToken).approve(router, uint(0));
-  //   IERC20(lpToken).approve(router, uint(-1));
-  // }
+  function approve(address tokenA, address tokenB) public {
+    address lp = factory.getPair(tokenA, tokenB);
+    require(lp != address(0), 'no lp token');
+    IERC20(tokenA).approveAll(address(router));
+    IERC20(tokenA).approveAll(address(bank));
+    IERC20(tokenB).approveAll(address(router));
+    IERC20(tokenB).approveAll(address(bank));
+    IERC20(lp).approveAll(address(router));
+    IERC20(lp).approveAll(address(bank));
+  }
+
+  function addLiquidityETH(
+    address token,
+    uint amtTokenUser,
+    uint amtETHBorrow,
+    uint amtTokenBorrow,
+    uint amtETHMin,
+    uint amtTokenMin
+  ) public payable {
+    address lp = factory.getPair(address(weth), token);
+    require(lp != address(0), 'no lp token');
+    doTransmitETH();
+    doTransmit(token, amtTokenUser);
+    doBorrow(address(weth), amtETHBorrow);
+    doBorrow(token, amtTokenBorrow);
+    (, , uint liquidity) =
+      router.addLiquidity(
+        address(weth),
+        token,
+        weth.balanceOf(address(this)),
+        IERC20(token).balanceOf(address(this)),
+        amtETHMin,
+        amtTokenMin,
+        address(this),
+        now
+      );
+    bank.putCollateral(lp, liquidity);
+    doRefundETH();
+    doRefund(token);
+  }
 
   function addLiquidity(
     address tokenA,
     address tokenB,
-    uint amountAUser,
-    uint amountBUser,
-    uint amountABorrow,
-    uint amountBBorrow,
-    uint amountAMin,
-    uint amountBMin
-  ) public payable {
-    address lpToken = factory.getPair(tokenA, tokenB);
-    require(lpToken != address(0), 'lp token does not exist');
-    if (msg.value > 0) weth.deposit{value: msg.value}();
-    if (amountAUser > 0) bank.transmit(tokenA, amountAUser);
-    if (amountBUser > 0) bank.transmit(tokenB, amountBUser);
-    if (amountABorrow > 0) bank.borrow(tokenA, amountABorrow);
-    if (amountBBorrow > 0) bank.borrow(tokenB, amountBBorrow);
-    uint amountADesired = IERC20(tokenA).balanceOf(address(this));
-    uint amountBDesired = IERC20(tokenB).balanceOf(address(this));
-    (uint amountA, uint amountB, uint liquidity) =
+    uint amtAUser,
+    uint amtBUser,
+    uint amtABorrow,
+    uint amtBBorrow,
+    uint amtAMin,
+    uint amtBMin
+  ) public {
+    address lp = factory.getPair(tokenA, tokenB);
+    require(lp != address(0), 'no lp token');
+    doTransmit(tokenA, amtAUser);
+    doTransmit(tokenB, amtBUser);
+    doBorrow(tokenA, amtABorrow);
+    doBorrow(tokenB, amtBBorrow);
+    (, , uint liquidity) =
       router.addLiquidity(
         tokenA,
         tokenB,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
+        IERC20(tokenA).balanceOf(address(this)),
+        IERC20(tokenB).balanceOf(address(this)),
+        amtAMin,
+        amtBMin,
         address(this),
-        now + 10
+        now
       );
-    address executor = bank.EXECUTOR();
-    if (amountADesired > amountA) IERC20(tokenA).transfer(executor, amountADesired - amountA);
-    if (amountBDesired > amountB) IERC20(tokenA).transfer(executor, amountADesired - amountB);
-    bank.putCollateral(lpToken, liquidity);
+    doPutCollateral(lp, liquidity);
+    doRefund(tokenA);
+    doRefund(tokenB);
   }
 
-  function removeLiquidity() public {
-    // TODO
+  function removeLiquidityETH(
+    address token,
+    uint liquidity,
+    uint amtETHMin,
+    uint amtTokenMin,
+    uint amtETHRepay,
+    uint amtTokenRepay
+  ) public {
+    address lp = factory.getPair(address(weth), token);
+    require(lp != address(0), 'no lp token');
+    bank.takeCollateral(lp, liquidity);
+    router.removeLiquidity(
+      address(weth),
+      token,
+      liquidity,
+      amtETHMin,
+      amtTokenMin,
+      address(this),
+      now
+    );
+    doRepay(address(weth), amtETHRepay);
+    doRepay(token, amtTokenRepay);
+    doRefundETH();
+    doRefund(token);
+  }
+
+  function removeLiquidity(
+    address tokenA,
+    address tokenB,
+    uint liquidity,
+    uint amtAMin,
+    uint amtBMin,
+    uint amtARepay,
+    uint amtBRepay
+  ) public {
+    address lp = factory.getPair(tokenA, tokenB);
+    require(lp != address(0), 'no lp token');
+    bank.takeCollateral(lp, liquidity);
+    router.removeLiquidity(tokenA, tokenB, liquidity, amtAMin, amtBMin, address(this), now);
+    doRepay(tokenA, amtARepay);
+    doRepay(tokenB, amtBRepay);
+    doRefund(tokenA);
+    doRefund(tokenB);
   }
 }
