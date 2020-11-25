@@ -9,4 +9,3 @@ Documentation coming soon. But here's what V2 will support:
 - Cross margin for all your farming positions = harder to get liquidated
 - You can bring your own LP tokens too = more flexibility
 - Native flashloan support
-- Yield farming on idle assets
