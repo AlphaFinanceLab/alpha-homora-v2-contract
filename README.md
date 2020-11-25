@@ -1,4 +1,4 @@
-# Homora V2
+# Alpha Homora V2
 
 Documentation coming soon. But here's what V2 will support:
 
