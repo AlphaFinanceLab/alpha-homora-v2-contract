@@ -1,46 +1,35 @@
 pragma solidity 0.6.12;
 
 interface IBank {
-  event Deposit(
-    address indexed user, //
+  /// The governor adds a new vault gets added to the system.
+  event AddVault(address token, uint8 status, address ib, address ir);
+  /// The governor updates the status of a vault.
+  event UpdateStatus(address token, uint8 status);
+  /// The governor updates the interest rate model of a vault.
+  event UpdateInterestRateModel(address token, address ir);
+  /// Someone deposits tokens to a vault.
+  event Deposit(address user, address token, uint amount, uint share);
+  /// Someone withdraws tokens from a vault.
+  event Withdraw(address user, address token, uint amount, uint share);
+  /// The governor withdraw tokens from the reserve of a vault.
+  event WithdrawReserve(address user, address token, uint amount);
+  /// Someone borrows tokens from a vault via a spell caller.
+  event Borrow(address user, address caller, address token, uint amount, uint share);
+  /// Someone repays tokens to a vault via a spell caller.
+  event Repay(address user, address caller, address token, uint amount, uint share);
+  /// Someone puts tokens as collateral via a spell caller.
+  event PutCollateral(address user, address caller, address token, uint amount);
+  /// Someone takes tokens from collateral via a spell caller.
+  event TakeCollateral(address user, address caller, address token, uint amount);
+  /// Someone calls liquidatation on a position, paying debt and taking collateral tokens.
+  event Liquidate(
+    address owner,
+    address liquidator,
+    address debtToken,
+    address collateralToken,
     uint amount,
-    uint share
-  );
-
-  event Withdraw(
-    address indexed user, //
-    uint amount,
-    uint share
-  );
-
-  event Borrow(
-    address indexed user,
-    address indexed caller,
-    address indexed token,
-    uint amount,
-    uint share
-  );
-
-  event Repay(
-    address indexed user,
-    address indexed caller,
-    address indexed token,
-    uint amount,
-    uint share
-  );
-
-  event PutCollateral(
-    address indexed user,
-    address indexed caller,
-    address indexed token,
-    uint amount
-  );
-
-  event TakeCollateral(
-    address indexed user,
-    address indexed caller,
-    address indexed token,
-    uint amount
+    uint share,
+    uint bounty
   );
 
   /// @dev Return the current executor while under execution.

@@ -220,6 +220,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     v.status = status;
     v.ir = ir;
     v.lastAccrueTime = now;
+    emit AddVault(token, status, address(v.ib), address(ir));
   }
 
   /// @dev Set vault status for the given set of vaults. Create new ib tokens for new vaults.
@@ -232,6 +233,7 @@ contract HomoraBank is Initializable, Governable, IBank {
       Vault storage v = vaults[token];
       require(v.status.valid(), 'vault does not exist');
       v.status = status;
+      emit UpdateStatus(token, status);
     }
   }
 
@@ -242,6 +244,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     Vault storage v = vaults[token];
     require(v.status.valid(), 'vault does not exist');
     v.ir = ir;
+    emit UpdateInterestRateModel(token, address(ir));
   }
 
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
@@ -262,7 +265,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint share = v.totalValue == 0 ? amount : amount.mul(totalShare).div(v.totalValue);
     v.totalValue = v.totalValue.add(amount);
     v.ib.mint(msg.sender, share);
-    emit Deposit(msg.sender, amount, share);
+    emit Deposit(msg.sender, token, amount, share);
     return share;
   }
 
@@ -278,7 +281,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     v.totalValue = v.totalValue.sub(amount);
     v.ib.burn(msg.sender, share);
     doTransferOut(token, amount);
-    emit Withdraw(msg.sender, amount, share);
+    emit Withdraw(msg.sender, token, amount, share);
     return amount;
   }
 
@@ -289,24 +292,25 @@ contract HomoraBank is Initializable, Governable, IBank {
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     v.reserve = v.reserve.sub(amount);
     doTransferOut(token, amount);
+    emit WithdrawReserve(msg.sender, token, amount);
   }
 
   /// @dev Liquidate a position. Pay debt for its owner and take the collateral.
   /// @param user The user position to perform liquidation on.
-  /// @param collateralToken The collateral token to take in exchange for clearing debts.
   /// @param debtToken The debt token to repay.
+  /// @param collateralToken The collateral token to take in exchange for clearing debts.
   /// @param amountCall The amount to repay when doing transferFrom call.
   function liquidate(
     address user,
-    address collateralToken,
     address debtToken,
+    address collateralToken,
     uint amountCall
   ) external lock poke(debtToken) {
     require(oracle.support(collateralToken), 'collateral token not supported');
     uint collateralValue = getCollateralETHValue(user);
     uint borrowValue = getBorrowETHValue(user);
     require(collateralValue < borrowValue, 'account still healthy');
-    (uint amountPaid, ) = repayInternal(user, debtToken, amountCall);
+    (uint amountPaid, uint share) = repayInternal(user, debtToken, amountCall);
     uint bounty = oracle.convertForLiquidation(debtToken, collateralToken, amountPaid);
     uint oldAmount = assetAmountOf[user][collateralToken];
     uint newAmount = oldAmount.sub(bounty);
@@ -315,6 +319,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     }
     assetAmountOf[user][collateralToken] = newAmount;
     doTransferOut(collateralToken, bounty);
+    emit Liquidate(user, msg.sender, debtToken, collateralToken, amountPaid, share, bounty);
   }
 
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
