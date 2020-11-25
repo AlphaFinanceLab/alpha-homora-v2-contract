@@ -253,6 +253,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint share = v.totalValue == 0 ? amount : amount.mul(totalShare).div(v.totalValue);
     v.totalValue = v.totalValue.add(amount);
     v.ib.mint(msg.sender, share);
+    emit Deposit(msg.sender, amount, share);
     return share;
   }
 
@@ -268,6 +269,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     v.totalValue = v.totalValue.sub(amount);
     v.ib.burn(msg.sender, share);
     doTransferOut(token, amount);
+    emit Withdraw(msg.sender, amount, share);
     return amount;
   }
 
@@ -295,7 +297,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint collateralValue = getCollateralETHValue(user);
     uint borrowValue = getBorrowETHValue(user);
     require(collateralValue < borrowValue, 'account still healthy');
-    uint amountPaid = repayInternal(user, debtToken, amountCall);
+    (uint amountPaid, ) = repayInternal(user, debtToken, amountCall);
     uint bounty = oracle.convertForLiquidation(debtToken, collateralToken, amountPaid);
     uint oldAmount = assetAmountOf[user][collateralToken];
     uint newAmount = oldAmount.sub(bounty);
@@ -338,24 +340,28 @@ contract HomoraBank is Initializable, Governable, IBank {
     }
     debtShareOf[executor][token] = newShare;
     doTransferOut(token, amount);
+    emit Borrow(executor, msg.sender, token, amount, share);
   }
 
   /// @dev Repays tokens to the vault. Must only be called while under execution.
   /// @param token The token to repay to the vault.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
-    repayInternal(EXECUTOR, token, amountCall);
+    address executor = EXECUTOR;
+    (uint amount, uint share) = repayInternal(executor, token, amountCall);
+    emit Repay(executor, msg.sender, token, amount, share);
   }
 
-  /// @dev Perform repay action. Return the amount actually taken. Refund rest to msg.sender.
+  /// @dev Perform repay action. Refund rest to msg.sender.
   /// @param user The user to repay debts to.
   /// @param token The vault token to pay the debt.
   /// @param amountCall The amount to repay by calling transferFrom.
+  /// @return The amount actually taken and the debt share reduced.
   function repayInternal(
     address user,
     address token,
     uint amountCall
-  ) internal returns (uint) {
+  ) internal returns (uint, uint) {
     Vault storage v = vaults[token];
     require(v.status.acceptRepay(), 'not accept repay');
     uint amount = doTransferIn(token, amountCall);
@@ -375,7 +381,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     if (oldDebtShare != 0 && newDebtShare == 0) {
       remove(debtsOf[user], token);
     }
-    return amount;
+    return (amount, subDebtShare);
   }
 
   /// @dev Transmit user assets to the caller, so users only need to approve Bank for spending.
@@ -400,6 +406,7 @@ contract HomoraBank is Initializable, Governable, IBank {
       require(assetsOf[executor].length <= MAX_ASSET_COUNT, 'too many collateral assets');
     }
     assetAmountOf[executor][token] = newAmount;
+    emit PutCollateral(executor, msg.sender, token, amount);
   }
 
   /// @dev Take some collateral back. Must only be called during execution.
@@ -415,6 +422,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     }
     assetAmountOf[executor][token] = newAmount;
     doTransferOut(token, amount);
+    emit TakeCollateral(executor, msg.sender, token, amount);
   }
 
   /// @dev Internal function to perform token transfer in and return amount actually received.

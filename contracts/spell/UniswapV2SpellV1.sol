@@ -3,17 +3,17 @@ pragma solidity 0.6.12;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 
-import './BasicWizard.sol';
+import './BasicSpell.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
 
-contract UniswapV2WizardV1 is BasicWizard {
+contract UniswapV2SpellV1 is BasicSpell {
   IUniswapV2Factory public factory;
   IUniswapV2Router02 public router;
 
   mapping(address => mapping(address => address)) public pairs;
 
-  constructor(IBank _bank, IUniswapV2Router02 _router) public BasicWizard(_bank, _router.WETH()) {
+  constructor(IBank _bank, IUniswapV2Router02 _router) public BasicSpell(_bank, _router.WETH()) {
     router = _router;
     factory = IUniswapV2Factory(_router.factory());
   }

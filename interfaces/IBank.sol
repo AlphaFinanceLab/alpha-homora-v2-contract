@@ -1,6 +1,40 @@
 pragma solidity 0.6.12;
 
 interface IBank {
+  event Deposit(address indexed user, uint amount, uint share);
+
+  event Withdraw(address indexed user, uint amount, uint share);
+
+  event Borrow(
+    address indexed user,
+    address indexed caller,
+    address indexed token,
+    uint amount,
+    uint share
+  );
+
+  event Repay(
+    address indexed user,
+    address indexed caller,
+    address indexed token,
+    uint amount,
+    uint share
+  );
+
+  event PutCollateral(
+    address indexed user,
+    address indexed caller,
+    address indexed token,
+    uint amount
+  );
+
+  event TakeCollateral(
+    address indexed user,
+    address indexed caller,
+    address indexed token,
+    uint amount
+  );
+
   /// @dev Return the current executor while under execution.
   function EXECUTOR() external view returns (address);
 
@@ -22,7 +56,7 @@ interface IBank {
   /// @dev Repays tokens to the vault.
   function repay(address token, uint amountCall) external;
 
-  /// @dev Transmit user assets to the goblin.
+  /// @dev Transmit user assets to the spell.
   function transmit(address token, uint amount) external;
 
   /// @dev Put more collateral for users.

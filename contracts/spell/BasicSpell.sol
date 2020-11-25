@@ -15,7 +15,7 @@ library ERC20ApproveInfinite {
   }
 }
 
-contract BasicWizard {
+contract BasicSpell {
   using ERC20ApproveInfinite for IERC20;
 
   IBank public bank;
