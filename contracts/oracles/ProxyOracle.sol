@@ -1,4 +1,5 @@
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
@@ -12,10 +13,17 @@ contract ProxyOracle is IOracle {
     IBaseOracle source;
     uint16 borrowFactor;
     uint16 collateralFactor;
+    uint16 liquidationIncentive;
   }
 
-  uint public constant LIQUIDATION_INCENTIVE = 10500;
   mapping(address => Oracle) public oracles;
+
+  function setOracles(address[] memory tokens, Oracle[] memory info) external {
+    require(tokens.length == info.length, 'inconsistent length');
+    for (uint idx = 0; idx < tokens.length; idx++) {
+      oracles[tokens[idx]] = info[idx];
+    }
+  }
 
   /// @dev Return whether the oracle supports evaluating value of the given address.
   /// @param token The ERC-20 token to check the acceptence.
@@ -32,9 +40,17 @@ contract ProxyOracle is IOracle {
     address tokenOut,
     uint amountIn
   ) external view override returns (uint) {
-    uint pxIn = oracles[tokenIn].source.getETHPx(tokenIn);
-    uint pxOut = oracles[tokenOut].source.getETHPx(tokenOut);
-    return amountIn.mul(pxIn).div(pxOut).mul(LIQUIDATION_INCENTIVE).div(10000);
+    Oracle memory oracleIn = oracles[tokenIn];
+    Oracle memory oracleOut = oracles[tokenOut];
+    uint pxIn = oracleIn.source.getETHPx(tokenIn);
+    uint pxOut = oracleOut.source.getETHPx(tokenOut);
+    return
+      amountIn
+        .mul(pxIn)
+        .div(pxOut)
+        .mul(oracleIn.liquidationIncentive)
+        .mul(oracleOut.liquidationIncentive)
+        .div(10000 * 10000);
   }
 
   /// @dev Return the value of the given input as ETH for collateral purpose.

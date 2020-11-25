@@ -5,6 +5,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC2
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
+import './Governable.sol';
 import './IbTokenV2.sol';
 import '../interfaces/IBank.sol';
 import '../interfaces/IInterestRateModel.sol';
@@ -62,7 +63,7 @@ contract HomoraCaster {
   }
 }
 
-contract HomoraBank is Initializable, IBank {
+contract HomoraBank is Initializable, Governable, IBank {
   using VaultStatus for uint8;
   using SafeMath for uint;
   using SafeERC20 for IERC20;
@@ -80,8 +81,6 @@ contract HomoraBank is Initializable, IBank {
   address public override SPELL;
 
   address public caster;
-  address public governor;
-  address public pendingGovernor;
   IOracle public oracle;
 
   struct Vault {
@@ -128,13 +127,12 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Initialize the bank smart contract, using msg.sender as the first governor.
   /// @param _oracle The oracle smart contract address.
   function initialize(IOracle _oracle) public initializer {
+    Governable.initialize();
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
     EXECUTOR = _NO_ADDRESS;
     SPELL = _NO_ADDRESS;
     caster = address(new HomoraCaster());
-    governor = msg.sender;
-    pendingGovernor = address(0);
     oracle = _oracle;
   }
 
@@ -206,20 +204,6 @@ contract HomoraBank is Initializable, IBank {
     return value;
   }
 
-  /// @dev Set the pending governor, which will be the governor once accepted.
-  /// @param _pendingGovernor The address to become the pending governor.
-  function setPendingGovernor(address _pendingGovernor) public {
-    require(msg.sender == governor, 'not the governor');
-    pendingGovernor = _pendingGovernor;
-  }
-
-  /// @dev Accept to become the new governor. Must be called by the pending governor.
-  function acceptGovernor() public {
-    require(msg.sender == pendingGovernor, 'not the pending governor');
-    pendingGovernor = address(0);
-    governor = msg.sender;
-  }
-
   /// @dev Add a new vault to the bank.
   /// @param token The underlying token for the vault.
   /// @param status The initial vault status.
@@ -228,8 +212,7 @@ contract HomoraBank is Initializable, IBank {
     address token,
     uint8 status,
     IInterestRateModel ir
-  ) public {
-    require(msg.sender == governor, 'not the governor');
+  ) public onlyGov {
     Vault storage v = vaults[token];
     require(!v.status.valid(), 'vault already exists');
     require(status.valid(), 'invalid status');
@@ -242,8 +225,7 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Set vault status for the given set of vaults. Create new ib tokens for new vaults.
   /// @param tokens The set of vault tokens to update the vault status.
   /// @param status The new vault status to set.
-  function setVaultStatus(address[] memory tokens, uint8 status) public {
-    require(msg.sender == governor, 'not the governor');
+  function setVaultStatus(address[] memory tokens, uint8 status) public onlyGov {
     require(status.valid(), 'invalid status');
     for (uint idx = 0; idx < tokens.length; idx++) {
       address token = tokens[idx];
@@ -291,8 +273,7 @@ contract HomoraBank is Initializable, IBank {
 
   /// @dev Withdraw the reserve portion of the vault.
   /// @param amount The amount of tokens to withdraw.
-  function withdrawReserve(address token, uint amount) public lock poke(token) {
-    require(msg.sender == governor, 'not the governor');
+  function withdrawReserve(address token, uint amount) public onlyGov lock poke(token) {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     v.reserve = v.reserve.sub(amount);

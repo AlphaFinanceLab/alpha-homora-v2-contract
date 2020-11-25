@@ -3,9 +3,10 @@ pragma experimental ABIEncoderV2;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
+import './Governable.sol';
 import '../interfaces/IInterestRateModel.sol';
 
-contract TripleSlopeInterestRate is IInterestRateModel {
+contract TripleSlopeInterestRate is IInterestRateModel, Governable {
   using SafeMath for uint;
 
   /// The triple slope data structure, consisting of 6 small integers. See description below.
@@ -19,34 +20,17 @@ contract TripleSlopeInterestRate is IInterestRateModel {
     uint32 U2; // Utilization stop 2.
   }
 
-  address public governor; // The governor who is in charge of updating the slope data.
-  address public pendingGovernor; // The pending governor to replace the governor.
   mapping(address => SlopeData) public slopes; // The slope data points for all tokens.
 
   /// @dev Create the smart contract and set msg.sender as the initial governor.
   constructor() public {
-    governor = msg.sender;
-  }
-
-  /// @dev Set the pending governor, which will be the governor once accepted.
-  /// @param _pendingGovernor The address to become the pending governor.
-  function setPendingGovernor(address _pendingGovernor) public {
-    require(msg.sender == governor, 'not the governor');
-    pendingGovernor = _pendingGovernor;
-  }
-
-  /// @dev Accept to become the new governor. Must be called by the pending governor.
-  function acceptGovernor() public {
-    require(msg.sender == pendingGovernor, 'not the pending governor');
-    pendingGovernor = address(0);
-    governor = msg.sender;
+    Governable.initialize();
   }
 
   /// @dev Set interest rate slopt for given token address.
   /// @param token The token contract to set interest rate.
   /// @param slope The slope data to set for the token.
-  function setInterestRate(address token, SlopeData memory slope) public {
-    require(msg.sender == governor, 'not the governor');
+  function setInterestRate(address token, SlopeData memory slope) public onlyGov {
     require(slope.exists == 1, 'bad exists');
     require(slope.R0 <= 1000000, 'bad R0 data'); // sanity cap at 10000% per year.
     require(slope.R1 <= 1000000, 'bad R1 data'); // sanity cap at 10000% per year.
@@ -59,8 +43,7 @@ contract TripleSlopeInterestRate is IInterestRateModel {
 
   /// @dev Remove interest rates for all of the given tokens.
   /// @param tokens The tokens to remove interest rates.
-  function removeInterestRates(address[] memory tokens) public {
-    require(msg.sender == governor, 'not the governor');
+  function removeInterestRates(address[] memory tokens) public onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
       address token = tokens[idx];
       require(slopes[token].exists == 1, 'slope does not exist');
