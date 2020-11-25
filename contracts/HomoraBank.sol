@@ -235,6 +235,15 @@ contract HomoraBank is Initializable, Governable, IBank {
     }
   }
 
+  /// @dev Set interest rate model for the given vault.
+  /// @param token The vault token to update the interest rate model.
+  /// @param ir The new interest rate model smart contract.
+  function setVaultInterestModel(address token, IInterestRateModel ir) public onlyGov {
+    Vault storage v = vaults[token];
+    require(v.status.valid(), 'vault does not exist');
+    v.ir = ir;
+  }
+
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
   /// @param token The vault token to deposit.
   /// @param amountCall The amount to call transferFrom.

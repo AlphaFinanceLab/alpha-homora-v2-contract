@@ -1,9 +1,17 @@
 pragma solidity 0.6.12;
 
 interface IBank {
-  event Deposit(address indexed user, uint amount, uint share);
+  event Deposit(
+    address indexed user, //
+    uint amount,
+    uint share
+  );
 
-  event Withdraw(address indexed user, uint amount, uint share);
+  event Withdraw(
+    address indexed user, //
+    uint amount,
+    uint share
+  );
 
   event Borrow(
     address indexed user,
