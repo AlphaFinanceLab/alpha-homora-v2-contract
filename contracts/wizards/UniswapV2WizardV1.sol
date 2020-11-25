@@ -23,9 +23,9 @@ contract UniswapV2WizardV1 is BasicWizard {
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
       require(lp != address(0), 'no lp token');
-      IERC20(tokenA).approveAll(address(router));
-      IERC20(tokenB).approveAll(address(router));
-      IERC20(lp).approveAll(address(router));
+      IERC20(tokenA).approveInfinite(address(router));
+      IERC20(tokenB).approveInfinite(address(router));
+      IERC20(lp).approveInfinite(address(router));
       pairs[tokenA][tokenB] = lp;
       pairs[tokenB][tokenA] = lp;
     }

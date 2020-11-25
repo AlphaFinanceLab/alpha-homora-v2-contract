@@ -6,17 +6,17 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC2
 import '../../interfaces/IBank.sol';
 import '../../interfaces/IWETH.sol';
 
-library ERC20ApproveAll {
+library ERC20ApproveInfinite {
   using SafeERC20 for IERC20;
 
-  function approveAll(IERC20 token, address spender) internal {
+  function approveInfinite(IERC20 token, address spender) internal {
     token.safeApprove(spender, 0);
     token.safeApprove(spender, uint(-1));
   }
 }
 
 contract BasicWizard {
-  using ERC20ApproveAll for IERC20;
+  using ERC20ApproveInfinite for IERC20;
 
   IBank public bank;
   address public weth;
