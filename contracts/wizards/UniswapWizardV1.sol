@@ -2,17 +2,12 @@ pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
 import './BasicWizard.sol';
-import '../../interfaces/IBank.sol';
-import '../../interfaces/IWETH.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
 
 contract UniswapV2WizardV1 is BasicWizard {
-  using SafeMath for uint;
-
   IUniswapV2Factory public factory;
   IUniswapV2Router02 public router;
 
@@ -21,7 +16,7 @@ contract UniswapV2WizardV1 is BasicWizard {
     factory = IUniswapV2Factory(_router.factory());
   }
 
-  function approve(address tokenA, address tokenB) public {
+  function accept(address tokenA, address tokenB) public {
     address lp = factory.getPair(tokenA, tokenB);
     require(lp != address(0), 'no lp token');
     IERC20(tokenA).approveAll(address(router));
@@ -40,24 +35,22 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtETHMin,
     uint amtTokenMin
   ) public payable {
-    address lp = factory.getPair(address(weth), token);
-    require(lp != address(0), 'no lp token');
     doTransmitETH();
     doTransmit(token, amtTokenUser);
-    doBorrow(address(weth), amtETHBorrow);
+    doBorrow(weth, amtETHBorrow);
     doBorrow(token, amtTokenBorrow);
     (, , uint liquidity) =
       router.addLiquidity(
-        address(weth),
+        weth,
         token,
-        weth.balanceOf(address(this)),
+        IERC20(weth).balanceOf(address(this)),
         IERC20(token).balanceOf(address(this)),
         amtETHMin,
         amtTokenMin,
         address(this),
         now
       );
-    bank.putCollateral(lp, liquidity);
+    bank.putCollateral(factory.getPair(weth, token), liquidity);
     doRefundETH();
     doRefund(token);
   }
@@ -72,8 +65,6 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtAMin,
     uint amtBMin
   ) public {
-    address lp = factory.getPair(tokenA, tokenB);
-    require(lp != address(0), 'no lp token');
     doTransmit(tokenA, amtAUser);
     doTransmit(tokenB, amtBUser);
     doBorrow(tokenA, amtABorrow);
@@ -89,7 +80,7 @@ contract UniswapV2WizardV1 is BasicWizard {
         address(this),
         now
       );
-    doPutCollateral(lp, liquidity);
+    doPutCollateral(factory.getPair(tokenA, tokenB), liquidity);
     doRefund(tokenA);
     doRefund(tokenB);
   }
@@ -102,19 +93,9 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtETHRepay,
     uint amtTokenRepay
   ) public {
-    address lp = factory.getPair(address(weth), token);
-    require(lp != address(0), 'no lp token');
-    bank.takeCollateral(lp, liquidity);
-    router.removeLiquidity(
-      address(weth),
-      token,
-      liquidity,
-      amtETHMin,
-      amtTokenMin,
-      address(this),
-      now
-    );
-    doRepay(address(weth), amtETHRepay);
+    bank.takeCollateral(factory.getPair(weth, token), liquidity);
+    router.removeLiquidity(weth, token, liquidity, amtETHMin, amtTokenMin, address(this), now);
+    doRepay(weth, amtETHRepay);
     doRepay(token, amtTokenRepay);
     doRefundETH();
     doRefund(token);
@@ -129,9 +110,7 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtARepay,
     uint amtBRepay
   ) public {
-    address lp = factory.getPair(tokenA, tokenB);
-    require(lp != address(0), 'no lp token');
-    bank.takeCollateral(lp, liquidity);
+    bank.takeCollateral(factory.getPair(tokenA, tokenB), liquidity);
     router.removeLiquidity(tokenA, tokenB, liquidity, amtAMin, amtBMin, address(this), now);
     doRepay(tokenA, amtARepay);
     doRepay(tokenB, amtBRepay);

@@ -19,16 +19,16 @@ contract BasicWizard {
   using ERC20ApproveAll for IERC20;
 
   IBank public bank;
-  IWETH public weth;
+  address public weth;
 
   constructor(IBank _bank, address _weth) public {
     bank = _bank;
-    weth = IWETH(_weth);
+    weth = _weth;
   }
 
   function doTransmitETH() internal {
     if (msg.value > 0) {
-      weth.deposit{value: msg.value}();
+      IWETH(weth).deposit{value: msg.value}();
     }
   }
 
@@ -46,9 +46,9 @@ contract BasicWizard {
   }
 
   function doRefundETH() internal {
-    uint balance = weth.balanceOf(address(this));
+    uint balance = IWETH(weth).balanceOf(address(this));
     if (balance > 0) {
-      weth.withdraw(balance);
+      IWETH(weth).withdraw(balance);
       (bool success, ) = bank.EXECUTOR().call{value: balance}(new bytes(0));
       require(success, 'refund ETH failed');
     }
