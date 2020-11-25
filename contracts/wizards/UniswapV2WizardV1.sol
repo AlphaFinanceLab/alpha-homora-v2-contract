@@ -11,20 +11,25 @@ contract UniswapV2WizardV1 is BasicWizard {
   IUniswapV2Factory public factory;
   IUniswapV2Router02 public router;
 
+  mapping(address => mapping(address => address)) public pairs;
+
   constructor(IBank _bank, IUniswapV2Router02 _router) public BasicWizard(_bank, _router.WETH()) {
     router = _router;
     factory = IUniswapV2Factory(_router.factory());
   }
 
-  function accept(address tokenA, address tokenB) public {
-    address lp = factory.getPair(tokenA, tokenB);
-    require(lp != address(0), 'no lp token');
-    IERC20(tokenA).approveAll(address(router));
-    IERC20(tokenA).approveAll(address(bank));
-    IERC20(tokenB).approveAll(address(router));
-    IERC20(tokenB).approveAll(address(bank));
-    IERC20(lp).approveAll(address(router));
-    IERC20(lp).approveAll(address(bank));
+  function getPair(address tokenA, address tokenB) public returns (address) {
+    address lp = pairs[tokenA][tokenB];
+    if (lp == address(0)) {
+      lp = factory.getPair(tokenA, tokenB);
+      require(lp != address(0), 'no lp token');
+      IERC20(tokenA).approveAll(address(router));
+      IERC20(tokenB).approveAll(address(router));
+      IERC20(lp).approveAll(address(router));
+      pairs[tokenA][tokenB] = lp;
+      pairs[tokenB][tokenA] = lp;
+    }
+    return lp;
   }
 
   function addLiquidityETH(
@@ -35,6 +40,7 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtETHMin,
     uint amtTokenMin
   ) public payable {
+    address lp = getPair(weth, token);
     doTransmitETH();
     doTransmit(token, amtTokenUser);
     doBorrow(weth, amtETHBorrow);
@@ -50,7 +56,7 @@ contract UniswapV2WizardV1 is BasicWizard {
         address(this),
         now
       );
-    bank.putCollateral(factory.getPair(weth, token), liquidity);
+    bank.putCollateral(lp, liquidity);
     doRefundETH();
     doRefund(token);
   }
@@ -65,6 +71,7 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtAMin,
     uint amtBMin
   ) public {
+    address lp = getPair(tokenA, tokenB);
     doTransmit(tokenA, amtAUser);
     doTransmit(tokenB, amtBUser);
     doBorrow(tokenA, amtABorrow);
@@ -80,7 +87,7 @@ contract UniswapV2WizardV1 is BasicWizard {
         address(this),
         now
       );
-    doPutCollateral(factory.getPair(tokenA, tokenB), liquidity);
+    doPutCollateral(lp, liquidity);
     doRefund(tokenA);
     doRefund(tokenB);
   }
@@ -93,7 +100,8 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtETHRepay,
     uint amtTokenRepay
   ) public {
-    bank.takeCollateral(factory.getPair(weth, token), liquidity);
+    address lp = getPair(weth, token);
+    bank.takeCollateral(lp, liquidity);
     router.removeLiquidity(weth, token, liquidity, amtETHMin, amtTokenMin, address(this), now);
     doRepay(weth, amtETHRepay);
     doRepay(token, amtTokenRepay);
@@ -110,7 +118,8 @@ contract UniswapV2WizardV1 is BasicWizard {
     uint amtARepay,
     uint amtBRepay
   ) public {
-    bank.takeCollateral(factory.getPair(tokenA, tokenB), liquidity);
+    address lp = getPair(tokenA, tokenB);
+    bank.takeCollateral(lp, liquidity);
     router.removeLiquidity(tokenA, tokenB, liquidity, amtAMin, amtBMin, address(this), now);
     doRepay(tokenA, amtARepay);
     doRepay(tokenB, amtBRepay);
