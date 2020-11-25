@@ -256,7 +256,14 @@ contract HomoraBank is Initializable, IBank {
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
   /// @param token The vault token to deposit.
   /// @param amountCall The amount to call transferFrom.
-  function deposit(address token, uint amountCall) external override lock poke(token) {
+  /// @return The amount of share issued to the caller.
+  function deposit(address token, uint amountCall)
+    external
+    override
+    lock
+    poke(token)
+    returns (uint)
+  {
     Vault storage v = vaults[token];
     require(v.status.acceptDeposit(), 'not accept deposit');
     uint totalShare = v.ib.totalSupply();
@@ -264,12 +271,14 @@ contract HomoraBank is Initializable, IBank {
     uint share = v.totalValue == 0 ? amount : amount.mul(totalShare).div(v.totalValue);
     v.totalValue = v.totalValue.add(amount);
     v.ib.mint(msg.sender, share);
+    return share;
   }
 
   /// @dev Withdraw tokens from the vault by burning the interest-bearing tokens.
   /// @param token The vault token to withdraw.
   /// @param share The amount of share to burn.
-  function withdraw(address token, uint share) external override lock poke(token) {
+  /// @return The amount of tokens transferred to the caller via transfer call
+  function withdraw(address token, uint share) external override lock poke(token) returns (uint) {
     Vault storage v = vaults[token];
     require(v.status.acceptWithdraw(), 'not accept withdraw');
     uint totalShare = v.ib.totalSupply();
@@ -277,6 +286,7 @@ contract HomoraBank is Initializable, IBank {
     v.totalValue = v.totalValue.sub(amount);
     v.ib.burn(msg.sender, share);
     doTransferOut(token, amount);
+    return amount;
   }
 
   /// @dev Withdraw the reserve portion of the vault.

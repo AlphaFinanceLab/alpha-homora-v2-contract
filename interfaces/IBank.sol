@@ -11,10 +11,10 @@ interface IBank {
   function ibTokenOf(address token) external view returns (address);
 
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
-  function deposit(address token, uint amountCall) external;
+  function deposit(address token, uint amountCall) external returns (uint);
 
   /// @dev Withdraw tokens from the vault by burning the interest-bearing tokens.
-  function withdraw(address token, uint share) external;
+  function withdraw(address token, uint share) external returns (uint);
 
   /// @dev Borrow tokens from the vault.
   function borrow(address token, uint amount) external;
