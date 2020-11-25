@@ -3,24 +3,37 @@ pragma experimental ABIEncoderV2;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
+import '../Governable.sol';
 import '../../interfaces/IOracle.sol';
 import '../../interfaces/IBaseOracle.sol';
 
-contract ProxyOracle is IOracle {
+contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
   struct Oracle {
-    IBaseOracle source;
-    uint16 borrowFactor;
-    uint16 collateralFactor;
-    uint16 liquidationIncentive;
+    IBaseOracle source; // The address to query price data, or zero if not supported.
+    uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
+    uint16 collateralFactor; // The collateral factor for this token, multiplied by 1e4.
+    uint16 liquidationIncentive; // The liquidation incentive, multiplied by 1e4.
   }
 
-  mapping(address => Oracle) public oracles;
+  mapping(address => Oracle) public oracles; // Mapping from token address to oracle info.
 
-  function setOracles(address[] memory tokens, Oracle[] memory info) external {
+  /// @dev Create the contract and initialize the first governor.
+  constructor() public {
+    Governable.initialize();
+  }
+
+  /// @dev Set oracle information for the given list of token addresses.
+  /// @param tokens The list of tokens addresses to set oracle data.
+  /// @param info The information corresponding to each token.
+  function setOracles(address[] memory tokens, Oracle[] memory info) external onlyGov {
     require(tokens.length == info.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
+      require(info[idx].borrowFactor >= 10000, 'borrow factor must be at least 100%');
+      require(info[idx].collateralFactor <= 10000, 'collateral factor must be at most 100%');
+      require(info[idx].liquidationIncentive >= 10000, 'incentive must be at least 100%');
+      require(info[idx].liquidationIncentive <= 20000, 'incentive must be at most 200%');
       oracles[tokens[idx]] = info[idx];
     }
   }
