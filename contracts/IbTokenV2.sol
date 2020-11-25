@@ -64,16 +64,16 @@ contract IbTokenV2 is ERC20, Ownable {
   }
 
   /// @dev Mint more interest-bearing tokens to the given user.
-  /// @param usr The beneficiary to receive the tokens.
-  /// @param amt The amount of tokens to mint.
-  function mint(address usr, uint amt) public onlyOwner {
-    _mint(usr, amt);
+  /// @param user The beneficiary to receive the tokens.
+  /// @param amount The amount of tokens to mint.
+  function mint(address user, uint amount) public onlyOwner {
+    _mint(user, amount);
   }
 
   /// @dev Burn some interest-bearing tokens from the given user.
-  /// @param usr The user to have their tokens burned.
-  /// @param amt The amount of tokens to burn.
-  function burn(address usr, uint amt) public onlyOwner {
-    _burn(usr, amt);
+  /// @param user The user to have their tokens burned.
+  /// @param amount The amount of tokens to burn.
+  function burn(address user, uint amount) public onlyOwner {
+    _burn(user, amount);
   }
 }
