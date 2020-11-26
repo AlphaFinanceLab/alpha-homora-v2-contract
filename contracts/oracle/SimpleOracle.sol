@@ -6,6 +6,9 @@ import '../../interfaces/IBaseOracle.sol';
 contract SimpleOracle is IBaseOracle, Governable {
   mapping(address => uint) public prices; // Mapping from token to price in ETH (times 2**112).
 
+  /// The governor sets oracle price for a token.
+  event SetETHPx(address token, uint px);
+
   /// @dev Create the contract and initialize the first governor.
   constructor() public {
     Governable.initialize();
