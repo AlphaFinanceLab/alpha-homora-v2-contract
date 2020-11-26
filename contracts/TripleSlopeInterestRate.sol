@@ -9,6 +9,9 @@ import '../interfaces/IInterestRateModel.sol';
 contract TripleSlopeInterestRate is IInterestRateModel, Governable {
   using SafeMath for uint;
 
+  event SetInterestRate(address token, SlopeData slope);
+  event RemoveInterestRate(address token);
+
   /// The triple slope data structure, consisting of 6 small integers. See description below.
   struct SlopeData {
     uint8 exists; // 1 if exists, 0 if not.
@@ -39,6 +42,7 @@ contract TripleSlopeInterestRate is IInterestRateModel, Governable {
     require(slope.U1 < slope.U2, 'U1 must be less than U2');
     require(slope.U2 < 10000, 'U2 must be less than 100%');
     slopes[token] = slope;
+    emit SetInterestRate(token, slope);
   }
 
   /// @dev Remove interest rates for all of the given tokens.
@@ -48,6 +52,7 @@ contract TripleSlopeInterestRate is IInterestRateModel, Governable {
       address token = tokens[idx];
       require(slopes[token].exists == 1, 'slope does not exist');
       slopes[token].exists = 0;
+      emit RemoveInterestRate(token);
     }
   }
 

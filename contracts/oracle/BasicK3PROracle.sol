@@ -15,7 +15,6 @@ contract BasicK3PROracle is IBaseOracle, BaseK3PROracle, Governable {
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
   /// @param token The ERC-20 token to check the value.
   function getETHPx(address token) external view override returns (uint) {
-    return 0;
-    // return prices[token];
+    return getTWAP(token, weth);
   }
 }
