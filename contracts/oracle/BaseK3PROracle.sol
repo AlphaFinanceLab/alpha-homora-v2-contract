@@ -59,25 +59,6 @@ contract BaseK3PROracle {
     weth = _k3pr.WETH();
   }
 
-  // function getTWAP(address quote, address base) public view returns (uint) {
-  //   (address pair, address token0, ) = UniswapV2Library.pairInfo(factory, quote, base);
-  //   uint length = k3pr.observationLength(pair);
-  //   require(length > 0, 'no length-1 observation');
-  //   (uint lastTime, uint lastPx0Cumu, uint lastPx1Cumu) = k3pr.observations(pair, length - 1);
-  //   if (lastTime > now - 15 minutes) {
-  //     require(length > 1, 'no length-2 observation');
-  //     (lastTime, lastPx0Cumu, lastPx1Cumu) = k3pr.observations(pair, length - 2);
-  //   }
-  //   require(lastTime >= now - 60 minutes && lastTime <= now - 15 minutes, 'bad last time');
-  //   if (token0 == quote) {
-  //     uint currPx0Cumu = currentPx0Cumu(pair);
-  //     return (currPx0Cumu - lastPx0Cumu) / (now - lastTime); // overflow is desired
-  //   } else {
-  //     uint currPx1Cumu = currentPx1Cumu(pair);
-  //     return (currPx1Cumu - lastPx1Cumu) / (now - lastTime); // overflow is desired
-  //   }
-  // }
-
   /// @dev Return the TWAP value price0. Revert if TWAP time range is not within the threshold.
   /// @param pair The pair to query for price0.
   function price0TWAP(address pair) public view returns (uint) {
