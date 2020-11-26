@@ -1,6 +1,8 @@
 pragma solidity 0.6.12;
 
 interface IBank {
+  /// The governor sets the address of the oracle smart contract.
+  event SetOracle(address oracle);
   /// The governor adds a new vault gets added to the system.
   event AddVault(address token, uint8 status, address ib, address ir);
   /// The governor updates the status of a vault.

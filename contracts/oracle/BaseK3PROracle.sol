@@ -52,6 +52,8 @@ contract BaseK3PROracle {
 
   constructor(IKeep3rV1Oracle _k3pr) public {
     k3pr = _k3pr;
+    factory = _k3pr.factory();
+    weth = _k3pr.WETH();
   }
 
   function getETHTWAP(address token) public view returns (uint) {
@@ -70,10 +72,10 @@ contract BaseK3PROracle {
     require(lastTime >= now - 60 minutes && lastTime <= now - 15 minutes, 'bad last time');
     if (token0 == quote) {
       uint currPx0Cumm = currentPx0Cumm(pair);
-      return (currPx0Cumm - lastPx0Cumm) / (now - lastTime);
+      return (currPx0Cumm - lastPx0Cumm) / (now - lastTime); // overflow is desired
     } else {
       uint currPx1Cumm = currentPx1Cumm(pair);
-      return (currPx1Cumm - lastPx1Cumm) / (now - lastTime);
+      return (currPx1Cumm - lastPx1Cumm) / (now - lastTime); // overflow is desired
     }
   }
 
@@ -82,8 +84,8 @@ contract BaseK3PROracle {
     px0Cumm = IUniswapV2Pair(pair).price0CumulativeLast();
     (uint reserve0, uint reserve1, uint32 lastTime) = IUniswapV2Pair(pair).getReserves();
     if (lastTime != now) {
-      uint32 timeElapsed = currTime - lastTime;
-      px0Cumm += uint((reserve1 << 112) / reserve0) * timeElapsed;
+      uint32 timeElapsed = currTime - lastTime; // overflow is desired
+      px0Cumm += uint((reserve1 << 112) / reserve0) * timeElapsed; // overflow is desired
     }
   }
 
@@ -92,8 +94,8 @@ contract BaseK3PROracle {
     px1Cumm = IUniswapV2Pair(pair).price1CumulativeLast();
     (uint reserve0, uint reserve1, uint32 lastTime) = IUniswapV2Pair(pair).getReserves();
     if (lastTime != now) {
-      uint32 timeElapsed = currTime - lastTime;
-      px1Cumm += uint((reserve0 << 112) / reserve1) * timeElapsed;
+      uint32 timeElapsed = currTime - lastTime; // overflow is desired
+      px1Cumm += uint((reserve0 << 112) / reserve1) * timeElapsed; // overflow is desired
     }
   }
 }

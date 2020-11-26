@@ -134,6 +134,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     SPELL = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     oracle = _oracle;
+    emit SetOracle(address(_oracle));
   }
 
   /// @dev Return the length of the assets of the given user.
@@ -245,6 +246,13 @@ contract HomoraBank is Initializable, Governable, IBank {
     require(v.status.valid(), 'vault does not exist');
     v.ir = ir;
     emit UpdateInterestRateModel(token, address(ir));
+  }
+
+  /// @dev Set the oracle smart contract address.
+  /// @param _oracle The new oracle smart contract address.
+  function setOracle(IOracle _oracle) public onlyGov {
+    oracle = _oracle;
+    emit SetOracle(address(_oracle));
   }
 
   /// @dev Deposit tokens to the vault and get back the interest-bearing tokens.
