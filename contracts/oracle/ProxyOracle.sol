@@ -10,6 +10,9 @@ import '../../interfaces/IBaseOracle.sol';
 contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
+  /// The governor sets oracle information for a token.
+  event SetOracle(address token, Oracle info);
+
   struct Oracle {
     IBaseOracle source; // The address to query price data, or zero if not supported.
     uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
@@ -35,6 +38,7 @@ contract ProxyOracle is IOracle, Governable {
       require(info[idx].liquidationIncentive >= 10000, 'incentive must be at least 100%');
       require(info[idx].liquidationIncentive <= 20000, 'incentive must be at most 200%');
       oracles[tokens[idx]] = info[idx];
+      emit SetOracle(tokens[idx], info[idx]);
     }
   }
 
