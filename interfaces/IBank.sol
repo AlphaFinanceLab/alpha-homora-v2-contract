@@ -37,7 +37,7 @@ interface IBank {
   function borrow(address token, uint amount) external;
 
   /// @dev Repays tokens to the bank.
-  function repay(address token, uint amountCall) external payable;
+  function repay(address token, uint amountCall) external;
 
   /// @dev Transmit user assets to the spell.
   function transmit(address token, uint amount) external;

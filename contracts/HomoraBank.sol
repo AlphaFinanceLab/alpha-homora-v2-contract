@@ -7,7 +7,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.
 
 import './Governable.sol';
 import '../interfaces/IBank.sol';
-import '../interfaces/ICToken.sol';
+import '../interfaces/ICErc20.sol';
 import '../interfaces/IOracle.sol';
 
 contract HomoraCaster {
@@ -24,7 +24,6 @@ contract HomoraBank is Initializable, Governable, IBank {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
 
-  address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
   uint private constant _NOT_ENTERED = 1;
   uint private constant _ENTERED = 2;
   uint private constant _NO_ID = uint(-1);
@@ -106,7 +105,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exist');
     uint totalDebt = bank.totalDebt;
-    uint debt = ICToken(bank.cToken).borrowBalanceCurrent(address(this));
+    uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
       bank.reserve = bank.reserve.add(doBorrow(token, fee)); // totalDebt gets updated in doBorrow.
@@ -254,7 +253,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Repays tokens to the bank. Must only be called while under execution.
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
-  function repay(address token, uint amountCall) external payable override inExec poke(token) {
+  function repay(address token, uint amountCall) external override inExec poke(token) {
     (uint amount, uint share) = repayInternal(POSITION_ID, token, amountCall);
     emit Repay(POSITION_ID, msg.sender, token, amount, share);
   }
@@ -313,19 +312,12 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// NOTE: Caller must ensure that cToken interest was already accrued up to this block.
   function doBorrow(address token, uint amountCall) internal returns (uint) {
     Bank storage bank = banks[token]; // assume the input is already sanity checked.
-    if (token == ETH) {
-      ICEther cToken = ICEther(bank.cToken);
-      require(cToken.borrow(amountCall) == 0, 'bad borrow');
-      bank.totalDebt = cToken.borrowBalanceStored(address(this));
-      return amountCall;
-    } else {
-      ICErc20 cToken = ICErc20(bank.cToken);
-      uint balanceBefore = IERC20(token).balanceOf(address(this));
-      require(cToken.borrow(amountCall) == 0, 'bad borrow');
-      uint balanceAfter = IERC20(token).balanceOf(address(this));
-      bank.totalDebt = cToken.borrowBalanceStored(address(this));
-      return balanceAfter.sub(balanceBefore);
-    }
+    ICErc20 cToken = ICErc20(bank.cToken);
+    uint balanceBefore = IERC20(token).balanceOf(address(this));
+    require(cToken.borrow(amountCall) == 0, 'bad borrow');
+    uint balanceAfter = IERC20(token).balanceOf(address(this));
+    bank.totalDebt = cToken.borrowBalanceStored(address(this));
+    return balanceAfter.sub(balanceBefore);
   }
 
   /// @dev Internal function to perform repay to the bank and return the amount actually repaid.
@@ -334,50 +326,28 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// NOTE: Caller must ensure that cToken interest was already accrued up to this block.
   function doRepay(address token, uint amountCall) internal returns (uint) {
     Bank storage bank = banks[token]; // assume the input is already sanity checked.
-    if (token == ETH) {
-      ICEther cToken = ICEther(bank.cToken);
-      cToken.repayBorrow{value: amountCall}();
-      bank.totalDebt = cToken.borrowBalanceStored(address(this));
-      return amountCall;
-    } else {
-      ICErc20 cToken = ICErc20(bank.cToken);
-      uint balanceBefore = IERC20(token).balanceOf(address(this));
-      cToken.repayBorrow(amountCall);
-      uint balanceAfter = IERC20(token).balanceOf(address(this));
-      bank.totalDebt = cToken.borrowBalanceStored(address(this));
-      return balanceBefore.sub(balanceAfter);
-    }
+    ICErc20 cToken = ICErc20(bank.cToken);
+    uint balanceBefore = IERC20(token).balanceOf(address(this));
+    cToken.repayBorrow(amountCall);
+    uint balanceAfter = IERC20(token).balanceOf(address(this));
+    bank.totalDebt = cToken.borrowBalanceStored(address(this));
+    return balanceBefore.sub(balanceAfter);
   }
 
   /// @dev Internal function to perform token transfer in and return amount actually received.
   /// @param token The token to perform transferFrom action.
   /// @param amountCall The amount use in the transferFrom call.
   function doTransferIn(address token, uint amountCall) internal returns (uint) {
-    if (token == ETH) {
-      require(msg.value == amountCall); // Actually no-op. Do not call this twice per context.
-      return msg.value;
-    } else {
-      uint balanceBefore = IERC20(token).balanceOf(address(this));
-      IERC20(token).safeTransferFrom(msg.sender, address(this), amountCall);
-      uint balanceAfter = IERC20(token).balanceOf(address(this));
-      return balanceAfter.sub(balanceBefore);
-    }
+    uint balanceBefore = IERC20(token).balanceOf(address(this));
+    IERC20(token).safeTransferFrom(msg.sender, address(this), amountCall);
+    uint balanceAfter = IERC20(token).balanceOf(address(this));
+    return balanceAfter.sub(balanceBefore);
   }
 
   /// @dev Internal function to perform token transfer out to msg.sender.
   /// @param token The token to perform transfer action.
   /// @param amount The amount use in the transfer call.
   function doTransferOut(address token, uint amount) internal {
-    if (token == ETH) {
-      (bool success, ) = msg.sender.call{value: amount}(new bytes(0));
-      require(success, 'doTransferOut failed');
-    } else {
-      IERC20(token).safeTransfer(msg.sender, amount);
-    }
-  }
-
-  /// @dev Only accept ETH sent from the cETH token smart contract.
-  receive() external payable {
-    require(msg.sender == banks[ETH].cToken, 'not from cETH');
+    IERC20(token).safeTransfer(msg.sender, amount);
   }
 }
