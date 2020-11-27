@@ -39,6 +39,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   uint public _IN_EXEC_LOCK;
   address public override EXECUTOR;
   address public override SPELL;
+  uint public override CONTEXT_ID;
 
   address public caster;
   IOracle public oracle;
@@ -53,10 +54,10 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   mapping(address => Bank) public banks;
-  mapping(address => address[]) public assetsOf;
-  mapping(address => mapping(address => uint)) public assetAmountOf;
-  mapping(address => address[]) public debtsOf;
-  mapping(address => mapping(address => uint)) public debtShareOf;
+  mapping(address => mapping(uint => address[])) public assetsOf;
+  mapping(address => mapping(uint => mapping(address => uint))) public assetAmountOf;
+  mapping(address => mapping(uint => address[])) public debtsOf;
+  mapping(address => mapping(uint => mapping(address => uint))) public debtShareOf;
 
   /// @dev Reentrancy lock guard.
   modifier lock() {
@@ -91,6 +92,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     _IN_EXEC_LOCK = _NOT_ENTERED;
     EXECUTOR = _NO_ADDRESS;
     SPELL = _NO_ADDRESS;
+    CONTEXT_ID = uint(-1);
     caster = address(new HomoraCaster());
     oracle = _oracle;
     feeBps = _feeBps;
@@ -99,13 +101,13 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   /// @dev Return the length of the assets of the given user.
-  function assetsLengthOf(address user) public view returns (uint) {
-    return assetsOf[user].length;
+  function assetsLengthOf(address user, uint contextId) public view returns (uint) {
+    return assetsOf[user][contextId].length;
   }
 
   /// @dev Return the length of the debts of the given user.
-  function debtsLengthOf(address user) public view returns (uint) {
-    return debtsOf[user].length;
+  function debtsLengthOf(address user, uint contextId) public view returns (uint) {
+    return debtsOf[user][contextId].length;
   }
 
   /// @dev Trigger interest accrual for the given bank.
@@ -134,24 +136,24 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Return the total collateral value of the given user in ETH.
   /// @param user The user to query for the collateral value.
-  function getCollateralETHValue(address user) public view returns (uint) {
+  function getCollateralETHValue(address user, uint contextId) public view returns (uint) {
     uint value = 0;
-    uint length = assetsOf[user].length;
+    uint length = assetsOf[user][contextId].length;
     for (uint idx = 0; idx < length; idx++) {
-      address token = assetsOf[user][idx];
-      value = value.add(oracle.asETHCollateral(token, assetAmountOf[user][token]));
+      address token = assetsOf[user][contextId][idx];
+      value = value.add(oracle.asETHCollateral(token, assetAmountOf[user][contextId][token]));
     }
     return value;
   }
 
   /// @dev Return the total borrow value of the given user in ETH.
   /// @param user The user to query for the borrow value.
-  function getBorrowETHValue(address user) public view returns (uint) {
+  function getBorrowETHValue(address user, uint contextId) public view returns (uint) {
     uint value = 0;
-    uint length = debtsOf[user].length;
+    uint length = debtsOf[user][contextId].length;
     for (uint idx = 0; idx < length; idx++) {
-      address token = debtsOf[user][idx];
-      uint share = debtShareOf[user][token];
+      address token = debtsOf[user][contextId][idx];
+      uint share = debtShareOf[user][contextId][token];
       Bank storage bank = banks[token];
       uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
       value = value.add(oracle.asETHBorrow(token, debt));
@@ -242,15 +244,21 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
   /// @param spell The target spell to invoke the execution via HomoraCaster.
   /// @param data Extra data to pass to the target for the execution.
-  function execute(address spell, bytes memory data) external payable lock {
+  function execute(
+    uint contextId,
+    address spell,
+    bytes memory data
+  ) external payable lock {
     EXECUTOR = msg.sender;
     SPELL = spell;
+    CONTEXT_ID = contextId;
     HomoraCaster(caster).cast{value: msg.value}(spell, data);
-    uint collateralValue = getCollateralETHValue(msg.sender);
-    uint borrowValue = getBorrowETHValue(msg.sender);
+    uint collateralValue = getCollateralETHValue(msg.sender, contextId);
+    uint borrowValue = getBorrowETHValue(msg.sender, contextId);
     require(collateralValue >= borrowValue, 'insufficient collateral');
     EXECUTOR = _NO_ADDRESS;
     SPELL = _NO_ADDRESS;
+    CONTEXT_ID = uint(-1);
   }
 
   /// @dev Borrow implementation that work both for ETH and ERC20 tokens.

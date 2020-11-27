@@ -36,6 +36,9 @@ interface IBank {
   /// @dev Return the current target while under execution.
   function SPELL() external view returns (address);
 
+  /// @dev TODO
+  function CONTEXT_ID() external view returns (uint);
+
   /// @dev Borrow tokens from the bank.
   function borrow(address token, uint amount) external;
 
