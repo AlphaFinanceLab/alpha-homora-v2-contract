@@ -34,14 +34,14 @@ contract HomoraBank is Initializable, Governable, IBank {
     bool isListed; // Whether this market exists.
     address cToken; // The CToken to draw liquidity from.
     uint reserve; // The reserve portion allocated to Homora.
-    uint totalDebt; // The last recorded total debt sine last action.
+    uint totalDebt; // The last recorded total debt since last action.
     uint totalShare; // The total debt share count across all positions.
   }
 
   struct Position {
     address owner; // The owner of this position.
     address collateralToken; // The token used as collateral for this position.
-    uint collateralSize; // The size of collater token for this position.
+    uint collateralSize; // The size of collateral token for this position.
     mapping(address => uint) debtShareOf; // The debt share for each token.
   }
 
@@ -217,10 +217,10 @@ contract HomoraBank is Initializable, Governable, IBank {
   ) external payable lock {
     if (positionId == 0) {
       require(oracle.support(collateralToken), 'collateral token not supported');
+      positionId = nextPositionId++;
       Position storage position = positions[positionId];
       position.owner = msg.sender;
       position.collateralToken = collateralToken;
-      nextPositionId++;
     } else {
       require(positionId < nextPositionId, 'position id not exists');
       Position storage position = positions[positionId];
