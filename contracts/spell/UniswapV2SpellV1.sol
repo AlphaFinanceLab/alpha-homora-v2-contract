@@ -23,9 +23,9 @@ contract UniswapV2SpellV1 is BasicSpell {
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
       require(lp != address(0), 'no lp token');
-      IERC20(tokenA).approveInfinite(address(router));
-      IERC20(tokenB).approveInfinite(address(router));
-      IERC20(lp).approveInfinite(address(router));
+      ensureApprove(tokenA, address(router));
+      ensureApprove(tokenB, address(router));
+      ensureApprove(lp, address(router));
       pairs[tokenA][tokenB] = lp;
       pairs[tokenB][tokenA] = lp;
     }
@@ -56,7 +56,7 @@ contract UniswapV2SpellV1 is BasicSpell {
         address(this),
         now
       );
-    bank.putCollateral(lp, liquidity);
+    bank.putCollateral(liquidity);
     doRefundETH();
     doRefund(token);
   }
@@ -101,7 +101,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint amtTokenRepay
   ) public {
     address lp = getPair(weth, token);
-    bank.takeCollateral(lp, liquidity);
+    bank.takeCollateral(liquidity);
     router.removeLiquidity(weth, token, liquidity, amtETHMin, amtTokenMin, address(this), now);
     doRepay(weth, amtETHRepay);
     doRepay(token, amtTokenRepay);
@@ -119,7 +119,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint amtBRepay
   ) public {
     address lp = getPair(tokenA, tokenB);
-    bank.takeCollateral(lp, liquidity);
+    bank.takeCollateral(liquidity);
     router.removeLiquidity(tokenA, tokenB, liquidity, amtAMin, amtBMin, address(this), now);
     doRepay(tokenA, amtARepay);
     doRepay(tokenB, amtBRepay);

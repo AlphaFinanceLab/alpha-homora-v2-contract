@@ -99,6 +99,13 @@ contract HomoraBank is Initializable, Governable, IBank {
     emit SetFeeBps(_feeBps);
   }
 
+  /// @dev Return the current executor (the owner of the current position).
+  function EXECUTOR() external view override returns (address) {
+    uint positionId = POSITION_ID;
+    require(positionId != _NO_ID, 'not under execution');
+    return positions[positionId].owner;
+  }
+
   /// @dev Trigger interest accrual for the given bank.
   /// @param token The underlying token to trigger the interest accrual.
   function accrue(address token) public {

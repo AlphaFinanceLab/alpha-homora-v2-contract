@@ -33,6 +33,9 @@ interface IBank {
   /// @dev Return the current target while under execution.
   function SPELL() external view returns (address);
 
+  /// @dev Return the current executor (the owner of the current position).
+  function EXECUTOR() external view returns (address);
+
   /// @dev Borrow tokens from the bank.
   function borrow(address token, uint amount) external;
 

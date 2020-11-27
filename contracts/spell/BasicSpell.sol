@@ -6,27 +6,29 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC2
 import '../../interfaces/IBank.sol';
 import '../../interfaces/IWETH.sol';
 
-library ERC20ApproveInfinite {
-  using SafeERC20 for IERC20;
-
-  /// @dev Convenient function to safe approve infinite spending.
-  /// @param token The token to call approve action on.
-  /// @param spender The spender to authorize infinite spending.
-  function approveInfinite(IERC20 token, address spender) internal {
-    token.safeApprove(spender, 0);
-    token.safeApprove(spender, uint(-1));
-  }
-}
-
 contract BasicSpell {
-  using ERC20ApproveInfinite for IERC20;
+  using SafeERC20 for IERC20;
 
   IBank public bank;
   address public weth;
 
+  mapping(address => mapping(address => bool)) public approved;
+
   constructor(IBank _bank, address _weth) public {
     bank = _bank;
     weth = _weth;
+    ensureApprove(_weth, address(_bank));
+  }
+
+  /// @dev Ensure that the spell approve the given spender to spend all of its tokens.
+  /// @param token The token to approve.
+  /// @param spender The spender to allow spending.
+  /// NOTE: This is safe because spell is never built to hold fund custody.
+  function ensureApprove(address token, address spender) public {
+    if (!approved[token][spender]) {
+      IERC20(token).safeApprove(spender, uint(-1));
+      approved[token][spender] = true;
+    }
   }
 
   /// @dev Internal call to convert msg.value ETH to WETH inside the contract.
@@ -78,25 +80,29 @@ contract BasicSpell {
   /// @param amount The amount to repay.
   function doRepay(address token, uint amount) internal {
     if (amount > 0) {
+      ensureApprove(token, address(bank));
       bank.repay(token, amount);
     }
   }
 
   /// @dev Internal call to put collateral tokens to the bank.
-  /// @param token The collateral token to put to the bank.
   /// @param amount The amount to put to the bank.
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
-      bank.putCollateral(token, amount);
+      ensureApprove(token, address(bank));
+      bank.putCollateral(amount);
     }
   }
 
   /// @dev Internal call to take collateral tokens bank from the bank.
-  /// @param token The collateral token to take back.
   /// @param amount The amount to take back.
-  function doTakeCollateral(address token, uint amount) internal {
+  function doTakeCollateral(uint amount) internal {
     if (amount > 0) {
-      bank.takeCollateral(token, amount);
+      bank.takeCollateral(amount);
     }
+  }
+
+  receive() external payable {
+    require(msg.sender == weth, 'ETH must come from WETH');
   }
 }

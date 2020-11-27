@@ -1,4 +1,4 @@
-from brownie import (accounts, BasicK3PROracle, HomoraBank, TripleSlopeInterestRate)
+from brownie import (accounts, BasicK3PROracle, HomoraBank)
 
 
 def main():
