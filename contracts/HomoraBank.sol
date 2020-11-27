@@ -118,7 +118,7 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Convenient function to trigger interest accrual for the list of banks.
   /// @param tokens The list of banks to trigger interest accrual.
-  function accrueAll(address[] memory tokens) public {
+  function accrueAll(address[] memory tokens) external {
     for (uint idx = 0; idx < tokens.length; idx++) {
       accrue(tokens[idx]);
     }
@@ -152,7 +152,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Add a new bank to the ecosystem.
   /// @param token The underlying token for the bank.
   /// @param cToken The address of the cToken smart contract.
-  function addBank(address token, address cToken) public onlyGov {
+  function addBank(address token, address cToken) external onlyGov {
     Bank storage bank = banks[token];
     require(!bank.isListed, 'bank already exists');
     bank.isListed = true;
@@ -163,14 +163,14 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Set the oracle smart contract address.
   /// @param _oracle The new oracle smart contract address.
-  function setOracle(IOracle _oracle) public onlyGov {
+  function setOracle(IOracle _oracle) external onlyGov {
     oracle = _oracle;
     emit SetOracle(address(_oracle));
   }
 
   /// @dev Set the fee bps value that Homora bank charges.
   /// @param _feeBps The new fee bps value.
-  function setFeeBps(uint _feeBps) public onlyGov {
+  function setFeeBps(uint _feeBps) external onlyGov {
     require(_feeBps <= 10000, 'fee too high');
     feeBps = _feeBps;
     emit SetFeeBps(_feeBps);
@@ -178,7 +178,7 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Withdraw the reserve portion of the bank.
   /// @param amount The amount of tokens to withdraw.
-  function withdrawReserve(address token, uint amount) public onlyGov lock poke(token) {
+  function withdrawReserve(address token, uint amount) external onlyGov lock poke(token) {
     Bank storage bank = banks[token];
     bank.reserve = bank.reserve.sub(amount);
     doTransferOut(token, amount);
