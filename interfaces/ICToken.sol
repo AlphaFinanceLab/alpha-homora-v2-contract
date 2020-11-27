@@ -1,11 +1,17 @@
 pragma solidity 0.6.12;
 
-interface ICErc20 {
+interface ICToken {
   function borrowBalanceCurrent(address account) external returns (uint);
 
   function borrowBalanceStored(address account) external view returns (uint);
 
   function borrow(uint borrowAmount) external returns (uint);
+}
 
-  function repayBorrow(uint repayAmount) external payable;
+interface ICErc20 is ICToken {
+  function repayBorrow(uint repayAmount) external;
+}
+
+interface ICEther is ICToken {
+  function repayBorrow() external payable;
 }

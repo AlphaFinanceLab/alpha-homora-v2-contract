@@ -6,11 +6,8 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
 import './Governable.sol';
-import './IbTokenV2.sol';
 import '../interfaces/IBank.sol';
-import '../interfaces/ICErc20.sol';
-import '../interfaces/ICEther.sol';
-import '../interfaces/IInterestRateModel.sol';
+import '../interfaces/ICToken.sol';
 import '../interfaces/IOracle.sol';
 
 contract HomoraCaster {
@@ -109,7 +106,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exist');
     uint totalDebt = bank.totalDebt;
-    uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
+    uint debt = ICToken(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
       bank.totalDebt = debt;
