@@ -33,31 +33,37 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   uint private constant _NOT_ENTERED = 1;
   uint private constant _ENTERED = 2;
+  uint private constant _NO_ID = uint(-1);
   address private constant _NO_ADDRESS = address(1);
 
-  uint public _GENERAL_LOCK;
-  uint public _IN_EXEC_LOCK;
-  address public override EXECUTOR;
-  address public override SPELL;
-  uint public override CONTEXT_ID;
-
-  address public caster;
-  IOracle public oracle;
-  uint public feeBps;
-
   struct Bank {
-    bool active;
-    address cToken;
-    uint reserve;
-    uint totalDebt;
-    uint totalShare;
+    bool isListed; // Whether this market exists.
+    address cToken; // The CToken to draw liquidity from.
+    uint reserve; // The reserve portion allocated to Homora.
+    uint totalDebt; // The last recorded total debt sine last action.
+    uint totalShare; // The total debt share count across all positions.
   }
 
-  mapping(address => Bank) public banks;
-  mapping(address => mapping(uint => address[])) public assetsOf;
-  mapping(address => mapping(uint => mapping(address => uint))) public assetAmountOf;
-  mapping(address => mapping(uint => address[])) public debtsOf;
-  mapping(address => mapping(uint => mapping(address => uint))) public debtShareOf;
+  struct Position {
+    address owner; // The owner of this position.
+    address collateralToken; // The token used as collateral for this position.
+    uint collateralSize; // The size of collater token for this position.
+    mapping(address => uint) debtShareOf; // The debt share for each token.
+  }
+
+  uint public _GENERAL_LOCK; // TEMPORARY: re-entrancy lock guard.
+  uint public _IN_EXEC_LOCK; // TEMPORARY: exec lock guard.
+  uint public override POSITION_ID; // TEMPORARY: position ID currently under execution.
+  address public override SPELL; // TEMPORARY: spell currently under execution.
+
+  address public caster; // The caster address for untrusted execution.
+  IOracle public oracle; // The oracle address for determining prices.
+  uint public feeBps; // The fee collected as protocol reserve in basis point from interest.
+  uint public nextPositionId; // Next available position ID, starting from 1 (see initialize).
+
+  address[] public allBanks; // The list of all listed banks.
+  mapping(address => Bank) public banks; // Mapping from token to bank data.
+  mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
   /// @dev Reentrancy lock guard.
   modifier lock() {
@@ -69,7 +75,7 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Ensure that the function is called from within the execution scope.
   modifier inExec() {
-    require(EXECUTOR != _NO_ADDRESS, 'not within execution');
+    require(POSITION_ID != _NO_ID, 'not within execution');
     require(SPELL == msg.sender, 'not from spell');
     require(_IN_EXEC_LOCK == _NOT_ENTERED, 'in exec lock');
     _IN_EXEC_LOCK = _ENTERED;
@@ -90,31 +96,21 @@ contract HomoraBank is Initializable, Governable, IBank {
     Governable.initialize();
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
-    EXECUTOR = _NO_ADDRESS;
+    POSITION_ID = _NO_ID;
     SPELL = _NO_ADDRESS;
-    CONTEXT_ID = uint(-1);
     caster = address(new HomoraCaster());
     oracle = _oracle;
     feeBps = _feeBps;
+    nextPositionId = 1;
     emit SetOracle(address(_oracle));
     emit SetFeeBps(_feeBps);
-  }
-
-  /// @dev Return the length of the assets of the given user.
-  function assetsLengthOf(address user, uint contextId) public view returns (uint) {
-    return assetsOf[user][contextId].length;
-  }
-
-  /// @dev Return the length of the debts of the given user.
-  function debtsLengthOf(address user, uint contextId) public view returns (uint) {
-    return debtsOf[user][contextId].length;
   }
 
   /// @dev Trigger interest accrual for the given bank.
   /// @param token The underlying token to trigger the interest accrual.
   function accrue(address token) public {
     Bank storage bank = banks[token];
-    require(bank.active, 'bank not active');
+    require(bank.isListed, 'bank not exist');
     uint totalDebt = bank.totalDebt;
     uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
@@ -134,29 +130,27 @@ contract HomoraBank is Initializable, Governable, IBank {
     }
   }
 
-  /// @dev Return the total collateral value of the given user in ETH.
-  /// @param user The user to query for the collateral value.
-  function getCollateralETHValue(address user, uint contextId) public view returns (uint) {
-    uint value = 0;
-    uint length = assetsOf[user][contextId].length;
-    for (uint idx = 0; idx < length; idx++) {
-      address token = assetsOf[user][contextId][idx];
-      value = value.add(oracle.asETHCollateral(token, assetAmountOf[user][contextId][token]));
-    }
-    return value;
+  /// @dev Return the total collateral value of the given position in ETH.
+  /// @param positionId The position ID to query for the collateral value.
+  function getCollateralETHValue(uint positionId) public view returns (uint) {
+    Position storage position = positions[positionId];
+    return oracle.asETHCollateral(position.collateralToken, position.collateralSize);
   }
 
-  /// @dev Return the total borrow value of the given user in ETH.
-  /// @param user The user to query for the borrow value.
-  function getBorrowETHValue(address user, uint contextId) public view returns (uint) {
+  /// @dev Return the total borrow value of the given position in ETH.
+  /// @param positionId The position ID to query for the borrow value.
+  function getBorrowETHValue(uint positionId) public view returns (uint) {
     uint value = 0;
-    uint length = debtsOf[user][contextId].length;
+    uint length = allBanks.length;
+    Position storage position = positions[positionId];
     for (uint idx = 0; idx < length; idx++) {
-      address token = debtsOf[user][contextId][idx];
-      uint share = debtShareOf[user][contextId][token];
-      Bank storage bank = banks[token];
-      uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
-      value = value.add(oracle.asETHBorrow(token, debt));
+      address token = allBanks[idx];
+      uint share = position.debtShareOf[token];
+      if (share != 0) {
+        Bank storage bank = banks[token];
+        uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
+        value = value.add(oracle.asETHBorrow(token, debt));
+      }
     }
     return value;
   }
@@ -164,29 +158,13 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Add a new bank to the ecosystem.
   /// @param token The underlying token for the bank.
   /// @param cToken The address of the cToken smart contract.
-  /// @param status The initial bank status.
-  function addBank(
-    address token,
-    address cToken,
-    bool status
-  ) public onlyGov {
+  function addBank(address token, address cToken) public onlyGov {
     Bank storage bank = banks[token];
-    require(cToken != address(0), 'bad cToken');
-    require(bank.cToken != address(0), 'bank already exists');
+    require(!bank.isListed, 'bank already exists');
+    bank.isListed = true;
     bank.cToken = cToken;
-    bank.active = status;
-    emit AddBank(token, cToken, status);
-  }
-
-  /// @dev Set bank status for the given set of banks.
-  /// @param tokens The set of bank tokens to update the bank status.
-  /// @param status The new bank status to set.
-  function setBankStatus(address[] memory tokens, bool status) public onlyGov {
-    for (uint idx = 0; idx < tokens.length; idx++) {
-      address token = tokens[idx];
-      Bank storage bank = banks[token];
-      bank.active = status;
-    }
+    allBanks.push(token);
+    emit AddBank(token, cToken);
   }
 
   /// @dev Set the oracle smart contract address.
@@ -214,152 +192,126 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   /// @dev Liquidate a position. Pay debt for its owner and take the collateral.
-  /// @param user The user position to perform liquidation on.
+  /// @param positionId The position ID to liquidate.
   /// @param debtToken The debt token to repay.
-  /// @param collateralToken The collateral token to take in exchange for clearing debts.
   /// @param amountCall The amount to repay when doing transferFrom call.
   function liquidate(
-    address user,
+    uint positionId,
     address debtToken,
-    address collateralToken,
     uint amountCall
   ) external lock poke(debtToken) {
-    // TODO
-    // require(oracle.support(collateralToken), 'collateral token not supported');
-    // uint collateralValue = getCollateralETHValue(user);
-    // uint borrowValue = getBorrowETHValue(user);
-    // require(collateralValue < borrowValue, 'account still healthy');
-    // (uint amountPaid, uint share) = repayInternal(user, debtToken, amountCall);
-    // uint bounty = oracle.convertForLiquidation(debtToken, collateralToken, amountPaid);
-    // uint oldAmount = assetAmountOf[user][collateralToken];
-    // uint newAmount = oldAmount.sub(bounty);
-    // if (oldAmount != 0 && newAmount == 0) {
-    //   remove(assetsOf[user], collateralToken);
-    // }
-    // assetAmountOf[user][collateralToken] = newAmount;
-    // doTransferOut(collateralToken, bounty);
-    // emit Liquidate(user, msg.sender, debtToken, collateralToken, amountPaid, share, bounty);
+    uint collateralValue = getCollateralETHValue(positionId);
+    uint borrowValue = getBorrowETHValue(positionId);
+    require(collateralValue < borrowValue, 'position still healthy');
+    Position storage position = positions[positionId];
+    (uint amountPaid, uint share) = repayInternal(positionId, debtToken, amountCall);
+    uint bounty = oracle.convertForLiquidation(debtToken, position.collateralToken, amountPaid);
+    doTransferOut(position.collateralToken, bounty);
+    emit Liquidate(positionId, msg.sender, debtToken, amountPaid, share, bounty);
   }
 
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
+  /// @param positionId The position ID to execution the action, or zero for new position.
   /// @param spell The target spell to invoke the execution via HomoraCaster.
+  /// @param collateralToken The collateral token for this position.
   /// @param data Extra data to pass to the target for the execution.
   function execute(
-    uint contextId,
+    uint positionId,
     address spell,
+    address collateralToken,
     bytes memory data
   ) external payable lock {
-    EXECUTOR = msg.sender;
+    if (positionId == 0) {
+      require(oracle.support(collateralToken), 'collateral token not supported');
+      Position storage position = positions[positionId];
+      position.owner = msg.sender;
+      position.collateralToken = collateralToken;
+      nextPositionId++;
+    } else {
+      require(positionId < nextPositionId, 'position id not exists');
+      Position storage position = positions[positionId];
+      require(msg.sender == position.owner, 'not position owner');
+      require(collateralToken == position.collateralToken, 'bad position token');
+    }
+    POSITION_ID = positionId;
     SPELL = spell;
-    CONTEXT_ID = contextId;
     HomoraCaster(caster).cast{value: msg.value}(spell, data);
-    uint collateralValue = getCollateralETHValue(msg.sender, contextId);
-    uint borrowValue = getBorrowETHValue(msg.sender, contextId);
+    uint collateralValue = getCollateralETHValue(positionId);
+    uint borrowValue = getBorrowETHValue(positionId);
     require(collateralValue >= borrowValue, 'insufficient collateral');
-    EXECUTOR = _NO_ADDRESS;
+    POSITION_ID = _NO_ID;
     SPELL = _NO_ADDRESS;
-    CONTEXT_ID = uint(-1);
   }
 
   /// @dev Borrow implementation that work both for ETH and ERC20 tokens.
   /// @param token The token to borrow from the bank.
+  /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
     Bank storage bank = banks[token];
-    require(bank.active, 'bank not active');
-    address executor = EXECUTOR;
+    require(bank.isListed, 'bank not exist');
+    Position storage position = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint received = doBorrow(token, amount);
     uint share = totalShare == 0 ? amount : amount.mul(totalDebt).div(totalShare);
-    bank.totalShare = totalShare.add(share);
-    uint oldShare = debtShareOf[executor][token];
-    uint newShare = oldShare.add(share);
-    if (oldShare == 0 && newShare != 0) {
-      debtsOf[executor].push(token);
-      require(debtsOf[executor].length <= MAX_DEBT_COUNT, 'too many borrow assets');
-    }
-    debtShareOf[executor][token] = newShare;
-    doTransferOut(token, received);
-    emit Borrow(executor, msg.sender, token, amount, share);
+    position.debtShareOf[token] = position.debtShareOf[token].add(share);
+    doTransferOut(token, doBorrow(token, amount));
+    emit Borrow(POSITION_ID, msg.sender, token, amount, share);
   }
 
   /// @dev Repays tokens to the bank. Must only be called while under execution.
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external payable override inExec poke(token) {
-    address executor = EXECUTOR;
-    (uint amount, uint share) = repayInternal(executor, token, amountCall);
-    emit Repay(executor, msg.sender, token, amount, share);
+    (uint amount, uint share) = repayInternal(POSITION_ID, token, amountCall);
+    emit Repay(POSITION_ID, msg.sender, token, amount, share);
   }
 
-  /// @dev Perform repay action. Refund rest to msg.sender.
-  /// @param user The user to repay debts to.
+  /// @dev Perform repay action. Return the amount actually taken and the debt share reduced.
+  /// @param positionId The position ID to repay the debt.
   /// @param token The bank token to pay the debt.
-  /// @param amountCall The amount to repay by calling transferFrom.
-  /// @return The amount actually taken and the debt share reduced.
+  /// @param amountCall The amount to repay by calling transferFrom, or 0 for debt size.
   function repayInternal(
-    address user,
+    uint positionId,
     address token,
     uint amountCall
   ) internal returns (uint, uint) {
     Bank storage bank = banks[token];
-    require(bank.active, 'bank not active');
+    require(bank.isListed, 'bank not exist');
+    Position storage position = positions[positionId];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint oldShare = debtShareOf[user][token];
+    uint oldShare = position.debtShareOf[token];
     uint oldDebt = oldShare.mul(totalDebt).div(totalShare);
-    if (amountCall == uint(-1)) {
-      amountCall = oldDebt;
-    }
-    uint amount = doRepay(token, doTransferIn(token, amountCall));
-    uint lessShare = amount >= oldDebt ? oldShare : amount.mul(totalShare).div(totalDebt);
+    uint paid = doRepay(token, doTransferIn(token, amountCall == uint(-1) ? oldDebt : amountCall));
+    uint lessShare = paid >= oldDebt ? oldShare : paid.mul(totalShare).div(totalDebt);
     bank.totalShare = totalShare.sub(lessShare);
-    uint newShare = oldDebt.sub(lessShare);
-    if (oldDebt != 0 && newShare == 0) {
-      remove(debtsOf[user], token);
-    }
-    return (amount, lessShare);
+    position.debtShareOf[token] = oldShare.sub(lessShare);
+    return (paid, lessShare);
   }
 
   /// @dev Transmit user assets to the caller, so users only need to approve Bank for spending.
   /// @param token The token to transfer from user to the caller.
   /// @param amount The amount to transfer.
   function transmit(address token, uint amount) external override inExec {
-    require(oracle.support(token), 'token not supported');
-    IERC20(token).safeTransferFrom(EXECUTOR, msg.sender, amount);
+    Position storage position = positions[POSITION_ID];
+    IERC20(token).safeTransferFrom(position.owner, msg.sender, amount);
   }
 
   /// @dev Put more collateral for users. Must only be called during execution.
-  /// @param token The token to put as collateral.
   /// @param amountCall The amount of tokens to put via transferFrom.
-  function putCollateral(address token, uint amountCall) external override inExec {
-    require(oracle.support(token), 'token not supported');
-    address executor = EXECUTOR;
-    uint amount = doTransferIn(token, amountCall);
-    uint oldAmount = assetAmountOf[executor][token];
-    uint newAmount = oldAmount.add(amount);
-    if (oldAmount == 0 && newAmount != 0) {
-      assetsOf[executor].push(token);
-      require(assetsOf[executor].length <= MAX_ASSET_COUNT, 'too many collateral assets');
-    }
-    assetAmountOf[executor][token] = newAmount;
-    emit PutCollateral(executor, msg.sender, token, amount);
+  function putCollateral(uint amountCall) external override inExec {
+    Position storage position = positions[POSITION_ID];
+    uint amount = doTransferIn(position.collateralToken, amountCall);
+    position.collateralSize = position.collateralSize.add(amount);
+    emit PutCollateral(POSITION_ID, msg.sender, amount);
   }
 
   /// @dev Take some collateral back. Must only be called during execution.
-  /// @param token The token to take back from being collateral.
   /// @param amount The amount of tokens to take back via transfer.
-  function takeCollateral(address token, uint amount) external override inExec {
-    require(oracle.support(token), 'token not supported');
-    address executor = EXECUTOR;
-    uint oldAmount = assetAmountOf[executor][token];
-    uint newAmount = oldAmount.sub(amount);
-    if (oldAmount != 0 && newAmount == 0) {
-      remove(assetsOf[executor], token);
-    }
-    assetAmountOf[executor][token] = newAmount;
-    doTransferOut(token, amount);
-    emit TakeCollateral(executor, msg.sender, token, amount);
+  function takeCollateral(uint amount) external override inExec {
+    Position storage position = positions[POSITION_ID];
+    position.collateralSize = position.collateralSize.sub(amount);
+    emit TakeCollateral(POSITION_ID, msg.sender, amount);
   }
 
   /// @dev Internal function to perform borrow from the bank and return the amount received.
@@ -429,23 +381,6 @@ contract HomoraBank is Initializable, Governable, IBank {
     } else {
       IERC20(token).safeTransfer(msg.sender, amount);
     }
-  }
-
-  /// @dev Remove the given address from the storage list. The item must exist in the list.
-  /// @param list The storage list to remove an address.
-  /// @param addr The address to be removed from the list.
-  function remove(address[] storage list, address addr) internal {
-    uint length = list.length;
-    bool found = false;
-    for (uint idx = 0; idx < length; idx++) {
-      if (list[idx] == addr) {
-        list[idx] = list[length - 1];
-        found = true;
-        break;
-      }
-    }
-    assert(found);
-    list.pop();
   }
 
   /// @dev Only accept ETH sent from the cETH token smart contract.

@@ -6,38 +6,32 @@ interface IBank {
   /// The governor sets the basis point fee of the bank.
   event SetFeeBps(uint feeBps);
   /// The governor adds a new bank gets added to the system.
-  event AddBank(address token, address cToken, bool status);
-  /// The governor updates the status of a bank.
-  event UpdateStatus(address token, bool status);
+  event AddBank(address token, address cToken);
   /// The governor withdraw tokens from the reserve of a bank.
   event WithdrawReserve(address user, address token, uint amount);
   /// Someone borrows tokens from a bank via a spell caller.
-  event Borrow(address user, address caller, address token, uint amount, uint share);
+  event Borrow(uint positionId, address caller, address token, uint amount, uint share);
   /// Someone repays tokens to a bank via a spell caller.
-  event Repay(address user, address caller, address token, uint amount, uint share);
+  event Repay(uint positionId, address caller, address token, uint amount, uint share);
   /// Someone puts tokens as collateral via a spell caller.
-  event PutCollateral(address user, address caller, address token, uint amount);
+  event PutCollateral(uint positionId, address caller, uint amount);
   /// Someone takes tokens from collateral via a spell caller.
-  event TakeCollateral(address user, address caller, address token, uint amount);
+  event TakeCollateral(uint positionId, address caller, uint amount);
   /// Someone calls liquidatation on a position, paying debt and taking collateral tokens.
   event Liquidate(
-    address owner,
+    uint positionId,
     address liquidator,
     address debtToken,
-    address collateralToken,
     uint amount,
     uint share,
     uint bounty
   );
 
-  /// @dev Return the current executor while under execution.
-  function EXECUTOR() external view returns (address);
+  /// @dev Return the current position while under execution.
+  function POSITION_ID() external view returns (uint);
 
   /// @dev Return the current target while under execution.
   function SPELL() external view returns (address);
-
-  /// @dev TODO
-  function CONTEXT_ID() external view returns (uint);
 
   /// @dev Borrow tokens from the bank.
   function borrow(address token, uint amount) external;
@@ -49,8 +43,8 @@ interface IBank {
   function transmit(address token, uint amount) external;
 
   /// @dev Put more collateral for users.
-  function putCollateral(address token, uint amountCall) external;
+  function putCollateral(uint amountCall) external;
 
   /// @dev Take some collateral back.
-  function takeCollateral(address token, uint amount) external;
+  function takeCollateral(uint amount) external;
 }
