@@ -109,8 +109,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint debt = ICToken(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
-      bank.totalDebt = debt;
-      bank.reserve = bank.reserve.add(doBorrow(token, fee));
+      bank.reserve = bank.reserve.add(doBorrow(token, fee)); // totalDebt gets updated in doBorrow.
     } else {
       bank.totalDebt = debt;
     }
