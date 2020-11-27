@@ -28,9 +28,6 @@ contract HomoraBank is Initializable, Governable, IBank {
   using SafeERC20 for IERC20;
 
   address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-  uint public constant MAX_ASSET_COUNT = 10;
-  uint public constant MAX_DEBT_COUNT = 10;
-
   uint private constant _NOT_ENTERED = 1;
   uint private constant _ENTERED = 2;
   uint private constant _NO_ID = uint(-1);
