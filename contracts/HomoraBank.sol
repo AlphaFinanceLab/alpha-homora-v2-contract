@@ -307,6 +307,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   function takeCollateral(uint amount) external override inExec {
     Position storage position = positions[POSITION_ID];
     position.collateralSize = position.collateralSize.sub(amount);
+    doTransferOut(position.collateralToken, amount);
     emit TakeCollateral(POSITION_ID, msg.sender, amount);
   }
 
