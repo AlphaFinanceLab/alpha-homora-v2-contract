@@ -16,7 +16,7 @@ contract HomoraCaster {
   /// @param data The data using in the call.
   function cast(address target, bytes calldata data) external payable {
     (bool ok, ) = target.call{value: msg.value}(data);
-    require(ok, 'bad cast call');
+    // require(ok, 'bad cast call');
   }
 }
 
@@ -100,7 +100,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   /// @dev Return the current executor (the owner of the current position).
-  function EXECUTOR() external view override returns (address) {
+  function EXECUTOR() external override view returns (address) {
     uint positionId = POSITION_ID;
     require(positionId != _NO_ID, 'not under execution');
     return positions[positionId].owner;
