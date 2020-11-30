@@ -52,7 +52,7 @@ contract BasicSpell {
   function doRefund(address token) internal {
     uint balance = IERC20(token).balanceOf(address(this));
     if (balance > 0) {
-      IERC20(token).transfer(bank.EXECUTOR(), balance);
+      IERC20(token).safeTransfer(bank.EXECUTOR(), balance);
     }
   }
 
