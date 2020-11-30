@@ -1,12 +1,14 @@
 pragma solidity 0.6.12;
 
 interface IBank {
+  /// The governor adds a new bank gets added to the system.
+  event AddBank(address token, address cToken);
+  /// The governor upgrades the cToken address for the given bank.
+  event SetCToken(address token, address cToken);
   /// The governor sets the address of the oracle smart contract.
   event SetOracle(address oracle);
   /// The governor sets the basis point fee of the bank.
   event SetFeeBps(uint feeBps);
-  /// The governor adds a new bank gets added to the system.
-  event AddBank(address token, address cToken);
   /// The governor withdraw tokens from the reserve of a bank.
   event WithdrawReserve(address user, address token, uint amount);
   /// Someone borrows tokens from a bank via a spell caller.

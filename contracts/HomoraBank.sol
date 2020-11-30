@@ -32,9 +32,9 @@ contract HomoraBank is Initializable, Governable, IBank {
   struct Bank {
     bool isListed; // Whether this market exists.
     address cToken; // The CToken to draw liquidity from.
-    uint reserve; // The reserve portion allocated to Homora.
+    uint reserve; // The reserve portion allocated to Homora protocol.
     uint totalDebt; // The last recorded total debt since last action.
-    uint totalShare; // The total debt share count across all positions.
+    uint totalShare; // The total debt share count across all open positions.
   }
 
   struct Position {
@@ -170,6 +170,16 @@ contract HomoraBank is Initializable, Governable, IBank {
     emit AddBank(token, cToken);
   }
 
+  /// @dev Upgrade cToken contract address to a new address. Must be used with care!
+  /// @param token The underlying token for the bank.
+  /// @param cToken The address of the cToken smart contract.
+  function setCToken(address token, address cToken) external onlyGov {
+    Bank storage bank = banks[token];
+    require(bank.isListed, 'bank not exists');
+    bank.cToken = cToken;
+    emit SetCToken(token, cToken);
+  }
+
   /// @dev Set the oracle smart contract address.
   /// @param _oracle The new oracle smart contract address.
   function setOracle(IOracle _oracle) external onlyGov {
@@ -246,12 +256,12 @@ contract HomoraBank is Initializable, Governable, IBank {
     SPELL = _NO_ADDRESS;
   }
 
-  /// @dev Borrow implementation that work both for ETH and ERC20 tokens.
+  /// @dev Borrow tokens from tha bank. Must only be called while under execution.
   /// @param token The token to borrow from the bank.
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exist');
+    require(bank.isListed, 'bank not exists');
     Position storage position = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
@@ -261,7 +271,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     emit Borrow(POSITION_ID, msg.sender, token, amount, share);
   }
 
-  /// @dev Repays tokens to the bank. Must only be called while under execution.
+  /// @dev Repay tokens to the bank. Must only be called while under execution.
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
@@ -279,7 +289,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint amountCall
   ) internal returns (uint, uint) {
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exist');
+    require(bank.isListed, 'bank not exists');
     Position storage position = positions[positionId];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
