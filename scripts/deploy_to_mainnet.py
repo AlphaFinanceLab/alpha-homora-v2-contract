@@ -11,6 +11,10 @@ def main():
         '0x73353801921417F465377c8d898c6f4C0270282C',
         {'from': deployer},
     )
+
+    spell = UniswapV2SpellV1.deploy(
+        
+    )
     data = oracle.getETHPx('0x6B175474E89094C44Da98b954EedeAC495271d0F')
     print(data)
     print(1 / (data / (2**112)))
