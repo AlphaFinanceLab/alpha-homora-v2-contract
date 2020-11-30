@@ -5,7 +5,7 @@ import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/IKeep3rV1Oracle.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 
-contract BasicKP3ROracle is IBaseOracle, BaseKP3ROracle {
+contract ERC20KP3ROracle is IBaseOracle, BaseKP3ROracle {
   constructor(IKeep3rV1Oracle _kp3r) public BaseKP3ROracle(_kp3r) {}
 
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.

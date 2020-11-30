@@ -233,7 +233,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     address spell,
     address collateralToken,
     bytes memory data
-  ) external payable lock {
+  ) external payable lock returns (uint) {
     if (positionId == 0) {
       require(oracle.support(collateralToken), 'collateral token not supported');
       positionId = nextPositionId++;
@@ -254,6 +254,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     require(collateralValue >= borrowValue, 'insufficient collateral');
     POSITION_ID = _NO_ID;
     SPELL = _NO_ADDRESS;
+    return positionId;
   }
 
   /// @dev Borrow tokens from tha bank. Must only be called while under execution.
@@ -266,6 +267,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
     uint share = totalShare == 0 ? amount : amount.mul(totalDebt).div(totalShare);
+    bank.totalShare = bank.totalShare.add(share);
     position.debtShareOf[token] = position.debtShareOf[token].add(share);
     doTransferOut(token, doBorrow(token, amount));
     emit Borrow(POSITION_ID, msg.sender, token, amount, share);

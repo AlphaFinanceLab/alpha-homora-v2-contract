@@ -1,9 +1,9 @@
-from brownie import accounts, BasicKP3ROracle, LpTokenKP3ROracle
+from brownie import accounts, ERC20KP3ROracle, LpTokenKP3ROracle
 
 
 def main():
     deployer = accounts[0]
-    oracle = BasicKP3ROracle.deploy(
+    oracle = ERC20KP3ROracle.deploy(
         '0x73353801921417F465377c8d898c6f4C0270282C',
         {'from': deployer},
     )
