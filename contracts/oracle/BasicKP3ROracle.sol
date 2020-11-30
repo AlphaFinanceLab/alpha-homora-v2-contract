@@ -1,7 +1,6 @@
 pragma solidity 0.6.12;
 
 import './BaseKP3ROracle.sol';
-import '../Governable.sol';
 import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/IKeep3rV1Oracle.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
