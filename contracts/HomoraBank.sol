@@ -115,7 +115,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   }
 
   /// @dev Return the current executor (the owner of the current position).
-  function EXECUTOR() external view override returns (address) {
+  function EXECUTOR() external override view returns (address) {
     uint positionId = POSITION_ID;
     require(positionId != _NO_ID, 'not under execution');
     return positions[positionId].owner;
