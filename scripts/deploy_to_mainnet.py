@@ -1,9 +1,9 @@
-from brownie import (accounts, BasicK3PROracle, HomoraBank)
+from brownie import (accounts, BasicKP3ROracle, HomoraBank)
 
 
 def main():
     deployer = accounts[0]
-    oracle = BasicK3PROracle.deploy(
+    oracle = BasicKP3ROracle.deploy(
         '0x73353801921417F465377c8d898c6f4C0270282C',
         {'from': deployer},
     )

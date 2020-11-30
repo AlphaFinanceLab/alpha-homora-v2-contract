@@ -1,15 +1,15 @@
 pragma solidity 0.6.12;
 
-import './BaseK3PROracle.sol';
+import './BaseKP3ROracle.sol';
 import '../Governable.sol';
 import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/IKeep3rV1Oracle.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 
-contract BasicK3PROracle is IBaseOracle, BaseK3PROracle, Governable {
+contract BasicKP3ROracle is IBaseOracle, BaseKP3ROracle, Governable {
   /// @dev Create the contract and initialize the first governor.
-  /// @param _k3pr The keeper oracle smart contract.
-  constructor(IKeep3rV1Oracle _k3pr) public BaseK3PROracle(_k3pr) {
+  /// @param _kp3r The keeper oracle smart contract.
+  constructor(IKeep3rV1Oracle _kp3r) public BaseKP3ROracle(_kp3r) {
     Governable.initialize();
   }
 

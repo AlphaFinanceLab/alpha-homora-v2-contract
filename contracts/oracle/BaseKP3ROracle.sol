@@ -3,29 +3,29 @@ pragma solidity 0.6.12;
 import '../../interfaces/IKeep3rV1Oracle.sol';
 import '../../interfaces/IUniswapV2Pair.sol';
 
-contract BaseK3PROracle {
+contract BaseKP3ROracle {
   uint public constant MIN_TWAP_TIME = 15 minutes;
   uint public constant MAX_TWAP_TIME = 60 minutes;
 
-  IKeep3rV1Oracle public k3pr;
+  IKeep3rV1Oracle public kp3r;
   address public factory;
   address public weth;
 
-  constructor(IKeep3rV1Oracle _k3pr) public {
-    k3pr = _k3pr;
-    factory = _k3pr.factory();
-    weth = _k3pr.WETH();
+  constructor(IKeep3rV1Oracle _kp3r) public {
+    kp3r = _kp3r;
+    factory = _kp3r.factory();
+    weth = _kp3r.WETH();
   }
 
   /// @dev Return the TWAP value price0. Revert if TWAP time range is not within the threshold.
   /// @param pair The pair to query for price0.
   function price0TWAP(address pair) public view returns (uint) {
-    uint length = k3pr.observationLength(pair);
+    uint length = kp3r.observationLength(pair);
     require(length > 0, 'no length-1 observation');
-    (uint lastTime, uint lastPx0Cumu, ) = k3pr.observations(pair, length - 1);
+    (uint lastTime, uint lastPx0Cumu, ) = kp3r.observations(pair, length - 1);
     if (lastTime > now - MIN_TWAP_TIME) {
       require(length > 1, 'no length-2 observation');
-      (lastTime, lastPx0Cumu, ) = k3pr.observations(pair, length - 2);
+      (lastTime, lastPx0Cumu, ) = kp3r.observations(pair, length - 2);
     }
     uint elapsedTime = now - lastTime;
     require(elapsedTime >= MIN_TWAP_TIME && elapsedTime <= MAX_TWAP_TIME, 'bad TWAP time');
@@ -36,12 +36,12 @@ contract BaseK3PROracle {
   /// @dev Return the TWAP value price1. Revert if TWAP time range is not within the threshold.
   /// @param pair The pair to query for price1.
   function price1TWAP(address pair) public view returns (uint) {
-    uint length = k3pr.observationLength(pair);
+    uint length = kp3r.observationLength(pair);
     require(length > 0, 'no length-1 observation');
-    (uint lastTime, , uint lastPx1Cumu) = k3pr.observations(pair, length - 1);
+    (uint lastTime, , uint lastPx1Cumu) = kp3r.observations(pair, length - 1);
     if (lastTime > now - MIN_TWAP_TIME) {
       require(length > 1, 'no length-2 observation');
-      (lastTime, , lastPx1Cumu) = k3pr.observations(pair, length - 2);
+      (lastTime, , lastPx1Cumu) = kp3r.observations(pair, length - 2);
     }
     uint elapsedTime = now - lastTime;
     require(elapsedTime >= MIN_TWAP_TIME && elapsedTime <= MAX_TWAP_TIME, 'bad TWAP time');
