@@ -114,13 +114,11 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   /// @dev Return the current executor (the owner of the current position).
-  function EXECUTOR() external override view returns (address) {
+  function EXECUTOR() external view override returns (address) {
     uint positionId = POSITION_ID;
     require(positionId != _NO_ID, 'not under execution');
     return positions[positionId].owner;
   }
-
-  event Accrue(uint totalDebt);
 
   /// @dev Trigger interest accrual for the given bank.
   /// @param token The underlying token to trigger the interest accrual.
@@ -140,7 +138,6 @@ contract HomoraBank is Initializable, Governable, IBank {
       // inflate debt share value and make this contract stop working due to math overflow.
       bank.totalDebt = debt;
     }
-    emit Accrue(totalDebt);
   }
 
   /// @dev Convenient function to trigger interest accrual for the list of banks.
@@ -154,7 +151,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Return the borrow balance for given positon and token without trigger interest accrual.
   /// @param positionId The position to query for borrow balance.
   /// @param token The token to query for borrow balance.
-  function borrowBalanceStored(uint positionId, address token) public override view returns (uint) {
+  function borrowBalanceStored(uint positionId, address token) public view override returns (uint) {
     uint totalDebt = banks[token].totalDebt;
     uint totalShare = banks[token].totalShare;
     uint share = positions[positionId].debtShareOf[token];
@@ -173,6 +170,26 @@ contract HomoraBank is Initializable, Governable, IBank {
     return borrowBalanceStored(positionId, token);
   }
 
+  /// @dev Return bank information for the given token.
+  /// @param token The token address to query for bank information.
+  function getBankInfo(address token)
+    external
+    view
+    override
+    returns (
+      bool isListed,
+      address cToken,
+      uint reserve,
+      uint totalDebt,
+      uint totalShare
+    )
+  {
+    Bank storage bank = banks[token];
+    return (bank.isListed, bank.cToken, bank.reserve, bank.totalDebt, bank.totalShare);
+  }
+
+  /// @dev Return position information for the given position id.
+  /// @param positionId The position id to query for position information.
   function getPositionInfo(uint positionId)
     external
     view
@@ -336,15 +353,6 @@ contract HomoraBank is Initializable, Governable, IBank {
     emit Repay(POSITION_ID, msg.sender, token, amount, share);
   }
 
-  event Test(
-    uint totalShare,
-    uint totalDebt,
-    uint oldShare,
-    uint oldDebt,
-    uint paid,
-    uint lessShare
-  );
-
   /// @dev Perform repay action. Return the amount actually taken and the debt share reduced.
   /// @param positionId The position ID to repay the debt.
   /// @param token The bank token to pay the debt.
@@ -366,7 +374,6 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint lessShare = paid == oldDebt ? oldShare : paid.mul(totalShare).div(totalDebt);
     bank.totalShare = totalShare.sub(lessShare);
     position.debtShareOf[token] = oldShare.sub(lessShare);
-    emit Test(totalShare, totalDebt, oldShare, oldDebt, paid, lessShare);
     return (paid, lessShare);
   }
 

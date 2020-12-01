@@ -43,7 +43,7 @@ def main():
     homora.initialize(oracle, 1000, {'from': admin})  # 10% fee
     setup_bank_hack(homora)
     homora.addBank(usdt, crusdt, {'from': admin})
-    lpusdt.approve(homora, 2**256-1, {'from': alice})
+    # lpusdt.approve(homora, 2**256-1, {'from': alice})
     # Steal some LP from the staking pool
     lpusdt.transfer(alice, 1*10**17, {'from': accounts.at('0x6C3e4cb2E96B01F4b866965A91ed4437839A121a', force=True)})
     household_spell = HouseHoldSpell.deploy(homora, WETH_ADDRESS, {'from': admin})

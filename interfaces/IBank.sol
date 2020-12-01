@@ -38,6 +38,19 @@ interface IBank {
   /// @dev Return the current executor (the owner of the current position).
   function EXECUTOR() external view returns (address);
 
+  /// @dev Return bank information for the given token.
+  function getBankInfo(address token)
+    external
+    view
+    returns (
+      bool isListed,
+      address cToken,
+      uint reserve,
+      uint totalDebt,
+      uint totalShare
+    );
+
+  /// @dev Return position information for the given position id.
   function getPositionInfo(uint positionId)
     external
     view
