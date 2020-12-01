@@ -110,7 +110,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @param token The underlying token to trigger the interest accrual.
   function accrue(address token) public {
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exist');
+    require(bank.isListed, 'bank not exists');
     uint totalDebt = bank.totalDebt;
     uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
@@ -131,6 +131,28 @@ contract HomoraBank is Initializable, Governable, IBank {
     for (uint idx = 0; idx < tokens.length; idx++) {
       accrue(tokens[idx]);
     }
+  }
+
+  /// @dev Return the borrow balance for given positon and token without trigger interest accrual.
+  /// @param positionId The position to query for borrow balance.
+  /// @param token The token to query for borrow balance.
+  function borrowBalanceStored(uint positionId, address token) public view override returns (uint) {
+    uint totalDebt = banks[token].totalDebt;
+    uint totalShare = banks[token].totalShare;
+    uint share = positions[positionId].debtShareOf[token];
+    if (share == 0 || totalDebt == 0) {
+      return 0;
+    } else {
+      return share.mul(totalDebt).div(totalShare);
+    }
+  }
+
+  /// @dev Trigger interest accrual and return the current borrow balance.
+  /// @param positionId The position to query for borrow balance.
+  /// @param token The token to query for borrow balance.
+  function borrowBalanceCurrent(uint positionId, address token) external override returns (uint) {
+    accrue(token);
+    return borrowBalanceStored(positionId, token);
   }
 
   /// @dev Return the total collateral value of the given position in ETH.
