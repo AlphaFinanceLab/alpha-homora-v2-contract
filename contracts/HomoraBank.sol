@@ -1,5 +1,4 @@
 pragma solidity 0.6.12;
-pragma experimental ABIEncoderV2;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';

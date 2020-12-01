@@ -2,30 +2,17 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
 import './BasicSpell.sol';
+import '../utils/HomoraMath.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
 import '../../interfaces/IUniswapV2Pair.sol';
 
-library Math {
-  using SafeMath for uint;
-
-  function sqrt(uint x) internal pure returns (uint y) {
-    uint z = (x + 1) / 2;
-    y = x;
-    while (z < y) {
-      y = z;
-      z = (x / z + z) / 2;
-    }
-  }
-}
-
 contract UniswapV2SpellV1 is BasicSpell {
   using SafeMath for uint;
-  using Math for uint;
+  using HomoraMath for uint;
 
   IUniswapV2Factory public factory;
   IUniswapV2Router02 public router;
@@ -83,18 +70,14 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint resB
   ) internal pure returns (uint) {
     require(amtA.mul(resB) >= amtB.mul(resA), 'Reversed');
-
     uint a = 997;
     uint b = uint(1997).mul(resA);
     uint _c = (amtA.mul(resB)).sub(amtB.mul(resA));
     uint c = _c.mul(1000).div(amtB.add(resB)).mul(resA);
-
     uint d = a.mul(c).mul(4);
-    uint e = Math.sqrt(b.mul(b).add(d));
-
+    uint e = HomoraMath.sqrt(b.mul(b).add(d));
     uint numerator = e.sub(b);
     uint denominator = a.mul(2);
-
     return numerator.div(denominator);
   }
 
@@ -150,16 +133,17 @@ contract UniswapV2SpellV1 is BasicSpell {
     }
 
     // 5. Add liquidity
-    (, , uint liquidity) = router.addLiquidity(
-      tokenA,
-      tokenB,
-      IERC20(tokenA).balanceOf(address(this)),
-      IERC20(tokenB).balanceOf(address(this)),
-      amt.amtAMin,
-      amt.amtBMin,
-      address(this),
-      now
-    );
+    (, , uint liquidity) =
+      router.addLiquidity(
+        tokenA,
+        tokenB,
+        IERC20(tokenA).balanceOf(address(this)),
+        IERC20(tokenB).balanceOf(address(this)),
+        amt.amtAMin,
+        amt.amtBMin,
+        address(this),
+        now
+      );
 
     // 6. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
@@ -213,15 +197,16 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
 
     // 4. Remove liquidity
-    (uint amtA, uint amtB) = router.removeLiquidity(
-      tokenA,
-      tokenB,
-      amtLPToRemove,
-      amt.amtAMin,
-      amt.amtBMin,
-      address(this),
-      now
-    );
+    (uint amtA, uint amtB) =
+      router.removeLiquidity(
+        tokenA,
+        tokenB,
+        amtLPToRemove,
+        amt.amtAMin,
+        amt.amtBMin,
+        address(this),
+        now
+      );
 
     // 5. MinimizeTrading to repay debt
     if (amtA < amtARepay && amtB >= amtBRepay) {

@@ -44,7 +44,7 @@ contract ProxyOracle is IOracle, Governable {
 
   /// @dev Return whether the oracle supports evaluating value of the given address.
   /// @param token The ERC-20 token to check the acceptence.
-  function support(address token) external override view returns (bool) {
+  function support(address token) external view override returns (bool) {
     return address(oracles[token].source) != address(0);
   }
 
@@ -56,7 +56,7 @@ contract ProxyOracle is IOracle, Governable {
     address tokenIn,
     address tokenOut,
     uint amountIn
-  ) external override view returns (uint) {
+  ) external view override returns (uint) {
     Oracle memory oracleIn = oracles[tokenIn];
     Oracle memory oracleOut = oracles[tokenOut];
     uint pxIn = oracleIn.source.getETHPx(tokenIn);
@@ -73,7 +73,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @dev Return the value of the given input as ETH for collateral purpose.
   /// @param token The ERC-20 token to check the value.
   /// @param amount The amount of tokens to check the value.
-  function asETHCollateral(address token, uint amount) external override view returns (uint) {
+  function asETHCollateral(address token, uint amount) external view override returns (uint) {
     Oracle memory oracle = oracles[token];
     uint ethValue = oracle.source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.collateralFactor).div(10000);
@@ -82,7 +82,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @dev Return the value of the given input as ETH for borrow purpose.
   /// @param token The ERC-20 token to check the value.
   /// @param amount The amount of tokens to check the value.
-  function asETHBorrow(address token, uint amount) external override view returns (uint) {
+  function asETHBorrow(address token, uint amount) external view override returns (uint) {
     Oracle memory oracle = oracles[token];
     uint ethValue = oracle.source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
