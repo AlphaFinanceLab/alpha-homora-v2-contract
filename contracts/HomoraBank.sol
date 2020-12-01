@@ -15,8 +15,19 @@ contract HomoraCaster {
   /// @param target The address target to call.
   /// @param data The data using in the call.
   function cast(address target, bytes calldata data) external payable {
-    (bool ok, ) = target.call{value: msg.value}(data);
-    require(ok, 'bad cast call');
+    (bool ok, bytes memory returndata) = target.call{value: msg.value}(data);
+    if (!ok) {
+      if (returndata.length > 0) {
+        // The easiest way to bubble the revert reason is using memory via assembly
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+          let returndata_size := mload(returndata)
+          revert(add(32, returndata), returndata_size)
+        }
+      } else {
+        revert('bad cast call');
+      }
+    }
   }
 }
 
@@ -115,7 +126,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
-      bank.totalDebt = totalDebt;
+      bank.totalDebt = debt;
       bank.reserve = bank.reserve.add(doBorrow(token, fee));
     } else {
       // Only case we reach here is when bank.totalDebt == debt because CREAMv2 does not support
@@ -154,6 +165,20 @@ contract HomoraBank is Initializable, Governable, IBank {
   function borrowBalanceCurrent(uint positionId, address token) external override returns (uint) {
     accrue(token);
     return borrowBalanceStored(positionId, token);
+  }
+
+  function getPositionInfo(uint positionId)
+    external
+    view
+    override
+    returns (
+      address owner,
+      address collateralToken,
+      uint collateralSize
+    )
+  {
+    Position storage position = positions[positionId];
+    return (position.owner, position.collateralToken, position.collateralSize);
   }
 
   /// @dev Return the total collateral value of the given position in ETH.
