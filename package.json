@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/AlphaFinanceLab/homora-v2/issues"
   },
-  "homepage": "https://github.com/AlphaFinanceLab/homora-v2#readme"
+  "homepage": "https://github.com/AlphaFinanceLab/homora-v2#readme",
+  "dependencies": {
+    "@uniswap/v2-core": "^1.0.1"
+  }
 }

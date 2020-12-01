@@ -73,7 +73,14 @@ def main():
     )
     print('bal', usdt.balanceOf(alice))
     print('put collateral gas', tx.gas_used)
-    usdt.approve(homora, 2**256-1, {'from': alice})
+    
+    _,_,_,totalDebt,totalShare = homora.banks(usdt)
+    print('bank usdt totalDebt', totalDebt)
+    print('bank usdt totalShare', totalShare)
+
+    usdt.approve(homora, 2**256-1, {'from' : alice})
+    usdt.approve(crusdt, 2**256-1, {'from' : accounts.at(homora, force=True)})
+
     tx = homora.execute(
         position_id,  # position id
         household_spell,

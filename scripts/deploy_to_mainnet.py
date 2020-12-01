@@ -13,7 +13,7 @@ def main():
     )
 
     spell = UniswapV2SpellV1.deploy(
-        
+
     )
     data = oracle.getETHPx('0x6B175474E89094C44Da98b954EedeAC495271d0F')
     print(data)

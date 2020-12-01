@@ -1,13 +1,32 @@
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
 import './BasicSpell.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
+import '../../interfaces/IUniswapV2Pair.sol';
+
+library Math {
+  using SafeMath for uint;
+
+  function sqrt(uint x) internal pure returns (uint y) {
+    uint z = (x + 1) / 2;
+    y = x;
+    while (z < y) {
+      y = z;
+      z = (x / z + z) / 2;
+    }
+  }
+}
 
 contract UniswapV2SpellV1 is BasicSpell {
+  using SafeMath for uint;
+  using Math for uint;
+
   IUniswapV2Factory public factory;
   IUniswapV2Router02 public router;
 
@@ -38,18 +57,18 @@ contract UniswapV2SpellV1 is BasicSpell {
   /// @param resA amount of token A in reserve
   /// @param resB amount of token B in reserve
   function optimalDeposit(
-      uint256 amtA,
-      uint256 amtB,
-      uint256 resA,
-      uint256 resB
-  ) internal pure returns (uint256 swapAmt, bool isReversed) {
-      if (amtA.mul(resB) >= amtB.mul(resA)) {
-          swapAmt = _optimalDepositA(amtA, amtB, resA, resB);
-          isReversed = false;
-      } else {
-          swapAmt = _optimalDepositA(amtB, amtA, resB, resA);
-          isReversed = true;
-      }
+    uint amtA,
+    uint amtB,
+    uint resA,
+    uint resB
+  ) internal pure returns (uint swapAmt, bool isReversed) {
+    if (amtA.mul(resB) >= amtB.mul(resA)) {
+      swapAmt = _optimalDepositA(amtA, amtB, resA, resB);
+      isReversed = false;
+    } else {
+      swapAmt = _optimalDepositA(amtB, amtA, resB, resA);
+      isReversed = true;
+    }
   }
 
   /// @dev Compute optimal deposit amount helper
@@ -58,50 +77,54 @@ contract UniswapV2SpellV1 is BasicSpell {
   /// @param resA amount of token A in reserve
   /// @param resB amount of token B in reserve
   function _optimalDepositA(
-      uint256 amtA,
-      uint256 amtB,
-      uint256 resA,
-      uint256 resB
-  ) internal pure returns (uint256) {
-      require(amtA.mul(resB) >= amtB.mul(resA), "Reversed");
+    uint amtA,
+    uint amtB,
+    uint resA,
+    uint resB
+  ) internal pure returns (uint) {
+    require(amtA.mul(resB) >= amtB.mul(resA), 'Reversed');
 
-      uint256 a = 997;
-      uint256 b = uint256(1997).mul(resA);
-      uint256 _c = (amtA.mul(resB)).sub(amtB.mul(resA));
-      uint256 c = _c.mul(1000).div(amtB.add(resB)).mul(resA);
+    uint a = 997;
+    uint b = uint(1997).mul(resA);
+    uint _c = (amtA.mul(resB)).sub(amtB.mul(resA));
+    uint c = _c.mul(1000).div(amtB.add(resB)).mul(resA);
 
-      uint256 d = a.mul(c).mul(4);
-      uint256 e = Math.sqrt(b.mul(b).add(d));
+    uint d = a.mul(c).mul(4);
+    uint e = Math.sqrt(b.mul(b).add(d));
 
-      uint256 numerator = e.sub(b);
-      uint256 denominator = a.mul(2);
+    uint numerator = e.sub(b);
+    uint denominator = a.mul(2);
 
-      return numerator.div(denominator);
+    return numerator.div(denominator);
+  }
+
+  struct Amounts {
+    uint amtAUser;
+    uint amtBUser;
+    uint amtLPUser;
+    uint amtABorrow;
+    uint amtBBorrow;
+    uint amtLPBorrow;
+    uint amtAMin;
+    uint amtBMin;
   }
 
   function addLiquidity(
     address tokenA,
     address tokenB,
-    uint amtAUser,
-    uint amtBUser,
-    uint amtLPUser,
-    uint amtABorrow,
-    uint amtBBorrow,
-    uint amtLPBorrow,
-    uint amtAMin,
-    uint amtBMin,
-  ) public {
+    Amounts calldata amt
+  ) external {
     address lp = getPair(tokenA, tokenB);
 
     // 1. Get user input amounts
-    if (amtAUser > 0) { doTransmit(tokenA, amtAUser); }
-    if (amtBUser > 0) { doTransmit(tokenB, amtBUser); }
-    if (amtLPUser > 0) { doTransmit(lp, amtLPUser); }
+    doTransmit(tokenA, amt.amtAUser);
+    doTransmit(tokenB, amt.amtBUser);
+    doTransmit(lp, amt.amtLPUser);
 
     // 2. Borrow specified amounts
-    if (amtABorrow > 0) { doBorrow(tokenA, amtABorrow); }
-    if (amtBBorrow > 0) { doBorrow(tokenB, amtBBorrow); }
-    if (amtLPBorrow > 0) { doBorrow(lp, amtLPBorrow); }
+    doBorrow(tokenA, amt.amtABorrow);
+    doBorrow(tokenB, amt.amtBBorrow);
+    doBorrow(lp, amt.amtLPBorrow);
 
     // 3. Calculate optimal swap amount
     uint swapAmt;
@@ -111,14 +134,13 @@ contract UniswapV2SpellV1 is BasicSpell {
       uint amtB = IERC20(tokenB).balanceOf(address(this));
       uint resA;
       uint resB;
-      if (lp.token0() == tokenA) {
-        (resA, resB, ) = lp.getReserves();
+      if (IUniswapV2Pair(lp).token0() == tokenA) {
+        (resA, resB, ) = IUniswapV2Pair(lp).getReserves();
       } else {
-        (resB, resA, ) = lp.getReserves();
+        (resB, resA, ) = IUniswapV2Pair(lp).getReserves();
       }
       (swapAmt, isReversed) = optimalDeposit(amtA, amtB, resA, resB);
     }
-
 
     // 4. Swap optimal amount
     {
@@ -128,15 +150,167 @@ contract UniswapV2SpellV1 is BasicSpell {
     }
 
     // 5. Add liquidity
-    (, , uint liquidity) = router.addLiquidity(tokenA, tokenB, IERC20(tokenA).balanceOf(address(this)), IERC20(tokenB).balanceOf(address(this)), amtAMin, amtBMin, address(this), now);
+    (, , uint liquidity) = router.addLiquidity(
+      tokenA,
+      tokenB,
+      IERC20(tokenA).balanceOf(address(this)),
+      IERC20(tokenB).balanceOf(address(this)),
+      amt.amtAMin,
+      amt.amtBMin,
+      address(this),
+      now
+    );
 
     // 6. Put collateral
-    bank.putCollateral(liquidity);
+    doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
 
-    // 7. Refund leftovers to users
+    // // 7. Refund leftovers to users
     doRefund(tokenA);
     doRefund(tokenB);
   }
+
+  struct RepayAmounts {
+    uint amtLPTake;
+    uint amtLPWithdraw;
+    uint amtARepay;
+    uint amtBRepay;
+    uint amtLPRepay;
+    uint amtAMin;
+    uint amtBMin;
+  }
+
+  function removeLiquidity(
+    address tokenA,
+    address tokenB,
+    RepayAmounts calldata amt
+  ) external {
+    address lp = getPair(tokenA, tokenB);
+
+    // 1. Take out collateral
+    doTakeCollateral(amt.amtLPTake);
+
+    // 2. Compute amount to actually remove
+    uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
+
+    // 3. Remove liquidity
+    (uint amtA, uint amtB) = router.removeLiquidity(
+      tokenA,
+      tokenB,
+      amtLPToRemove,
+      amt.amtAMin,
+      amt.amtBMin,
+      address(this),
+      now
+    );
+
+    // // 4. Repay TODO: if repay amount = -1, repay max debt
+    // if (amt.amtARepay == uint(-1)) {
+    //   // uint amtARepay = bank.
+    // }
+
+    // 5. MinimizeTrading to repay debt
+    if (amtA < amt.amtARepay && amtB >= amt.amtBRepay) {
+      address[] memory path = new address[](2);
+      (path[0], path[1]) = (tokenB, tokenA);
+      router.swapTokensForExactTokens(amt.amtARepay.sub(amtA), uint(-1), path, address(this), now);
+    } else if (amtA >= amt.amtARepay && amtB < amt.amtBRepay) {
+      address[] memory path = new address[](2);
+      (path[0], path[1]) = (tokenA, tokenB);
+      router.swapTokensForExactTokens(amt.amtBRepay.sub(amtB), uint(-1), path, address(this), now);
+    }
+
+    // 6. Repay
+    doRepay(tokenA, amt.amtARepay);
+    // doRepay(tokenB, amt.amtBRepay);
+    // doRepay(lp, amt.amtLPRepay);
+
+    // // 7. Slippage control
+    // require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
+    // require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
+
+    // // 8. Refund leftover
+    // doRefund(tokenA);
+    // doRefund(tokenB);
+  }
+
+  // function addLiquidity(
+  //   address tokenA,
+  //   address tokenB,
+  //   uint amtAUser,
+  //   uint amtBUser,
+  //   uint amtLPUser,
+  //   uint amtABorrow,
+  //   uint amtBBorrow,
+  //   uint amtLPBorrow,
+  //   uint amtAMin,
+  //   uint amtBMin
+  // ) public {
+  //   address lp = getPair(tokenA, tokenB);
+
+  //   // 1. Get user input amounts
+  //   if (amtAUser > 0) {
+  //     doTransmit(tokenA, amtAUser);
+  //   }
+  //   if (amtBUser > 0) {
+  //     doTransmit(tokenB, amtBUser);
+  //   }
+  //   if (amtLPUser > 0) {
+  //     doTransmit(lp, amtLPUser);
+  //   }
+
+  //   // 2. Borrow specified amounts
+  //   if (amtABorrow > 0) {
+  //     doBorrow(tokenA, amtABorrow);
+  //   }
+  //   if (amtBBorrow > 0) {
+  //     doBorrow(tokenB, amtBBorrow);
+  //   }
+  //   if (amtLPBorrow > 0) {
+  //     doBorrow(lp, amtLPBorrow);
+  //   }
+
+  //   // 3. Calculate optimal swap amount
+  //   uint swapAmt;
+  //   bool isReversed;
+  //   {
+  //     uint amtA = IERC20(tokenA).balanceOf(address(this));
+  //     uint amtB = IERC20(tokenB).balanceOf(address(this));
+  //     uint resA;
+  //     uint resB;
+  //     if (IUniswapV2Pair(lp).token0() == tokenA) {
+  //       (resA, resB, ) = IUniswapV2Pair(lp).getReserves();
+  //     } else {
+  //       (resB, resA, ) = IUniswapV2Pair(lp).getReserves();
+  //     }
+  //     (swapAmt, isReversed) = optimalDeposit(amtA, amtB, resA, resB);
+  //   }
+
+  //   // 4. Swap optimal amount
+  //   {
+  //     address[] memory path = new address[](2);
+  //     (path[0], path[1]) = isReversed ? (tokenB, tokenA) : (tokenA, tokenB);
+  //     router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
+  //   }
+
+  //   // 5. Add liquidity
+  //   (, , uint liquidity) = router.addLiquidity(
+  //     tokenA,
+  //     tokenB,
+  //     IERC20(tokenA).balanceOf(address(this)),
+  //     IERC20(tokenB).balanceOf(address(this)),
+  //     amtAMin,
+  //     amtBMin,
+  //     address(this),
+  //     now
+  //   );
+
+  //   // 6. Put collateral
+  //   bank.putCollateral(liquidity);
+
+  //   // 7. Refund leftovers to users
+  //   doRefund(tokenA);
+  //   doRefund(tokenB);
+  // }
 
   // function addLiquidityETH(
   //   address token,
