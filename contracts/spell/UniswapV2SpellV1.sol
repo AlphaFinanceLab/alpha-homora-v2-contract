@@ -190,7 +190,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint amtBRepay = amt.amtBRepay;
     uint amtLPRepay = amt.amtLPRepay;
 
-    // 1. Compute repay amount if -1 is supplied (max debt)
+    // 1. Compute repay amount if MAX_INT is supplied (max debt)
     if (amtARepay == uint(-1)) {
       amtARepay = bank.borrowBalanceCurrent(positionId, tokenA);
     }
@@ -202,7 +202,12 @@ contract UniswapV2SpellV1 is BasicSpell {
     }
 
     // 2. Take out collateral
-    doTakeCollateral(amt.amtLPTake);
+    if (amt.amtLPTake == uint(-1)) {
+      (, , uint collateralSize) = bank.getPositionInfo(bank.POSITION_ID());
+      doTakeCollateral(collateralSize);
+    } else {
+      doTakeCollateral(amt.amtLPTake);
+    }
 
     // 3. Compute amount to actually remove
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
@@ -230,9 +235,9 @@ contract UniswapV2SpellV1 is BasicSpell {
     }
 
     // 6. Repay
-    doRepay(tokenA, amt.amtARepay);
-    doRepay(tokenB, amt.amtBRepay);
-    doRepay(lp, amt.amtLPRepay);
+    doRepay(tokenA, amtARepay);
+    doRepay(tokenB, amtBRepay);
+    doRepay(lp, amtLPRepay);
 
     // 7. Slippage control
     require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
