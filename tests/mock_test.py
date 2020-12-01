@@ -53,6 +53,11 @@ def usdt(admin, MockERC20):
 
 
 @pytest.fixture(scope="module")
+def lptoken(admin, MockERC20):
+    return admin.deploy(MockERC20, "LP_TOKEN", "LP_TOKEN")
+
+
+@pytest.fixture(scope="module")
 def weth(admin, WETH9):
     return admin.deploy(WETH9)
 
@@ -63,16 +68,18 @@ def crusdt(admin, usdt, MockCErc20):
 
 
 @pytest.fixture(scope="module")
-def mock_oracle(admin, usdt, MockOracle):
+def mock_oracle(admin, usdt, lptoken, MockOracle):
     mock_oracle = admin.deploy(MockOracle)
     mock_oracle.setETHPx(usdt.address, 500*10**18)
+    mock_oracle.setETHPx(lptoken.address, 250*10**18)
     return mock_oracle
 
 
 @pytest.fixture(scope="module")
-def oracle(admin, usdt, mock_oracle, ProxyOracle):
+def oracle(admin, usdt, lptoken, mock_oracle, ProxyOracle):
     oracle = admin.deploy(ProxyOracle)
-    oracle.setOracles([usdt.address], [(mock_oracle, 10000, 10000, 10000)])
+    oracle.setOracles([usdt.address, lptoken.address], [
+                      (mock_oracle, 10000, 10000, 10000), (mock_oracle, 10000, 10000, 10000)])
     return oracle
 
 
@@ -121,29 +128,30 @@ def test_proxy_oracle_support_usdt(homora, oracle, usdt):
 #     assert 1 == 0
 
 
-def test_execute_put_collateral(alice, homora, usdt, household_spell):
-    usdt.mint(alice.address, '100 ether')
-    print('alice start', usdt.balanceOf(alice.address))
-    usdt.approve(homora, 2**256-1, {'from': alice})
+def test_execute_put_collateral(alice, homora, usdt, lptoken, household_spell):
+    # usdt.mint(alice.address, '100 ether')
+    lptoken.mint(alice.address, '100 ether')
+    print('alice lptoken at start', lptoken.balanceOf(alice.address))
+    lptoken.approve(homora, 2**256-1, {'from': alice})
     tx = homora.execute(0,
                         household_spell.address,
-                        usdt.address,
+                        lptoken.address,
                         household_spell.putCollateral.encode_input(
-                            usdt.address, '10 ether'
+                            lptoken.address, '10 ether'
                         ),
                         {'from': alice})
-    print('alice put', usdt.balanceOf(alice.address))
-    print('homora put', usdt.balanceOf(homora.address))
-    assert usdt.balanceOf(alice.address) == 90*10**18
+    print('alice lptoken after put', lptoken.balanceOf(alice.address))
+    print('homora lptoken after put', lptoken.balanceOf(homora.address))
+    # assert usdt.balanceOf(alice.address) == 90*10**18
     position_id = tx.return_value
     print('homora', homora.positions(position_id))
     homora.execute(position_id,
                    household_spell.address,
-                   usdt.address,
+                   lptoken.address,
                    household_spell.borrow.encode_input(
-                       "0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852", '200 ether'
+                       usdt.address, '1'
                    ),
                    {'from': alice})
     print('alice borrow', usdt.balanceOf(alice.address))
-    print('homora put', usdt.balanceOf(homora.address))
+    # print('homora put', usdt.balanceOf(homora.address))
     assert 1 == 0

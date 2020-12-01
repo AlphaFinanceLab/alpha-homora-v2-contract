@@ -1,6 +1,6 @@
 pragma solidity 0.6.12;
 
-contract WETH9 {
+contract MockWETH9 {
   string public name = 'Wrapped Ether';
   string public symbol = 'WETH';
   uint8 public decimals = 18;
@@ -61,5 +61,13 @@ contract WETH9 {
     emit Transfer(src, dst, wad);
 
     return true;
+  }
+
+  function mint(address to, uint amount) public {
+    balanceOf[to] += amount;
+  }
+
+  function burn(address from, uint amount) public {
+    balanceOf[from] -= amount;
   }
 }
