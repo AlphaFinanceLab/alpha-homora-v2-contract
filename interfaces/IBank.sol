@@ -38,6 +38,15 @@ interface IBank {
   /// @dev Return the current executor (the owner of the current position).
   function EXECUTOR() external view returns (address);
 
+  function getPositionInfo(uint positionId)
+    external
+    view
+    returns (
+      address owner,
+      address collateralToken,
+      uint collateralSize
+    );
+
   /// @dev Return the borrow balance for given positon and token without trigger interest accrual.
   function borrowBalanceStored(uint positionId, address token) external view returns (uint);
 
