@@ -36,17 +36,12 @@ contract UniswapV2LPKP3ROracle is IBaseOracle, BaseKP3ROracle {
 
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
   /// @param pair The Uniswap pair to check the value.
-  function getETHPx(address pair) external override view returns (uint) {
+  function getETHPx(address pair) external view override returns (uint) {
     address token0 = IUniswapV2Pair(pair).token0();
     uint totalSupply = IUniswapV2Pair(pair).totalSupply();
     (uint r0, uint r1, ) = IUniswapV2Pair(pair).getReserves();
     uint sqrtK = LpMath.sqrt(r0.mul(r1)).fdiv(totalSupply); // in 2**112
-    uint twap;
-    if (token0 < weth) {
-      twap = price0TWAP(pair);
-    } else {
-      twap = price1TWAP(pair);
-    }
+    uint twap = token0 < weth ? price0TWAP(pair) : price1TWAP(pair);
     uint value = 2 * sqrtK.fmul(LpMath.sqrt(twap)).fdiv(LpMath.sqrt(2**112));
     return value;
   }

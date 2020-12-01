@@ -11,8 +11,6 @@ import '../interfaces/IBank.sol';
 import '../interfaces/ICErc20.sol';
 import '../interfaces/IOracle.sol';
 
-import './spell/UniswapV2SpellV1.sol';
-
 contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
