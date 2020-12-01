@@ -115,7 +115,8 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
-      bank.reserve = bank.reserve.add(doBorrow(token, fee)); // totalDebt gets updated in doBorrow.
+      bank.totalDebt = totalDebt;
+      bank.reserve = bank.reserve.add(doBorrow(token, fee));
     } else {
       // Only case we reach here is when bank.totalDebt == debt because CREAMv2 does not support
       // *repayBorrowBehalf* functionality. We set bank.totalDebt = debt anyways to ensure
