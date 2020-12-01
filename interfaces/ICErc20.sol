@@ -8,6 +8,4 @@ interface ICErc20 {
   function borrow(uint borrowAmount) external returns (uint);
 
   function repayBorrow(uint repayAmount) external;
-
-  function repayBorrowBehalf(address borrower, uint repayAmount) external;
 }

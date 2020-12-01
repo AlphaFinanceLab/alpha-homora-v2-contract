@@ -164,7 +164,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     // 6. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
 
-    // // 7. Refund leftovers to users
+    // 7. Refund leftovers to users
     doRefund(tokenA);
     doRefund(tokenB);
   }
@@ -185,14 +185,29 @@ contract UniswapV2SpellV1 is BasicSpell {
     RepayAmounts calldata amt
   ) external {
     address lp = getPair(tokenA, tokenB);
+    uint positionId = bank.POSITION_ID();
+    uint amtARepay = amt.amtARepay;
+    uint amtBRepay = amt.amtBRepay;
+    uint amtLPRepay = amt.amtLPRepay;
 
-    // 1. Take out collateral
+    // 1. Compute repay amount if -1 is supplied (max debt)
+    if (amtARepay == uint(-1)) {
+      amtARepay = bank.borrowBalanceCurrent(positionId, tokenA);
+    }
+    if (amtBRepay == uint(-1)) {
+      amtBRepay = bank.borrowBalanceCurrent(positionId, tokenB);
+    }
+    if (amtLPRepay == uint(-1)) {
+      amtLPRepay = bank.borrowBalanceCurrent(positionId, lp);
+    }
+
+    // 2. Take out collateral
     doTakeCollateral(amt.amtLPTake);
 
-    // 2. Compute amount to actually remove
+    // 3. Compute amount to actually remove
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
 
-    // 3. Remove liquidity
+    // 4. Remove liquidity
     (uint amtA, uint amtB) = router.removeLiquidity(
       tokenA,
       tokenB,
@@ -203,205 +218,29 @@ contract UniswapV2SpellV1 is BasicSpell {
       now
     );
 
-    // // 4. Repay TODO: if repay amount = -1, repay max debt
-    // if (amt.amtARepay == uint(-1)) {
-    //   // uint amtARepay = bank.
-    // }
-
     // 5. MinimizeTrading to repay debt
-    if (amtA < amt.amtARepay && amtB >= amt.amtBRepay) {
+    if (amtA < amtARepay && amtB >= amtBRepay) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
-      router.swapTokensForExactTokens(amt.amtARepay.sub(amtA), uint(-1), path, address(this), now);
-    } else if (amtA >= amt.amtARepay && amtB < amt.amtBRepay) {
+      router.swapTokensForExactTokens(amtARepay.sub(amtA), uint(-1), path, address(this), now);
+    } else if (amtA >= amtARepay && amtB < amtBRepay) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
-      router.swapTokensForExactTokens(amt.amtBRepay.sub(amtB), uint(-1), path, address(this), now);
+      router.swapTokensForExactTokens(amtBRepay.sub(amtB), uint(-1), path, address(this), now);
     }
 
     // 6. Repay
     doRepay(tokenA, amt.amtARepay);
-    // doRepay(tokenB, amt.amtBRepay);
-    // doRepay(lp, amt.amtLPRepay);
+    doRepay(tokenB, amt.amtBRepay);
+    doRepay(lp, amt.amtLPRepay);
 
-    // // 7. Slippage control
-    // require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
-    // require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
+    // 7. Slippage control
+    require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
+    require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
 
-    // // 8. Refund leftover
-    // doRefund(tokenA);
-    // doRefund(tokenB);
+    // 8. Refund leftover
+    doRefund(tokenA);
+    doRefund(tokenB);
+    doRefund(lp);
   }
-
-  // function addLiquidity(
-  //   address tokenA,
-  //   address tokenB,
-  //   uint amtAUser,
-  //   uint amtBUser,
-  //   uint amtLPUser,
-  //   uint amtABorrow,
-  //   uint amtBBorrow,
-  //   uint amtLPBorrow,
-  //   uint amtAMin,
-  //   uint amtBMin
-  // ) public {
-  //   address lp = getPair(tokenA, tokenB);
-
-  //   // 1. Get user input amounts
-  //   if (amtAUser > 0) {
-  //     doTransmit(tokenA, amtAUser);
-  //   }
-  //   if (amtBUser > 0) {
-  //     doTransmit(tokenB, amtBUser);
-  //   }
-  //   if (amtLPUser > 0) {
-  //     doTransmit(lp, amtLPUser);
-  //   }
-
-  //   // 2. Borrow specified amounts
-  //   if (amtABorrow > 0) {
-  //     doBorrow(tokenA, amtABorrow);
-  //   }
-  //   if (amtBBorrow > 0) {
-  //     doBorrow(tokenB, amtBBorrow);
-  //   }
-  //   if (amtLPBorrow > 0) {
-  //     doBorrow(lp, amtLPBorrow);
-  //   }
-
-  //   // 3. Calculate optimal swap amount
-  //   uint swapAmt;
-  //   bool isReversed;
-  //   {
-  //     uint amtA = IERC20(tokenA).balanceOf(address(this));
-  //     uint amtB = IERC20(tokenB).balanceOf(address(this));
-  //     uint resA;
-  //     uint resB;
-  //     if (IUniswapV2Pair(lp).token0() == tokenA) {
-  //       (resA, resB, ) = IUniswapV2Pair(lp).getReserves();
-  //     } else {
-  //       (resB, resA, ) = IUniswapV2Pair(lp).getReserves();
-  //     }
-  //     (swapAmt, isReversed) = optimalDeposit(amtA, amtB, resA, resB);
-  //   }
-
-  //   // 4. Swap optimal amount
-  //   {
-  //     address[] memory path = new address[](2);
-  //     (path[0], path[1]) = isReversed ? (tokenB, tokenA) : (tokenA, tokenB);
-  //     router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
-  //   }
-
-  //   // 5. Add liquidity
-  //   (, , uint liquidity) = router.addLiquidity(
-  //     tokenA,
-  //     tokenB,
-  //     IERC20(tokenA).balanceOf(address(this)),
-  //     IERC20(tokenB).balanceOf(address(this)),
-  //     amtAMin,
-  //     amtBMin,
-  //     address(this),
-  //     now
-  //   );
-
-  //   // 6. Put collateral
-  //   bank.putCollateral(liquidity);
-
-  //   // 7. Refund leftovers to users
-  //   doRefund(tokenA);
-  //   doRefund(tokenB);
-  // }
-
-  // function addLiquidityETH(
-  //   address token,
-  //   uint amtTokenUser,
-  //   uint amtETHBorrow,
-  //   uint amtTokenBorrow,
-  //   uint amtETHMin,
-  //   uint amtTokenMin
-  // ) public payable {
-  //   address lp = getPair(weth, token);
-  //   doTransmitETH();
-  //   doTransmit(token, amtTokenUser);
-  //   doBorrow(weth, amtETHBorrow);
-  //   doBorrow(token, amtTokenBorrow);
-  //   (, , uint liquidity) = router.addLiquidity(
-  //     weth,
-  //     token,
-  //     IERC20(weth).balanceOf(address(this)),
-  //     IERC20(token).balanceOf(address(this)),
-  //     amtETHMin,
-  //     amtTokenMin,
-  //     address(this),
-  //     now
-  //   );
-  //   bank.putCollateral(liquidity);
-  //   doRefundETH();
-  //   doRefund(token);
-  // }
-
-  // function addLiquidity(
-  //   address tokenA,
-  //   address tokenB,
-  //   uint amtAUser,
-  //   uint amtBUser,
-  //   uint amtABorrow,
-  //   uint amtBBorrow,
-  //   uint amtAMin,
-  //   uint amtBMin
-  // ) public {
-  //   address lp = getPair(tokenA, tokenB);
-  //   doTransmit(tokenA, amtAUser);
-  //   doTransmit(tokenB, amtBUser);
-  //   doBorrow(tokenA, amtABorrow);
-  //   doBorrow(tokenB, amtBBorrow);
-  //   (, , uint liquidity) = router.addLiquidity(
-  //     tokenA,
-  //     tokenB,
-  //     IERC20(tokenA).balanceOf(address(this)),
-  //     IERC20(tokenB).balanceOf(address(this)),
-  //     amtAMin,
-  //     amtBMin,
-  //     address(this),
-  //     now
-  //   );
-  //   doPutCollateral(lp, liquidity);
-  //   doRefund(tokenA);
-  //   doRefund(tokenB);
-  // }
-
-  // function removeLiquidityETH(
-  //   address token,
-  //   uint liquidity,
-  //   uint amtETHMin,
-  //   uint amtTokenMin,
-  //   uint amtETHRepay,
-  //   uint amtTokenRepay
-  // ) public {
-  //   address lp = getPair(weth, token);
-  //   bank.takeCollateral(liquidity);
-  //   router.removeLiquidity(weth, token, liquidity, amtETHMin, amtTokenMin, address(this), now);
-  //   doRepay(weth, amtETHRepay);
-  //   doRepay(token, amtTokenRepay);
-  //   doRefundETH();
-  //   doRefund(token);
-  // }
-
-  // function removeLiquidity(
-  //   address tokenA,
-  //   address tokenB,
-  //   uint liquidity,
-  //   uint amtAMin,
-  //   uint amtBMin,
-  //   uint amtARepay,
-  //   uint amtBRepay
-  // ) public {
-  //   address lp = getPair(tokenA, tokenB);
-  //   bank.takeCollateral(liquidity);
-  //   router.removeLiquidity(tokenA, tokenB, liquidity, amtAMin, amtBMin, address(this), now);
-  //   doRepay(tokenA, amtARepay);
-  //   doRepay(tokenB, amtBRepay);
-  //   doRefund(tokenA);
-  //   doRefund(tokenB);
-  // }
 }
