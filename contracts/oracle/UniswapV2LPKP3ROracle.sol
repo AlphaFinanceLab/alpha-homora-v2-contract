@@ -28,7 +28,7 @@ library LpMath {
   }
 }
 
-contract UniswapV2LPK3PROracle is IBaseOracle, BaseKP3ROracle {
+contract UniswapV2LPKP3ROracle is IBaseOracle, BaseKP3ROracle {
   using SafeMath for uint;
   using LpMath for uint;
 

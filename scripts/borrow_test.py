@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPK3PROracle, HouseHoldSpell,
+    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, HouseHoldSpell,
 )
 
 
@@ -26,7 +26,7 @@ def main():
     crusdt = interface.ICErc20('0x797AAB1ce7c01eB727ab980762bA88e7133d2157')
     router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
     erc20_oracle = ERC20KP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
-    lp_oracle = UniswapV2LPK3PROracle.deploy(KP3R_ADDRESS, {'from': admin})
+    lp_oracle = UniswapV2LPKP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setOracles(
         [
@@ -73,3 +73,16 @@ def main():
     )
     print('bal', usdt.balanceOf(alice))
     print('put collateral gas', tx.gas_used)
+    usdt.approve(homora, 2**256-1, {'from': alice})
+    tx = homora.execute(
+        position_id,  # position id
+        household_spell,
+        '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
+        household_spell.repay.encode_input(
+            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
+            '300000000',  # $300
+        ),
+        {'from': alice},
+    )
+    print('bal', usdt.balanceOf(alice))
+    print('repay gas', tx.gas_used)

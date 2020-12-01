@@ -166,6 +166,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     require(!bank.isListed, 'bank already exists');
     bank.isListed = true;
     bank.cToken = cToken;
+    IERC20(token).safeApprove(cToken, uint(-1));
     allBanks.push(token);
     emit AddBank(token, cToken);
   }
@@ -356,7 +357,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     cToken.repayBorrow(amountCall);
     uint newDebt = cToken.borrowBalanceStored(address(this));
     bank.totalDebt = newDebt;
-    return newDebt.sub(oldDebt);
+    return oldDebt.sub(newDebt);
   }
 
   /// @dev Internal function to perform token transfer in and return amount actually received.
