@@ -320,9 +320,9 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint totalDebt = bank.totalDebt;
     uint oldShare = position.debtShareOf[token];
     uint oldDebt = oldShare.mul(totalDebt).div(totalShare);
-    uint paid = doRepay(token, doTransferIn(token, amountCall == uint(-1) ? oldDebt : amountCall));
-    require(paid <= oldDebt, 'paid exceeds debt'); // prevent overflow attack
-    uint lessShare = paid.mul(totalShare).div(totalDebt);
+    uint paid = doRepay(token, doTransferIn(token, amountCall));
+    require(paid <= oldDebt, 'paid exceeds debt'); // prevent share overflow attack
+    uint lessShare = paid == oldDebt ? oldShare : paid.mul(totalShare).div(totalDebt);
     bank.totalShare = totalShare.sub(lessShare);
     position.debtShareOf[token] = oldShare.sub(lessShare);
     return (paid, lessShare);
@@ -360,9 +360,8 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// NOTE: Caller must ensure that cToken interest was already accrued up to this block.
   function doBorrow(address token, uint amountCall) internal returns (uint) {
     Bank storage bank = banks[token]; // assume the input is already sanity checked.
-    ICErc20 cToken = ICErc20(bank.cToken);
     uint balanceBefore = IERC20(token).balanceOf(address(this));
-    require(cToken.borrow(amountCall) == 0, 'bad borrow');
+    require(ICErc20(bank.cToken).borrow(amountCall) == 0, 'bad borrow');
     uint balanceAfter = IERC20(token).balanceOf(address(this));
     bank.totalDebt = bank.totalDebt.add(amountCall);
     return balanceAfter.sub(balanceBefore);
