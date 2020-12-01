@@ -7,6 +7,12 @@
     "test": "tests"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.2.1",
+    "ethers": "^5.0.23",
+    "hardhat": "^2.0.4",
     "prettier": "2.2.0",
     "prettier-plugin-solidity": "^1.0.0-alpha.59"
   },
@@ -24,6 +30,7 @@
   },
   "homepage": "https://github.com/AlphaFinanceLab/homora-v2#readme",
   "dependencies": {
-    "@uniswap/v2-core": "^1.0.1"
+    "@uniswap/v2-core": "^1.0.1",
+    "@openzeppelin/contracts": "^3.2.0"
   }
 }
