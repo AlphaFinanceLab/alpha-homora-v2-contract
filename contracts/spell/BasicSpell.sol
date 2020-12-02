@@ -3,21 +3,30 @@ pragma solidity 0.6.12;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 
+import '../utils/ERC1155NaiveReceiver.sol';
 import '../../interfaces/IBank.sol';
+import '../../interfaces/IWERC20.sol';
 import '../../interfaces/IWETH.sol';
 
-contract BasicSpell {
+contract BasicSpell is ERC1155NaiveReceiver {
   using SafeERC20 for IERC20;
 
   IBank public bank;
+  IWERC20 public werc20;
   address public weth;
 
   mapping(address => mapping(address => bool)) public approved;
 
-  constructor(IBank _bank, address _weth) public {
+  constructor(
+    IBank _bank,
+    address _werc20,
+    address _weth
+  ) public {
     bank = _bank;
+    werc20 = IWERC20(_werc20);
     weth = _weth;
     ensureApprove(_weth, address(_bank));
+    werc20.setApprovalForAll(address(bank), true);
   }
 
   /// @dev Ensure that the spell approve the given spender to spend all of its tokens.
@@ -89,8 +98,9 @@ contract BasicSpell {
   /// @param amount The amount to put to the bank.
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
-      ensureApprove(token, address(bank));
-      bank.putCollateral(token, amount);
+      ensureApprove(token, address(werc20));
+      werc20.mint(token, amount);
+      bank.putCollateral(address(werc20), uint(token), amount);
     }
   }
 
@@ -98,7 +108,11 @@ contract BasicSpell {
   /// @param amount The amount to take back.
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
-      bank.takeCollateral(token, amount);
+      if (amount == uint(-1)) {
+        (, , , amount) = bank.getPositionInfo(bank.POSITION_ID());
+      }
+      bank.takeCollateral(address(werc20), uint(token), amount);
+      werc20.burn(token, amount);
     }
   }
 

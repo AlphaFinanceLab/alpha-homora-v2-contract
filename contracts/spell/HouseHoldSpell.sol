@@ -7,7 +7,11 @@ import '../../interfaces/IBank.sol';
 import '../../interfaces/IWETH.sol';
 
 contract HouseHoldSpell is BasicSpell {
-  constructor(IBank _bank, address _weth) public BasicSpell(_bank, _weth) {}
+  constructor(
+    IBank _bank,
+    address _werc20,
+    address _weth
+  ) public BasicSpell(_bank, _werc20, _weth) {}
 
   function borrowETH(uint amount) external {
     doBorrow(weth, amount);
