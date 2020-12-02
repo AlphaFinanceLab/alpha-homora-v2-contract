@@ -5,10 +5,17 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.s
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/utils/ReentrancyGuard.sol';
 
-import '../interfaces/IWERC20.sol';
+import '../../interfaces/IWERC20.sol';
 
-contract WERC20 is ERC1155(''), ReentrancyGuard, IWERC20 {
+contract WERC20 is ERC1155('WERC20'), ReentrancyGuard, IWERC20 {
   using SafeERC20 for IERC20;
+
+  /// @dev Return the underlying ERC-20 for the given ERC-1155 token id.
+  function getUnderlying(uint id) external view override returns (address) {
+    address token = address(id);
+    require(uint(token) == id, 'id overflow');
+    return token;
+  }
 
   /// @dev Return the underlying ERC20 balance for the user.
   function balanceOfERC20(address token, address user) external view override returns (uint) {

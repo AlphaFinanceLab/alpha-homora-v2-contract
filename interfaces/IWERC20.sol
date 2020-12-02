@@ -2,7 +2,9 @@ pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC1155/IERC1155.sol';
 
-interface IWERC20 is IERC1155 {
+import './IERC20Wrapper.sol';
+
+interface IWERC20 is IERC1155, IERC20Wrapper {
   /// @dev Return the underlying ERC20 balance for the user.
   function balanceOfERC20(address token, address user) external view returns (uint);
 
