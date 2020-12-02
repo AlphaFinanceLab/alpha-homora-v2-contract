@@ -111,7 +111,7 @@ def main():
     print('add liquidity gas', tx.gas_used)
     print('bank lp balance', lpusdt.balanceOf(homora))
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
     assert(lpusdt.balanceOf(uniswap_spell) == 0)
@@ -156,7 +156,7 @@ def main():
     print('bank delta lp balance', curLPBal - prevLPBal)
     print('bank total lp balance', curLPBal)
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 

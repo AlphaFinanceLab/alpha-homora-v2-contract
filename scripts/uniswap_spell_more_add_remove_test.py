@@ -136,7 +136,7 @@ def main():
     print('add liquidity gas', tx.gas_used)
     print('bank lp balance', lp.balanceOf(homora))
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
     assert position_id == 1  # position doesn't increase
@@ -185,7 +185,7 @@ def main():
     print('add liquidity gas', tx.gas_used)
     print('bank lp balance', lp.balanceOf(homora))
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
     assert position_id == 1  # position doesn't increase
@@ -232,7 +232,7 @@ def main():
     print('bank delta lp balance', curLPBal - prevLPBal)
     print('bank total lp balance', curLPBal)
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 
@@ -277,7 +277,7 @@ def main():
     print('bank delta lp balance', curLPBal - prevLPBal)
     print('bank total lp balance', curLPBal)
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 
@@ -324,7 +324,7 @@ def main():
     print('add liquidity gas', tx.gas_used)
     print('bank lp balance', lp.balanceOf(homora))
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
     assert position_id == 1  # position doesn't increase
@@ -371,7 +371,7 @@ def main():
     print('bank delta lp balance', curLPBal - prevLPBal)
     print('bank total lp balance', curLPBal)
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 
