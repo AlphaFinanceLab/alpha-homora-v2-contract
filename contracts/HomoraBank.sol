@@ -13,7 +13,7 @@ import '../interfaces/IOracle.sol';
 contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
-  /// @param data The data using in the call.
+  /// @param data The data used in the call.
   function cast(address target, bytes calldata data) external payable {
     (bool ok, bytes memory returndata) = target.call{value: msg.value}(data);
     if (!ok) {
@@ -44,6 +44,7 @@ contract HomoraBank is Initializable, Governable, IBank {
     bool isListed; // Whether this market exists.
     address cToken; // The CToken to draw liquidity from.
     uint reserve; // The reserve portion allocated to Homora protocol.
+    uint pendingReserve; // The pending reserve portion waiting to be resolve.
     uint totalDebt; // The last recorded total debt since last action.
     uint totalShare; // The total debt share count across all open positions.
   }
@@ -127,12 +128,12 @@ contract HomoraBank is Initializable, Governable, IBank {
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
       bank.totalDebt = debt;
-      bank.reserve = bank.reserve.add(doBorrow(token, fee));
-    } else {
-      // Only case we reach here is when bank.totalDebt == debt because CREAMv2 does not support
-      // *repayBorrowBehalf* functionality. We set bank.totalDebt = debt anyways to ensure
-      // consistency. But do note that if *repayBorrowBehalf* exists, an attacker can maliciously
-      // inflate debt share value and make this contract stop working due to math overflow.
+      bank.pendingReserve = bank.pendingReserve.add(fee);
+    } else if (totalDebt != debt) {
+      // We should never reach here because CREAMv2 does not support *repayBorrowBehalf*
+      // functionality. We set bank.totalDebt = debt nonetheless to ensure consistency. But do
+      // note that if *repayBorrowBehalf* exists, an attacker can maliciously deflate debt
+      // share value and potentially make this contract stop working due to math overflow.
       bank.totalDebt = debt;
     }
   }
@@ -142,6 +143,24 @@ contract HomoraBank is Initializable, Governable, IBank {
   function accrueAll(address[] memory tokens) external {
     for (uint idx = 0; idx < tokens.length; idx++) {
       accrue(tokens[idx]);
+    }
+  }
+
+  /// @dev Trigger reserve resolve by borrowing the pending amount for reserve.
+  /// @param token The underlying token to trigger reserve resolve.
+  function resolveReserve(address token) public lock {
+    Bank storage bank = banks[token];
+    require(bank.isListed, 'bank not exists');
+    uint pendingReserve = bank.pendingReserve;
+    bank.pendingReserve = 0;
+    bank.reserve = bank.reserve.add(doBorrow(token, pendingReserve));
+  }
+
+  /// @dev Convenient function to trigger reserve resolve for the list of banks.
+  /// @param tokens The list of banks to trigger reserve resolve.
+  function resolveReserveAll(address[] memory tokens) external {
+    for (uint idx = 0; idx < tokens.length; idx++) {
+      resolveReserve(tokens[idx]);
     }
   }
 
@@ -266,7 +285,7 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Withdraw the reserve portion of the bank.
   /// @param amount The amount of tokens to withdraw.
-  function withdrawReserve(address token, uint amount) external onlyGov lock poke(token) {
+  function withdrawReserve(address token, uint amount) external onlyGov lock {
     Bank storage bank = banks[token];
     bank.reserve = bank.reserve.sub(amount);
     doTransferOut(token, amount);
