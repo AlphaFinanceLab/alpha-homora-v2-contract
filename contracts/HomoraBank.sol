@@ -368,7 +368,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Perform repay action. Return the amount actually taken and the debt share reduced.
   /// @param positionId The position ID to repay the debt.
   /// @param token The bank token to pay the debt.
-  /// @param amountCall The amount to repay by calling transferFrom, or 0 for debt size.
+  /// @param amountCall The amount to repay by calling transferFrom, or -1 for debt size.
   function repayInternal(
     uint positionId,
     address token,
@@ -381,6 +381,9 @@ contract HomoraBank is Initializable, Governable, IBank {
     uint totalDebt = bank.totalDebt;
     uint oldShare = position.debtShareOf[token];
     uint oldDebt = oldShare.mul(totalDebt).div(totalShare);
+    if (amountCall == uint(-1)) {
+      amountCall = oldDebt;
+    }
     uint paid = doRepay(token, doTransferIn(token, amountCall));
     require(paid <= oldDebt, 'paid exceeds debt'); // prevent share overflow attack
     uint lessShare = paid == oldDebt ? oldShare : paid.mul(totalShare).div(totalDebt);
