@@ -424,7 +424,7 @@ contract HomoraBank is Initializable, Governable, IBank {
       pos.collateralToken = collateralToken;
       pos.collateralId = collateralId;
     }
-    uint amount = 0; //doTransferIn(collateralToken, amountCall);
+    uint amount = doERC1155TransferIn(collateralToken, collateralId, amountCall);
     pos.collateralSize = pos.collateralSize.add(amount);
     emit PutCollateral(POSITION_ID, msg.sender, collateralToken, collateralId, amount);
   }
