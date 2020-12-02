@@ -7,6 +7,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
 import './Governable.sol';
+import './utils/ERC1155NaiveReceiver.sol';
 import '../interfaces/IBank.sol';
 import '../interfaces/ICErc20.sol';
 import '../interfaces/IOracle.sol';
@@ -32,7 +33,7 @@ contract HomoraCaster {
   }
 }
 
-contract HomoraBank is Initializable, Governable, IBank {
+contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
 
@@ -445,7 +446,7 @@ contract HomoraBank is Initializable, Governable, IBank {
       amount = pos.collateralSize;
     }
     pos.collateralSize = pos.collateralSize.sub(amount);
-    IERC1155(collateralToken).safeTransferFrom(msg.sender, address(this), collateralId, amount, '');
+    IERC1155(collateralToken).safeTransferFrom(address(this), msg.sender, collateralId, amount, '');
     emit TakeCollateral(POSITION_ID, msg.sender, collateralToken, collateralId, amount);
   }
 

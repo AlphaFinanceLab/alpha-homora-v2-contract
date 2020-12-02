@@ -3,11 +3,12 @@ pragma solidity 0.6.12;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 
+import '../utils/ERC1155NaiveReceiver.sol';
 import '../../interfaces/IBank.sol';
 import '../../interfaces/IWERC20.sol';
 import '../../interfaces/IWETH.sol';
 
-contract BasicSpell {
+contract BasicSpell is ERC1155NaiveReceiver {
   using SafeERC20 for IERC20;
 
   IBank public bank;
@@ -107,6 +108,9 @@ contract BasicSpell {
   /// @param amount The amount to take back.
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
+      if (amount == uint(-1)) {
+        (, , , amount) = bank.getPositionInfo(bank.POSITION_ID());
+      }
       bank.takeCollateral(address(werc20), uint(token), amount);
       werc20.burn(token, amount);
     }
