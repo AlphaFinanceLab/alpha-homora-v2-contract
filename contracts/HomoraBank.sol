@@ -488,6 +488,7 @@ contract HomoraBank is Initializable, Governable, IBank {
 
   /// @dev Internal function to perform ERC1155 transfer in and return amount actually received.
   /// @param token The token to perform transferFrom action.
+  /// @param id The id to perform transferFrom action.
   /// @param amountCall The amount use in the transferFrom call.
   function doERC1155TransferIn(
     address token,
