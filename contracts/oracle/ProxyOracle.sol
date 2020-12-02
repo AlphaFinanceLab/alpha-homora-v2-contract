@@ -70,12 +70,10 @@ contract ProxyOracle is IOracle, Governable {
     address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlying(tokenOutId);
     Oracle memory oracleIn = oracles[tokenIn];
     Oracle memory oracleOut = oracles[tokenOutUnderlying];
-    uint amountOut;
-    {
-      amountOut = amountIn.mul(oracleIn.source.getETHPx(tokenIn)).div(
+    uint amountOut =
+      amountIn.mul(oracleIn.source.getETHPx(tokenIn)).div(
         oracleIn.source.getETHPx(tokenOutUnderlying)
       );
-    }
     return amountOut.mul(oracleIn.liqIncentive).mul(oracleOut.liqIncentive).div(10000 * 10000);
   }
 
