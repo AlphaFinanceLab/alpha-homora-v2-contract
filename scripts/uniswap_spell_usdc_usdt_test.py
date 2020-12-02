@@ -134,8 +134,6 @@ def main():
     assert(usdt.balanceOf(uniswap_spell) == 0)
     assert(usdc.balanceOf(uniswap_spell) == 0)
 
-    assert(totalDebt == 1000 * 10 ** 6)
-
     #####################################################################################
 
     # remove liquidity from the same position
