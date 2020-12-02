@@ -419,7 +419,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   ) external override inExec {
     Position storage pos = positions[POSITION_ID];
     if (pos.collateralToken != collateralToken || pos.collateralId != collateralId) {
-      require(oracle.support(collateralToken, collateralId), 'collateral must have value');
+      require(oracle.support(collateralToken, collateralId), 'collateral not supported');
       require(pos.collateralSize == 0, 'another type of collateral already exists');
       pos.collateralToken = collateralToken;
       pos.collateralId = collateralId;
