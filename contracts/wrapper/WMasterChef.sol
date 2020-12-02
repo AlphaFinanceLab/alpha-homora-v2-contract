@@ -41,7 +41,7 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Mint ERC1155 token for the given pool id.
-  /// @return id The token id that got minted.
+  /// @return The token id that got minted.
   function mint(uint pid, uint amount) external nonReentrant returns (uint) {
     (address lpToken, , , ) = chef.poolInfo(pid);
     IERC20(lpToken).safeTransferFrom(msg.sender, address(this), amount);
@@ -57,7 +57,7 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Burn ERC1155 token to redeem LP ERC20 token back plus SUSHI rewards.
-  /// @return pid The pool id that that you received LP token back.
+  /// @return The pool id that that you received LP token back.
   function burn(uint id, uint amount) external nonReentrant returns (uint) {
     (uint pid, uint stSushiPerShare) = decodeId(id);
     _burn(msg.sender, id, amount);
@@ -73,7 +73,7 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Burn ERC1155 token to redeem LP ERC20 token back without taking SUSHI rewards.
-  /// @return pid The pool id that that you received LP token back.
+  /// @return The pool id that that you received LP token back.
   function emergencyBurn(uint id, uint amount) external nonReentrant returns (uint) {
     (uint pid, ) = decodeId(id);
     _burn(msg.sender, id, amount);
