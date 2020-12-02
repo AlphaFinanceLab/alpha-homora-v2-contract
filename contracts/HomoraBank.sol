@@ -112,7 +112,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   /// @dev Return the current executor (the owner of the current position).
-  function EXECUTOR() external view override returns (address) {
+  function EXECUTOR() external override view returns (address) {
     uint positionId = POSITION_ID;
     require(positionId != _NO_ID, 'not under execution');
     return positions[positionId].owner;
@@ -167,7 +167,7 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Return the borrow balance for given positon and token without trigger interest accrual.
   /// @param positionId The position to query for borrow balance.
   /// @param token The token to query for borrow balance.
-  function borrowBalanceStored(uint positionId, address token) public view override returns (uint) {
+  function borrowBalanceStored(uint positionId, address token) public override view returns (uint) {
     uint totalDebt = banks[token].totalDebt;
     uint totalShare = banks[token].totalShare;
     uint share = positions[positionId].debtShareOf[token];
@@ -190,8 +190,8 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @param token The token address to query for bank information.
   function getBankInfo(address token)
     external
-    view
     override
+    view
     returns (
       bool isListed,
       address cToken,
@@ -208,8 +208,8 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @param positionId The position id to query for position information.
   function getPositionInfo(uint positionId)
     external
-    view
     override
+    view
     returns (
       address owner,
       address collateralToken,
