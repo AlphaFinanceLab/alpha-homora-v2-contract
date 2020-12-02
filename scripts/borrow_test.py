@@ -72,7 +72,7 @@ def main():
     print('bal', usdt.balanceOf(alice))
     print('put collateral gas', tx.gas_used)
 
-    _, _, _, totalDebt, totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 
