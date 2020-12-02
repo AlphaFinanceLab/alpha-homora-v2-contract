@@ -3,14 +3,15 @@ pragma solidity 0.6.12;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC1155/ERC1155.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/utils/ReentrancyGuard.sol';
 
+import '../utils/HomoraMath.sol';
 import '../../interfaces/IERC20Wrapper.sol';
 import '../../interfaces/IMasterChef.sol';
 
 contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   using SafeMath for uint;
+  using HomoraMath for uint;
   using SafeERC20 for IERC20;
 
   IMasterChef public chef;
@@ -63,7 +64,11 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
     chef.withdraw(pid, amount);
     (address lpToken, , , uint enSushiPerShare) = chef.poolInfo(pid);
     IERC20(lpToken).safeTransfer(msg.sender, amount);
-    sushi.safeTransfer(msg.sender, amount.mul(enSushiPerShare.sub(stSushiPerShare)).div(1e12));
+    uint stSushi = stSushiPerShare.mul(amount).divCeil(1e12);
+    uint enSushi = enSushiPerShare.mul(amount).div(1e12);
+    if (enSushi > stSushi) {
+      sushi.safeTransfer(msg.sender, enSushi.sub(stSushi));
+    }
     return pid;
   }
 
