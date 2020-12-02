@@ -186,12 +186,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     }
 
     // 2. Take out collateral
-    if (amt.amtLPTake == uint(-1)) {
-      (, , uint collateralSize) = bank.getPositionInfo(bank.POSITION_ID());
-      doTakeCollateral(lp, collateralSize);
-    } else {
-      doTakeCollateral(lp, amt.amtLPTake);
-    }
+    doTakeCollateral(lp, amt.amtLPTake);
 
     // 3. Compute amount to actually remove
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
