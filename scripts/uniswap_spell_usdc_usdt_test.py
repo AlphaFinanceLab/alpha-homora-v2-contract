@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, SimpleOracle
+    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, SimpleOracle, WERC20
 )
 
 
@@ -38,11 +38,14 @@ def main():
 
     router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
+    werc20 = WERC20.deploy({'from': admin})
+
     simple_oracle = SimpleOracle.deploy({'from': admin})
     simple_oracle.setETHPx([usdt, usdc, lp], [8343331721347310729683379470025550036595362,
                                               8344470555541464992529317899641128796042472, 18454502573009087919612273470304975922 * 10**6])
 
     oracle = ProxyOracle.deploy({'from': admin})
+    oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     oracle.setOracles(
         [
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
@@ -67,19 +70,24 @@ def main():
     homora.addBank(usdc, crusdc, {'from': admin})
 
     # setup initial funds 10^5 USDT + 10^5 USDC to alice
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7', force=True), alice, 10**6 * 10**6)
+    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+                                     force=True), alice, 10**6 * 10**6)
+    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
+                                     force=True), alice, 10**6 * 10**6)
 
     # setup initial funds 10^6 USDT + 10^6 USDC to homora bank
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**6 * 10**6)
+    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+                                     force=True), homora, 10**6 * 10**6)
+    setup_transfer(usdc, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0',
+                                     force=True), homora, 10**6 * 10**6)
 
     # check alice's funds
     print(f'Alice usdt balance {usdt.balanceOf(alice)}')
     print(f'Alice usdc balance {usdc.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 1*10**8, {'from': accounts.at('0x85af1678527f63eb6492ab158ed5d2a94b8732c0', force=True)})
+    lp.transfer(alice, 1*10**8,
+                {'from': accounts.at('0x85af1678527f63eb6492ab158ed5d2a94b8732c0', force=True)})
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
@@ -88,8 +96,9 @@ def main():
     usdc.approve(crusdc, 2**256-1, {'from': alice})
     lp.approve(homora, 2**256-1, {'from': alice})
 
-    uniswap_spell = UniswapV2SpellV1.deploy(homora, router, {'from': admin})
-    uniswap_spell.getPair(usdt, usdc, {'from': admin})  # first time call to reduce gas
+    uniswap_spell = UniswapV2SpellV1.deploy(homora, werc20, router, {'from': admin})
+    # first time call to reduce gas
+    uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
     #####################################################################################
 
@@ -124,7 +133,7 @@ def main():
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
     print('add liquidity gas', tx.gas_used)
-    print('bank lp balance', lp.balanceOf(homora))
+    print('bank lp balance', werc20.balanceOfERC20(lp, homora))
 
     _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
     print('bank usdt totalDebt', totalDebt)
@@ -138,7 +147,7 @@ def main():
     # remove liquidity from the same position
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
-    prevLPBal = lp.balanceOf(homora)
+    prevLPBal = werc20.balanceOfERC20(lp, homora)
 
     tx = homora.execute(
         position_id,
@@ -159,7 +168,7 @@ def main():
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
-    curLPBal = lp.balanceOf(homora)
+    curLPBal = werc20.balanceOfERC20(lp, homora)
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('spell usdt balance', usdt.balanceOf(uniswap_spell))

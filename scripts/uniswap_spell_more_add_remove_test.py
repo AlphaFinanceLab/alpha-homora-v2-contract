@@ -14,7 +14,8 @@ WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 def setup_bank_hack(homora):
     donator = accounts[5]
     fake = accounts.at(homora.address, force=True)
-    controller = interface.IComptroller('0x3d5BC3c8d13dcB8bF317092d84783c2697AE9258')
+    controller = interface.IComptroller(
+        '0x3d5BC3c8d13dcB8bF317092d84783c2697AE9258')
     creth = interface.ICEtherEx('0xD06527D5e56A3495252A528C4987003b712860eE')
     creth.mint({'value': '90 ether', 'from': donator})
     creth.transfer(fake, creth.balanceOf(donator), {'from': donator})
@@ -74,20 +75,25 @@ def main():
     homora.addBank(usdt, crusdt, {'from': admin})
     homora.addBank(usdc, crusdc, {'from': admin})
 
-    # setup initial funds 10^5 USDT + 10^5 USDC to alice
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7', force=True), alice, 10**6 * 10**6)
+    # setup initial funds 10^6 USDT + 10^6 USDC to alice
+    setup_transfer(usdt, accounts.at(
+        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**6 * 10**6)
+    setup_transfer(usdc, accounts.at(
+        '0xa191e578a6736167326d05c119ce0c90849e84b7', force=True), alice, 10**6 * 10**6)
 
     # setup initial funds 10^6 USDT + 10^6 USDC to homora bank
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**6 * 10**6)
+    setup_transfer(usdt, accounts.at(
+        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
+    setup_transfer(usdc, accounts.at(
+        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**6 * 10**6)
 
     # check alice's funds
     print(f'Alice usdt balance {usdt.balanceOf(alice)}')
     print(f'Alice usdc balance {usdc.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 1*10**8, {'from': accounts.at('0x85af1678527f63eb6492ab158ed5d2a94b8732c0', force=True)})
+    lp.transfer(alice, 1*10**8,
+                {'from': accounts.at('0x85af1678527f63eb6492ab158ed5d2a94b8732c0', force=True)})
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
@@ -97,7 +103,8 @@ def main():
     lp.approve(homora, 2**256-1, {'from': alice})
 
     uniswap_spell = UniswapV2SpellV1.deploy(homora, werc20, router, {'from': admin})
-    uniswap_spell.getPair(usdt, usdc, {'from': admin})  # first time call to reduce gas
+    # first time call to reduce gas
+    uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
     #####################################################################################
     # add liquidity

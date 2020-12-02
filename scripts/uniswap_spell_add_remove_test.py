@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1,
+    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, WERC20
 )
 
 
@@ -32,9 +32,12 @@ def main():
     crusdt = interface.ICErc20('0x797AAB1ce7c01eB727ab980762bA88e7133d2157')
     weth = interface.IERC20Ex(WETH_ADDRESS)
     router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
+
+    werc20 = WERC20.deploy({'from': admin})
     erc20_oracle = ERC20KP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
     lp_oracle = UniswapV2LPKP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
     oracle = ProxyOracle.deploy({'from': admin})
+    oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     oracle.setOracles(
         [
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
@@ -52,20 +55,26 @@ def main():
     homora.addBank(usdt, crusdt, {'from': admin})
 
     # setup initial funds 10^5 USDT + 10^4 WETH to alice
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**5 * 10**6)
-    setup_transfer(weth, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
+    setup_transfer(usdt, accounts.at(
+        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**5 * 10**6)
+    setup_transfer(weth, accounts.at(
+        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
 
     # setup initial funds 10^6 USDT + 10^5 WETH to homora bank
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
-    setup_transfer(weth, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
+    setup_transfer(usdt, accounts.at(
+        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
+    setup_transfer(weth, accounts.at(
+        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
 
     # check alice's funds
     print(f'Alice usdt balance {usdt.balanceOf(alice)}')
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lpusdt.transfer(alice, 1*10**17, {'from': accounts.at('0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
-    lpusdt.transfer(homora, 2*10**17, {'from': accounts.at('0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
+    lpusdt.transfer(alice, 1*10**17, {'from': accounts.at(
+        '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
+    lpusdt.transfer(homora, 2*10**17, {'from': accounts.at(
+        '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
@@ -73,8 +82,9 @@ def main():
     weth.approve(homora, 2**256-1, {'from': alice})
     lpusdt.approve(homora, 2**256-1, {'from': alice})
 
-    uniswap_spell = UniswapV2SpellV1.deploy(homora, router, {'from': admin})
-    uniswap_spell.getPair(weth, usdt, {'from': admin})  # first time call to reduce gas
+    uniswap_spell = UniswapV2SpellV1.deploy(homora, werc20, router, {'from': admin})
+    # first time call to reduce gas
+    uniswap_spell.getPair(weth, usdt, {'from': admin})
 
     #####################################################################################
 
