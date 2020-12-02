@@ -35,7 +35,7 @@ contract HouseHoldSpell is BasicSpell {
   }
 
   function takeCollateral(address token, uint amount) external {
-    doTakeCollateral(amount);
+    doTakeCollateral(token, amount);
     doRefund(token);
   }
 }

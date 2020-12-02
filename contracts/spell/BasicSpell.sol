@@ -90,15 +90,15 @@ contract BasicSpell {
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
       ensureApprove(token, address(bank));
-      bank.putCollateral(amount);
+      bank.putCollateral(token, amount);
     }
   }
 
   /// @dev Internal call to take collateral tokens bank from the bank.
   /// @param amount The amount to take back.
-  function doTakeCollateral(uint amount) internal {
+  function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
-      bank.takeCollateral(amount);
+      bank.takeCollateral(token, amount);
     }
   }
 

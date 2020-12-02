@@ -1,11 +1,12 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, 
+    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1,
 )
 
 
 KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
 WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+
 
 def setup_bank_hack(homora):
     donator = accounts[5]
@@ -16,9 +17,11 @@ def setup_bank_hack(homora):
     creth.transfer(fake, creth.balanceOf(donator), {'from': donator})
     controller.enterMarkets([creth], {'from': fake})
 
+
 def setup_transfer(asset, fro, to, amt):
     print(f'sending from {fro} {amt} {asset.name()} to {to}')
     asset.transfer(to, amt, {'from': fro})
+
 
 def main():
     admin = accounts[0]
@@ -48,7 +51,6 @@ def main():
     setup_bank_hack(homora)
     homora.addBank(usdt, crusdt, {'from': admin})
 
-    
     # setup initial funds 10^5 USDT + 10^4 WETH to alice
     setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**5 * 10**6)
     setup_transfer(weth, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
@@ -66,13 +68,13 @@ def main():
     lpusdt.transfer(homora, 2*10**17, {'from': accounts.at('0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
 
     # set approval
-    usdt.approve(homora, 2**256-1, {'from' : alice})
-    usdt.approve(crusdt, 2**256-1, {'from' : alice})
-    weth.approve(homora, 2**256-1, {'from' : alice})
+    usdt.approve(homora, 2**256-1, {'from': alice})
+    usdt.approve(crusdt, 2**256-1, {'from': alice})
+    weth.approve(homora, 2**256-1, {'from': alice})
     lpusdt.approve(homora, 2**256-1, {'from': alice})
 
-    uniswap_spell = UniswapV2SpellV1.deploy(homora, router, {'from' : admin})
-    uniswap_spell.getPair(weth, usdt, {'from': admin}) # first time call to reduce gas
+    uniswap_spell = UniswapV2SpellV1.deploy(homora, router, {'from': admin})
+    uniswap_spell.getPair(weth, usdt, {'from': admin})  # first time call to reduce gas
 
     #####################################################################################
 
@@ -80,20 +82,19 @@ def main():
     prevBBal = weth.balanceOf(alice)
 
     tx = homora.execute(
-        0, 
+        0,
         uniswap_spell,
-        lpusdt, # USDT-WETH
         uniswap_spell.addLiquidity.encode_input(
             usdt,
-            weth, # WETH
-            [400 * 10 ** 6, # 400 USDT
-            10 ** 18,   # 1 WETH
-            1*10**16,  # 0 LP
-            1000 * 10 ** 6,  # borrow 0 USDT
-            0,# 10 * 10**18,  # borrow 0 WETH
-            0,# 2*10**16,  # borrow 0 LP tokens
-            0,  # min 0 USDT
-            0],  # min 0 WETH
+            weth,  # WETH
+            [400 * 10 ** 6,  # 400 USDT
+             10 ** 18,   # 1 WETH
+             1*10**16,  # 0 LP
+             1000 * 10 ** 6,  # borrow 0 USDT
+             0,  # 10 * 10**18,  # borrow 0 WETH
+             0,  # 2*10**16,  # borrow 0 LP tokens
+             0,  # min 0 USDT
+             0],  # min 0 WETH
         ),
         {'from': alice}
     )
@@ -110,7 +111,7 @@ def main():
     print('add liquidity gas', tx.gas_used)
     print('bank lp balance', lpusdt.balanceOf(homora))
 
-    _,_,_,totalDebt,totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.banks(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
     assert(lpusdt.balanceOf(uniswap_spell) == 0)
@@ -126,19 +127,18 @@ def main():
     prevLPBal = lpusdt.balanceOf(homora)
 
     tx = homora.execute(
-        position_id, 
+        position_id,
         uniswap_spell,
-        lpusdt, # USDT-WETH
         uniswap_spell.removeLiquidity.encode_input(
             usdt,
-            weth, # WETH
-            [1 * 10 ** 16, # take out 1e16 LP tokens
-            1 * 10 ** 15,   # withdraw 1e15 LP tokens to wallet
-            2**256-1,  # repay 500 USDT
-            0,   # repay 0 WETH
-            0,   # repay 0 LP 
-            0,   # min 0 USDT
-            0],  # min 0 WETH
+            weth,  # WETH
+            [1 * 10 ** 16,  # take out 1e16 LP tokens
+             1 * 10 ** 15,   # withdraw 1e15 LP tokens to wallet
+             2**256-1,  # repay 500 USDT
+             0,   # repay 0 WETH
+             0,   # repay 0 LP
+             0,   # min 0 USDT
+             0],  # min 0 WETH
         ),
         {'from': alice}
     )
@@ -156,7 +156,7 @@ def main():
     print('bank delta lp balance', curLPBal - prevLPBal)
     print('bank total lp balance', curLPBal)
 
-    _,_,_,totalDebt,totalShare = homora.banks(usdt)
+    _, _, _, totalDebt, totalShare = homora.banks(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 

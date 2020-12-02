@@ -224,7 +224,8 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @param positionId The position ID to query for the collateral value.
   function getCollateralETHValue(uint positionId) public view returns (uint) {
     Position storage position = positions[positionId];
-    return oracle.asETHCollateral(position.collateralToken, position.collateralSize);
+    uint size = position.collateralSize;
+    return size == 0 ? 0 : oracle.asETHCollateral(position.collateralToken, size);
   }
 
   /// @dev Return the total borrow value of the given position in ETH.
@@ -314,25 +315,20 @@ contract HomoraBank is Initializable, Governable, IBank {
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
   /// @param positionId The position ID to execution the action, or zero for new position.
   /// @param spell The target spell to invoke the execution via HomoraCaster.
-  /// @param collateralToken The collateral token for this position.
   /// @param data Extra data to pass to the target for the execution.
   function execute(
     uint positionId,
     address spell,
-    address collateralToken,
     bytes memory data
   ) external payable lock returns (uint) {
     if (positionId == 0) {
-      require(oracle.support(collateralToken), 'collateral token not supported');
       positionId = nextPositionId++;
       Position storage position = positions[positionId];
       position.owner = msg.sender;
-      position.collateralToken = collateralToken;
     } else {
       require(positionId < nextPositionId, 'position id not exists');
       Position storage position = positions[positionId];
       require(msg.sender == position.owner, 'not position owner');
-      require(collateralToken == position.collateralToken, 'bad position token');
     }
     POSITION_ID = positionId;
     SPELL = spell;
@@ -402,21 +398,29 @@ contract HomoraBank is Initializable, Governable, IBank {
   }
 
   /// @dev Put more collateral for users. Must only be called during execution.
+  /// @param collateralToken The token to collateral.
   /// @param amountCall The amount of tokens to put via transferFrom.
-  function putCollateral(uint amountCall) external override inExec {
+  function putCollateral(address collateralToken, uint amountCall) external override inExec {
     Position storage position = positions[POSITION_ID];
-    uint amount = doTransferIn(position.collateralToken, amountCall);
+    if (position.collateralToken != collateralToken) {
+      require(oracle.support(collateralToken), 'collateral token not supported');
+      require(position.collateralSize == 0, 'another type of collateral already exists');
+      position.collateralToken = collateralToken;
+    }
+    uint amount = doTransferIn(collateralToken, amountCall);
     position.collateralSize = position.collateralSize.add(amount);
-    emit PutCollateral(POSITION_ID, msg.sender, amount);
+    emit PutCollateral(POSITION_ID, msg.sender, collateralToken, amount);
   }
 
   /// @dev Take some collateral back. Must only be called during execution.
+  /// @param collateralToken The token to take back.
   /// @param amount The amount of tokens to take back via transfer.
-  function takeCollateral(uint amount) external override inExec {
+  function takeCollateral(address collateralToken, uint amount) external override inExec {
     Position storage position = positions[POSITION_ID];
+    require(collateralToken == position.collateralToken, 'invalid collateral token');
     position.collateralSize = position.collateralSize.sub(amount);
-    doTransferOut(position.collateralToken, amount);
-    emit TakeCollateral(POSITION_ID, msg.sender, amount);
+    doTransferOut(collateralToken, amount);
+    emit TakeCollateral(POSITION_ID, msg.sender, collateralToken, amount);
   }
 
   /// @dev Internal function to perform borrow from the bank and return the amount received.
