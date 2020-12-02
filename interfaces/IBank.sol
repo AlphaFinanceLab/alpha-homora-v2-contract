@@ -16,9 +16,9 @@ interface IBank {
   /// Someone repays tokens to a bank via a spell caller.
   event Repay(uint positionId, address caller, address token, uint amount, uint share);
   /// Someone puts tokens as collateral via a spell caller.
-  event PutCollateral(uint positionId, address caller, address token, uint amount);
+  event PutCollateral(uint positionId, address caller, address token, uint id, uint amount);
   /// Someone takes tokens from collateral via a spell caller.
-  event TakeCollateral(uint positionId, address caller, address token, uint amount);
+  event TakeCollateral(uint positionId, address caller, address token, uint id, uint amount);
   /// Someone calls liquidatation on a position, paying debt and taking collateral tokens.
   event Liquidate(
     uint positionId,
@@ -57,6 +57,7 @@ interface IBank {
     returns (
       address owner,
       address collateralToken,
+      uint collateralId,
       uint collateralSize
     );
 
@@ -76,8 +77,16 @@ interface IBank {
   function transmit(address token, uint amount) external;
 
   /// @dev Put more collateral for users.
-  function putCollateral(address collateralToken, uint amountCall) external;
+  function putCollateral(
+    address collateralToken,
+    uint collateralId,
+    uint amountCall
+  ) external;
 
   /// @dev Take some collateral back.
-  function takeCollateral(address collateralToken, uint amount) external;
+  function takeCollateral(
+    address collateralToken,
+    uint collateralId,
+    uint amount
+  ) external;
 }

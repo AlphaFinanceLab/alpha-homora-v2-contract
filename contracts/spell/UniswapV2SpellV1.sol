@@ -19,7 +19,11 @@ contract UniswapV2SpellV1 is BasicSpell {
 
   mapping(address => mapping(address => address)) public pairs;
 
-  constructor(IBank _bank, IUniswapV2Router02 _router) public BasicSpell(_bank, _router.WETH()) {
+  constructor(
+    IBank _bank,
+    address _werc20,
+    IUniswapV2Router02 _router
+  ) public BasicSpell(_bank, _werc20, _router.WETH()) {
     router = _router;
     factory = IUniswapV2Factory(_router.factory());
   }
