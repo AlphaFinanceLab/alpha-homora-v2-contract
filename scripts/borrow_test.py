@@ -50,7 +50,6 @@ def main():
     tx = homora.execute(
         0,  # position id
         household_spell,
-        '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
         household_spell.putCollateral.encode_input(
             '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT
             '0.00001 ether',  # valued at approximately $600
@@ -64,7 +63,6 @@ def main():
     tx = homora.execute(
         position_id,  # position id
         household_spell,
-        '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
         household_spell.borrow.encode_input(
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
             '500000000',  # $500
@@ -73,18 +71,17 @@ def main():
     )
     print('bal', usdt.balanceOf(alice))
     print('put collateral gas', tx.gas_used)
-    
-    _,_,_,totalDebt,totalShare = homora.banks(usdt)
+
+    _, _, _, totalDebt, totalShare = homora.banks(usdt)
     print('bank usdt totalDebt', totalDebt)
     print('bank usdt totalShare', totalShare)
 
-    usdt.approve(homora, 2**256-1, {'from' : alice})
-    usdt.approve(crusdt, 2**256-1, {'from' : accounts.at(homora, force=True)})
+    usdt.approve(homora, 2**256-1, {'from': alice})
+    usdt.approve(crusdt, 2**256-1, {'from': accounts.at(homora, force=True)})
 
     tx = homora.execute(
         position_id,  # position id
         household_spell,
-        '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
         household_spell.repay.encode_input(
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
             '300000000',  # $300

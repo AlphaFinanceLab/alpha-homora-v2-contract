@@ -99,7 +99,6 @@ def main():
     tx = homora.execute(
         0,
         uniswap_spell,
-        lp,  # USDT-USDC
         uniswap_spell.addLiquidity.encode_input(
             usdt,
             usdc,
@@ -144,7 +143,6 @@ def main():
     tx = homora.execute(
         position_id,
         uniswap_spell,
-        lp,  # USDT-USDC
         uniswap_spell.removeLiquidity.encode_input(
             usdt,
             usdc,
