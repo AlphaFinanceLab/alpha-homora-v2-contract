@@ -56,8 +56,8 @@ interface IBank {
     view
     returns (
       address owner,
-      address collateralToken,
-      uint collateralId,
+      address collToken,
+      uint collId,
       uint collateralSize
     );
 
@@ -78,15 +78,15 @@ interface IBank {
 
   /// @dev Put more collateral for users.
   function putCollateral(
-    address collateralToken,
-    uint collateralId,
+    address collToken,
+    uint collId,
     uint amountCall
   ) external;
 
   /// @dev Take some collateral back.
   function takeCollateral(
-    address collateralToken,
-    uint collateralId,
+    address collToken,
+    uint collId,
     uint amount
   ) external;
 }

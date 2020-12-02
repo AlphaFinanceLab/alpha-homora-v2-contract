@@ -53,8 +53,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   struct Position {
     address owner; // The owner of this position.
-    address collateralToken; // The ERC1155 token used as collateral for this position.
-    uint collateralId; // The token id used as collateral.
+    address collToken; // The ERC1155 token used as collateral for this position.
+    uint collId; // The token id used as collateral.
     uint collateralSize; // The size of collateral token for this position.
     mapping(address => uint) debtShareOf; // The debt share for each token.
   }
@@ -215,13 +215,13 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     override
     returns (
       address owner,
-      address collateralToken,
-      uint collateralId,
+      address collToken,
+      uint collId,
       uint collateralSize
     )
   {
     Position storage pos = positions[positionId];
-    return (pos.owner, pos.collateralToken, pos.collateralId, pos.collateralSize);
+    return (pos.owner, pos.collToken, pos.collId, pos.collateralSize);
   }
 
   /// @dev Return the total collateral value of the given position in ETH.
@@ -229,7 +229,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function getCollateralETHValue(uint positionId) public view returns (uint) {
     Position storage pos = positions[positionId];
     uint size = pos.collateralSize;
-    return size == 0 ? 0 : oracle.asETHCollateral(pos.collateralToken, pos.collateralId, size);
+    return size == 0 ? 0 : oracle.asETHCollateral(pos.collToken, pos.collId, size);
   }
 
   /// @dev Return the total borrow value of the given position in ETH.
@@ -311,15 +311,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(collateralValue < borrowValue, 'position still healthy');
     Position storage pos = positions[positionId];
     (uint amountPaid, uint share) = repayInternal(positionId, debtToken, amountCall);
-    uint bounty =
-      oracle.convertForLiquidation(debtToken, pos.collateralToken, pos.collateralId, amountPaid);
-    IERC1155(pos.collateralToken).safeTransferFrom(
-      address(this),
-      msg.sender,
-      pos.collateralId,
-      bounty,
-      ''
-    );
+    uint bounty = oracle.convertForLiquidation(debtToken, pos.collToken, pos.collId, amountPaid);
+    IERC1155(pos.collToken).safeTransferFrom(address(this), msg.sender, pos.collId, bounty, '');
     emit Liquidate(positionId, msg.sender, debtToken, amountPaid, share, bounty);
   }
 
@@ -410,44 +403,44 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   }
 
   /// @dev Put more collateral for users. Must only be called during execution.
-  /// @param collateralToken The ERC1155 token to collateral.
-  /// @param collateralId The token id to collateral.
+  /// @param collToken The ERC1155 token to collateral.
+  /// @param collId The token id to collateral.
   /// @param amountCall The amount of tokens to put via transferFrom.
   function putCollateral(
-    address collateralToken,
-    uint collateralId,
+    address collToken,
+    uint collId,
     uint amountCall
   ) external override inExec {
     Position storage pos = positions[POSITION_ID];
-    if (pos.collateralToken != collateralToken || pos.collateralId != collateralId) {
-      require(oracle.support(collateralToken, collateralId), 'collateral not supported');
+    if (pos.collToken != collToken || pos.collId != collId) {
+      require(oracle.support(collToken, collId), 'collateral not supported');
       require(pos.collateralSize == 0, 'another type of collateral already exists');
-      pos.collateralToken = collateralToken;
-      pos.collateralId = collateralId;
+      pos.collToken = collToken;
+      pos.collId = collId;
     }
-    uint amount = doERC1155TransferIn(collateralToken, collateralId, amountCall);
+    uint amount = doERC1155TransferIn(collToken, collId, amountCall);
     pos.collateralSize = pos.collateralSize.add(amount);
-    emit PutCollateral(POSITION_ID, msg.sender, collateralToken, collateralId, amount);
+    emit PutCollateral(POSITION_ID, msg.sender, collToken, collId, amount);
   }
 
   /// @dev Take some collateral back. Must only be called during execution.
-  /// @param collateralToken The ERC1155 token to take back.
-  /// @param collateralId The token id to take back.
+  /// @param collToken The ERC1155 token to take back.
+  /// @param collId The token id to take back.
   /// @param amount The amount of tokens to take back via transfer.
   function takeCollateral(
-    address collateralToken,
-    uint collateralId,
+    address collToken,
+    uint collId,
     uint amount
   ) external override inExec {
     Position storage pos = positions[POSITION_ID];
-    require(collateralToken == pos.collateralToken, 'invalid collateral token');
-    require(collateralId == pos.collateralId, 'invalid collateral token');
+    require(collToken == pos.collToken, 'invalid collateral token');
+    require(collId == pos.collId, 'invalid collateral token');
     if (amount == uint(-1)) {
       amount = pos.collateralSize;
     }
     pos.collateralSize = pos.collateralSize.sub(amount);
-    IERC1155(collateralToken).safeTransferFrom(address(this), msg.sender, collateralId, amount, '');
-    emit TakeCollateral(POSITION_ID, msg.sender, collateralToken, collateralId, amount);
+    IERC1155(collToken).safeTransferFrom(address(this), msg.sender, collId, amount, '');
+    emit TakeCollateral(POSITION_ID, msg.sender, collToken, collId, amount);
   }
 
   /// @dev Internal function to perform borrow from the bank and return the amount received.
