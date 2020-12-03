@@ -29,11 +29,14 @@ def main():
     chef = accounts.at('0xc2edad668740f1aa35e4d8f227fb8e17dca888cd', force=True)
     wchef = WMasterChef.deploy(chef, {'from': admin})
 
+    # set approval
     usdt.approve(wchef, 2**256-1, {'from': alice})
     usdc.approve(wchef, 2**256-1, {'from': alice})
     weth.approve(wchef, 2**256-1, {'from': alice})
     lpusdt.approve(wchef, 2**256-1, {'from': alice})
     lpusdc.approve(wchef, 2**256-1, {'from': alice})
+    lpusdt.approve(chef, 2**256-1, {'from': alice})
+    lpusdc.approve(chef, 2**256-1, {'from': alice})
 
     # setup initial funds 10^6 USDT + 10^6 USDC + 10^4 WETH to alice
     setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
@@ -49,6 +52,8 @@ def main():
 
     ######################################################################
     # Check encoding and decoding ids
+    print('######################################################################')
+    print('Case 1.')
 
     pid = 10
     sushiPerShare = 210
@@ -76,6 +81,9 @@ def main():
     ######################################################################
     # check mint & burn
 
+    print('######################################################################')
+    print('Case 2.')
+
     pid = 0
     amt = 10**10
 
@@ -94,6 +102,7 @@ def main():
     assert wchef.balanceOf(alice, encoded_id) == amt
 
     # burn exact
+    prevSushiBalance = sushi.balanceOf(alice)
     tx = wchef.burn(encoded_id, amt, {'from': alice})
     _, _, _, newAccSushiPerShare = interface.IMasterChef(chef).poolInfo(0)
     print('tx status', tx.status)
@@ -101,13 +110,26 @@ def main():
     print('alice wlpusdt balance', wchef.balanceOf(alice, encoded_id))
 
     print('alice sushi balance', sushi.balanceOf(alice))
+    receivedSushi = sushi.balanceOf(alice) - prevSushiBalance
+
     assert tx.status == 1
     assert wchef.balanceOf(alice, encoded_id) == 0  # remove all
-    assert almostEqual(sushi.balanceOf(
-        alice), (newAccSushiPerShare-prevAccSushiPerShare)*amt//10**12)
+    assert almostEqual(receivedSushi, (newAccSushiPerShare-prevAccSushiPerShare)*amt//10**12)
+
+    # check reward same as staking directly
+    prevSushi = sushi.balanceOf(alice)
+    print('alice lpusdt balance', interface.IERC20Ex(lpusdt).balanceOf(alice))
+    tx = interface.IMasterChef(chef).deposit(pid, amt, {'from': alice})
+    tx = interface.IMasterChef(chef).withdraw(pid, amt, {'from': alice})
+    receivedSushiFromChef = sushi.balanceOf(alice) - prevSushi
+    print('receivedSushiFromChef', receivedSushiFromChef)
+    assert almostEqual(receivedSushi, receivedSushiFromChef)
 
     ######################################################################
     # check mint & burn max_int
+
+    print('######################################################################')
+    print('Case 3.')
 
     pid = 0
     amt = 10**10
@@ -135,13 +157,26 @@ def main():
     print('alice wlpusdt balance', wchef.balanceOf(alice, encoded_id))
 
     print('alice sushi balance', sushi.balanceOf(alice))
+    receivedSushi = sushi.balanceOf(alice) - prevSushiBalance
+
     assert tx.status == 1
     assert wchef.balanceOf(alice, encoded_id) == 0  # remove all
     assert almostEqual(sushi.balanceOf(
         alice) - prevSushiBalance, (newAccSushiPerShare-prevAccSushiPerShare)*amt//10**12)
 
+    # check reward same as staking directly
+    prevSushi = sushi.balanceOf(alice)
+    print('alice lpusdt balance', interface.IERC20Ex(lpusdt).balanceOf(alice))
+    tx = interface.IMasterChef(chef).deposit(pid, amt, {'from': alice})
+    tx = interface.IMasterChef(chef).withdraw(pid, amt, {'from': alice})
+    receivedSushiFromChef = sushi.balanceOf(alice) - prevSushi
+    print('receivedSushiFromChef', receivedSushiFromChef)
+    assert almostEqual(receivedSushi, receivedSushiFromChef)
+
     ######################################################################
     # check mint & burn (try more than available--revert, half, then remaining)
+    print('######################################################################')
+    print('Case 4.')
 
     pid = 0
     amt = 10**10
@@ -149,6 +184,7 @@ def main():
     print('alice lpusdt balance', lpusdt.balanceOf(alice))
 
     # mint
+    startSushiBalance = sushi.balanceOf(alice)
     tx = wchef.mint(pid, amt, {'from': alice})
 
     encoded_id = tx.return_value
@@ -201,7 +237,19 @@ def main():
     print('alice wlpusdt balance', wchef.balanceOf(alice, encoded_id))
     print('alice sushi balance', sushi.balanceOf(alice))
 
+    receivedSushi = sushi.balanceOf(alice) - prevSushiBalance
+
     assert tx.status == 1
     assert almostEqual(sushi.balanceOf(
         alice) - prevSushiBalance, (newAccSushiPerShare-prevAccSushiPerShare)*amt//2//10**12)
     assert wchef.balanceOf(alice, encoded_id) == 0
+
+    # check reward same as staking directly
+    prevSushi = sushi.balanceOf(alice)
+    print('alice lpusdt balance', interface.IERC20Ex(lpusdt).balanceOf(alice))
+    tx = interface.IMasterChef(chef).deposit(pid, amt, {'from': alice})  # stake all
+    tx = interface.IMasterChef(chef).withdraw(pid, amt//2, {'from': alice})  # redeem half
+    tx = interface.IMasterChef(chef).withdraw(pid, amt-amt//2, {'from': alice})  # redeem remaining
+    receivedSushiFromChef = sushi.balanceOf(alice) - prevSushi
+    print('receivedSushiFromChef', receivedSushiFromChef)
+    assert almostEqual(receivedSushi, receivedSushiFromChef)
