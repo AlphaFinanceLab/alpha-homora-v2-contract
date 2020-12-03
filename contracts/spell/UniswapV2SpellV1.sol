@@ -100,10 +100,11 @@ contract UniswapV2SpellV1 is BasicSpell {
     address tokenA,
     address tokenB,
     Amounts calldata amt
-  ) external {
+  ) external payable {
     address lp = getPair(tokenA, tokenB);
 
     // 1. Get user input amounts
+    doTransmitETH();
     doTransmit(tokenA, amt.amtAUser);
     doTransmit(tokenB, amt.amtBUser);
     doTransmit(lp, amt.amtLPUser);
@@ -153,6 +154,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
 
     // 7. Refund leftovers to users
+    doRefundETH();
     doRefund(tokenA);
     doRefund(tokenB);
   }
@@ -228,6 +230,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
 
     // 8. Refund leftover
+    doRefundETH(); 
     doRefund(tokenA);
     doRefund(tokenB);
     doRefund(lp);
