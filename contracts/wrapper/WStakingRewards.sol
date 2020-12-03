@@ -9,7 +9,7 @@ import '../utils/HomoraMath.sol';
 import '../../interfaces/IERC20Wrapper.sol';
 import '../../interfaces/IStakingRewards.sol';
 
-contract WStakingRewards is ERC1155, ReentrancyGuard, IERC20Wrapper {
+contract WStakingRewards is ERC1155('WStakingRewards'), ReentrancyGuard, IERC20Wrapper {
   using SafeMath for uint;
   using HomoraMath for uint;
   using SafeERC20 for IERC20;
@@ -22,7 +22,7 @@ contract WStakingRewards is ERC1155, ReentrancyGuard, IERC20Wrapper {
     address _staking,
     address _underlying,
     address _reward
-  ) public ERC1155('TODO') {
+  ) public {
     staking = _staking;
     underlying = _underlying;
     reward = _reward;
