@@ -101,10 +101,16 @@ def main():
     prevLPBal_bank = lpusdt.balanceOf(homora)
     prevLPBal_werc20 = lpusdt.balanceOf(werc20)
 
+    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
+        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    else:
+        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+
     usdt_amt = 400 * 10**6
     weth_amt = 10 ** 18
     lp_amt = 1 * 10**16
     borrow_usdt_amt = 1000 * 10**6
+    borrow_weth_amt = 0
 
     tx = homora.execute(
         0,
@@ -116,7 +122,7 @@ def main():
              weth_amt,   # supply WETH
              lp_amt,  # supply LP
              borrow_usdt_amt,  # borrow USDT
-             0,  # borrow WETH
+             borrow_weth_amt,  # borrow WETH
              0,  # borrow LP tokens
              0,  # min USDT
              0],  # min WETH
@@ -132,6 +138,11 @@ def main():
     curLPBal = lpusdt.balanceOf(alice)
     curLPBal_bank = lpusdt.balanceOf(homora)
     curLPBal_werc20 = lpusdt.balanceOf(werc20)
+
+    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
+        curARes, curBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    else:
+        curBRes, curARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
 
     print('spell lp balance', lpusdt.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
@@ -149,6 +160,12 @@ def main():
     print('werc20 prev LP balance', prevLPBal_werc20)
     print('werc20 cur LP balance', curLPBal_werc20)
 
+    print('prev usdt res', prevARes)
+    print('cur usdt res', curARes)
+
+    print('prev weth res', prevBRes)
+    print('cur weth res', curBRes)
+
     # alice
     assert almostEqual(curABal - prevABal, -usdt_amt), 'incorrect USDT amt'
     assert almostEqual(curBBal - prevBBal, -weth_amt), 'incorrect WETH amt'
@@ -159,6 +176,12 @@ def main():
     assert weth.balanceOf(uniswap_spell) == 0, 'non-zero spell WETH balance'
     assert lpusdt.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
     assert totalDebt == 1000 * 10 ** 6
+
+    # check balance and pool reserves
+    assert curABal - prevABal - borrow_usdt_amt == - \
+        (curARes - prevARes), 'not all USDT tokens go to LP pool'
+    assert curBBal - prevBBal - borrow_weth_amt == - \
+        (curBRes - prevBRes), 'not all USDC tokens go to LP pool'
 
     #####################################################################################
     print('=========================================================================')
@@ -172,9 +195,17 @@ def main():
     prevLPBal_werc20 = lpusdt.balanceOf(werc20)
     prevETHBal = alice.balance()
 
+    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
+        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    else:
+        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+
     lp_take_amt = 1 * 10**16
     lp_want = 1 * 10**15
     usdt_repay = 2**256-1  # max
+    weth_repay = 0
+
+    real_usdt_repay = homora.borrowBalanceStored(position_id, usdt)
 
     tx = homora.execute(
         position_id,
@@ -200,6 +231,11 @@ def main():
     curLPBal_werc20 = lpusdt.balanceOf(werc20)
     curETHBal = alice.balance()
 
+    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
+        curARes, curBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    else:
+        curBRes, curARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+
     print('spell lp balance', lpusdt.balanceOf(uniswap_spell))
     print('spell usdt balance', usdt.balanceOf(uniswap_spell))
     print('spell weth balance', weth.balanceOf(uniswap_spell))
@@ -222,6 +258,8 @@ def main():
     print('prev werc20 LP balance', prevLPBal_werc20)
     print('cur werc20 LP balance', curLPBal_werc20)
 
+    print('real usdt repay', real_usdt_repay)
+
     # alice
     assert almostEqual(curBBal - prevBBal, 0), 'incorrect WETH amt'
     assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
@@ -233,5 +271,12 @@ def main():
     assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
     assert weth.balanceOf(uniswap_spell) == 0, 'non-zero spell WETH balance'
     assert lpusdt.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+
+    # check balance and pool reserves
+    assert almostEqual(curABal - prevABal + real_usdt_repay, -
+                       (curARes - prevARes)), 'inconsistent USDT from withdraw'
+    assert almostEqual(curBBal - prevBBal, 0), 'inconsistent WETH from withdraw'
+    assert almostEqual(curETHBal - prevETHBal + weth_repay, -
+                       (curBRes - prevBRes)), 'inconsistent ETH from withdraw'
 
     return tx

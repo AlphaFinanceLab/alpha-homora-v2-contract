@@ -6,7 +6,7 @@ from brownie import (
 
 def almostEqual(a, b):
     thresh = 0.01
-    return a < b + thresh * abs(b) and a > b - thresh * abs(b)
+    return a <= b + thresh * abs(b) and a >= b - thresh * abs(b)
 
 
 def setup_transfer(asset, fro, to, amt):
