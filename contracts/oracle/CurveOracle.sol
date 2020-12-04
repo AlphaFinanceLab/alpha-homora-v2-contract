@@ -29,9 +29,7 @@ contract CurveOracle is IBaseOracle {
         uint tokenPx = tokenOracle.getETHPx(coin);
         if (decimals < 18) tokenPx = tokenPx.div(10**(18 - decimals));
         if (decimals > 18) tokenPx = tokenPx.mul(10**(decimals - 18));
-        if (tokenPx < minPx) {
-          minPx = tokenPx;
-        }
+        if (tokenPx < minPx) minPx = tokenPx;
       } catch (bytes memory) {
         break;
       }
