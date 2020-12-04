@@ -22,7 +22,7 @@ contract MockCErc20 is ICErc20 {
   function borrow(uint borrowAmount) external override returns (uint) {
     balance[msg.sender] += borrowAmount;
     underlying.mint(msg.sender, borrowAmount);
-    return borrowAmount;
+    return 0;
   }
 
   function repayBorrow(uint repayAmount) external override {

@@ -1,4 +1,4 @@
-from brownie import accounts, MockOracle, ProxyOracle, MockERC20, MockCErc20, HomoraBank, BasicSpell, HouseHoldSpell, MockWETH9
+from brownie import accounts, MockOracle, ProxyOracle, MockERC20, MockCErc20, HomoraBank, BasicSpell, HouseHoldSpell, MockWETH9, WERC20
 
 
 def main():
@@ -13,6 +13,7 @@ def main():
 
     cusdt = MockCErc20.deploy(usdt.address, {'from': deployer})
     cweth = MockCErc20.deploy(weth.address, {'from': deployer})
+    werc20 = WERC20.deploy({'from': deployer})
 
     mock_oracle = MockOracle.deploy({'from': deployer})
     mock_oracle.setETHPx(usdt.address, 500*10**18)
@@ -20,6 +21,7 @@ def main():
     mock_oracle.setETHPx(weth.address, 1*10**18)
 
     oracle = ProxyOracle.deploy({'from': deployer})
+    oracle.setWhitelistERC1155([werc20.address], True, {'from': deployer})
     oracle.setOracles([usdt.address, lptoken.address, weth.address], [
                       (mock_oracle, 10000, 10000, 10000),
                       (mock_oracle, 10000, 10000, 10000),
@@ -29,14 +31,15 @@ def main():
     homora.addBank(usdt.address, cusdt.address, {'from': deployer})
     homora.addBank(weth.address, cweth.address, {'from': deployer})
     basic_spell = BasicSpell.deploy(
-        homora.address, weth.address, {'from': deployer})
+        homora.address, werc20.address, weth.address, {'from': deployer})
     household_spell = HouseHoldSpell.deploy(
-        homora.address, weth.address, {'from': deployer})
+        homora.address, werc20.address, weth.address, {'from': deployer})
     print('usdt', usdt.address)
     print('lptoken', lptoken.address)
     print('weth', weth.address)
     print('cusdt', cusdt.address)
     print('cweth', cweth.address)
+    print('werc20', werc20.address)
     print('oracle', oracle.address)
     print('homora', homora.address)
     print('basic_spell', basic_spell.address)

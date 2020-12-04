@@ -6,6 +6,7 @@ describe("Greeter", function () {
   let weth;
   let crusdt;
   let crweth;
+  let werc20;
   let mockOracle;
   let oracle;
   let homora;
@@ -19,6 +20,7 @@ describe("Greeter", function () {
     const MockERC20 = await ethers.getContractFactory("MockERC20");
     const WETH9 = await ethers.getContractFactory("MockWETH9");
     const MockCErc20 = await ethers.getContractFactory("MockCErc20");
+    const WERC20 = await ethers.getContractFactory("WERC20");
     const MockOracle = await ethers.getContractFactory("MockOracle");
     const ProxyOracle = await ethers.getContractFactory("ProxyOracle");
     const HomoraBank = await ethers.getContractFactory("HomoraBank");
@@ -38,7 +40,10 @@ describe("Greeter", function () {
     console.log("WE", (await weth.totalSupply()).toString());
     crusdt = await MockCErc20.deploy(usdt.address);
     crweth = await MockCErc20.deploy(weth.address);
+    werc20 = await WERC20.deploy();
     await crusdt.deployed();
+    await crweth.deployed();
+    await werc20.deployed();
     mockOracle = await MockOracle.deploy();
     await mockOracle.deployed();
     await mockOracle.setETHPx(usdt.address, ethers.utils.parseEther("500"));
@@ -46,6 +51,7 @@ describe("Greeter", function () {
     await mockOracle.setETHPx(weth.address, ethers.utils.parseEther("1"));
     oracle = await ProxyOracle.deploy();
     await oracle.deployed();
+    await oracle.setWhitelistERC1155([werc20.address], true);
     await oracle.setOracles(
       [usdt.address, lpToken.address, weth.address],
       [
@@ -54,14 +60,23 @@ describe("Greeter", function () {
         [mockOracle.address, 10000, 10000, 10000],
       ]
     );
+    console.log("Deploying bank");
     homora = await HomoraBank.deploy();
     await homora.deployed();
     await homora.initializeX(oracle.address, 1000);
     await homora.addBank(usdt.address, crusdt.address);
     await homora.addBank(weth.address, crweth.address);
-    basicSpell = await BasicSpell.deploy(homora.address, weth.address);
+    basicSpell = await BasicSpell.deploy(
+      homora.address,
+      werc20.address,
+      weth.address
+    );
     await basicSpell.deployed();
-    houseHoldSpell = await HouseHoldSpell.deploy(homora.address, weth.address);
+    houseHoldSpell = await HouseHoldSpell.deploy(
+      homora.address,
+      werc20.address,
+      weth.address
+    );
     await basicSpell.deployed();
   });
 
@@ -86,7 +101,6 @@ describe("Greeter", function () {
       .execute(
         0,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("putCollateral", [
           lpToken.address,
           ethers.utils.parseEther("10"),
@@ -106,7 +120,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("takeCollateral", [
           lpToken.address,
           ethers.utils.parseEther("1"),
@@ -144,7 +157,6 @@ describe("Greeter", function () {
       .execute(
         0,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("putCollateral", [
           lpToken.address,
           ethers.utils.parseEther("10"),
@@ -168,7 +180,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("borrow", [
           usdt.address,
           ethers.utils.parseEther("1"),
@@ -210,7 +221,6 @@ describe("Greeter", function () {
       .execute(
         0,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("putCollateral", [
           lpToken.address,
           ethers.utils.parseEther("10"),
@@ -234,7 +244,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("borrow", [
           usdt.address,
           ethers.utils.parseEther("1"),
@@ -260,7 +269,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("repay", [
           usdt.address,
           ethers.utils.parseEther("1"),
@@ -302,7 +310,6 @@ describe("Greeter", function () {
       .execute(
         0,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("putCollateral", [
           lpToken.address,
           ethers.utils.parseEther("10"),
@@ -323,7 +330,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("borrowETH", [
           ethers.utils.parseEther("1"),
         ])
@@ -361,7 +367,6 @@ describe("Greeter", function () {
       .execute(
         0,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("putCollateral", [
           lpToken.address,
           ethers.utils.parseEther("10"),
@@ -382,7 +387,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("borrowETH", [
           ethers.utils.parseEther("1"),
         ])
@@ -401,7 +405,6 @@ describe("Greeter", function () {
       .execute(
         positionId - 1,
         houseHoldSpell.address,
-        lpToken.address,
         houseHoldSpell.interface.encodeFunctionData("repayETH", [
           ethers.utils.parseEther("1"),
         ]),
