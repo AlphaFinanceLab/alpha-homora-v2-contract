@@ -100,6 +100,7 @@ def main():
 
     prevABal = usdt.balanceOf(alice)
     prevBBal = weth.balanceOf(alice)
+    prevETHBal = alice.balance()
     prevLPBal = lpusdt.balanceOf(alice)
     prevLPBal_bank = lpusdt.balanceOf(homora)
     prevLPBal_werc20 = lpusdt.balanceOf(werc20)
@@ -110,7 +111,8 @@ def main():
         prevBRes, prevARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
 
     usdt_amt = 400 * 10**6
-    weth_amt = 10 ** 18
+    weth_amt = 10**18
+    eth_amt = 10**18
     lp_amt = 1 * 10**16
     borrow_usdt_amt = 1000 * 10**6
     borrow_weth_amt = 0
@@ -130,7 +132,7 @@ def main():
              0,  # min USDT
              0],  # min WETH
         ),
-        {'from': alice}
+        {'from': alice, 'value': eth_amt}
     )
 
     position_id = tx.return_value
@@ -138,6 +140,7 @@ def main():
 
     curABal = usdt.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
+    curETHBal = alice.balance()
     curLPBal = lpusdt.balanceOf(alice)
     curLPBal_bank = lpusdt.balanceOf(homora)
     curLPBal_werc20 = lpusdt.balanceOf(werc20)
@@ -163,27 +166,23 @@ def main():
     print('werc20 prev LP balance', prevLPBal_werc20)
     print('werc20 cur LP balance', curLPBal_werc20)
 
-    print('prev usdt res', prevARes)
-    print('cur usdt res', curARes)
-
-    print('prev weth res', prevBRes)
-    print('cur weth res', curBRes)
-
     # alice
     assert almostEqual(curABal - prevABal, -usdt_amt), 'incorrect USDT amt'
     assert almostEqual(curBBal - prevBBal, -weth_amt), 'incorrect WETH amt'
+    assert almostEqual(curETHBal - prevETHBal, -eth_amt), 'incorrect ETH amt'
     assert curLPBal - prevLPBal == -lp_amt, 'incorrect LP amt'
 
     # spell
     assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
     assert weth.balanceOf(uniswap_spell) == 0, 'non-zero spell WETH balance'
+    assert uniswap_spell.balance() == 0, 'non-zero spell ETH balance'
     assert lpusdt.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
     assert totalDebt == borrow_usdt_amt
 
     # check balance and pool reserves
     assert curABal - prevABal - borrow_usdt_amt == - \
         (curARes - prevARes), 'not all USDT tokens go to LP pool'
-    assert curBBal - prevBBal - borrow_weth_amt == - \
+    assert curBBal - prevBBal - borrow_weth_amt - eth_amt == - \
         (curBRes - prevBRes), 'not all WETH tokens go to LP pool'
 
     #####################################################################################
@@ -219,7 +218,7 @@ def main():
             [lp_take_amt,  # take out LP tokens
              lp_want,   # withdraw LP tokens to wallet
              usdt_repay,  # repay USDT
-             0,   # repay WETH
+             weth_repay,   # repay WETH
              0,   # repay LP
              0,   # min USDT
              0],  # min WETH
@@ -261,8 +260,6 @@ def main():
     print('prev werc20 LP balance', prevLPBal_werc20)
     print('cur werc20 LP balance', curLPBal_werc20)
 
-    print('real usdt repay', real_usdt_repay)
-
     # alice
     assert almostEqual(curBBal - prevBBal, 0), 'incorrect WETH amt'
     assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
@@ -274,6 +271,7 @@ def main():
     # spell
     assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
     assert weth.balanceOf(uniswap_spell) == 0, 'non-zero spell WETH balance'
+    assert uniswap_spell.balance() == 0, 'non-zero spell ETH balance'
     assert lpusdt.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
 
     # check balance and pool reserves

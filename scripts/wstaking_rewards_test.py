@@ -21,9 +21,11 @@ def main():
     perp = interface.IERC20Ex('0xbC396689893D065F41bc2C6EcbeE5e0085233447')
     usdc = interface.IERC20Ex('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
 
-    bpt = interface.IERC20Ex('0xf54025af2dc86809be1153c1f20d77adb7e8ecf4')  # perp-usdc
+    bpt = interface.IERC20Ex(
+        '0xf54025af2dc86809be1153c1f20d77adb7e8ecf4')  # perp-usdc
 
-    staking = accounts.at('0xb9840a4a8a671f79de3df3b812feeb38047ce552', force=True)
+    staking = accounts.at(
+        '0xb9840a4a8a671f79de3df3b812feeb38047ce552', force=True)
 
     wstaking = WStakingRewards.deploy(staking, bpt, perp, {'from': admin})
 
@@ -78,7 +80,8 @@ def main():
     print('alice perp balance', curPerpBalance)
     assert curBPTBalance - prevBPTBalance == amt
     print('perp gained', curPerpBalance - prevPerpBalance)
-    print('perp calculated reward', (enRewardPerToken - stRewardPerToken) * amt // (10**18))
+    print('perp calculated reward',
+          (enRewardPerToken - stRewardPerToken) * amt // (10**18))
     assert almostEqual(curPerpBalance - prevPerpBalance,
                        (enRewardPerToken - stRewardPerToken) * amt // (10**18))
 
@@ -93,7 +96,8 @@ def main():
     tx = interface.IStakingRewards(staking).getReward({'from': alice})
     curReward = perp.balanceOf(alice)
     print('perp gained from directly staking', curReward - prevReward)
-    assert almostEqual(curPerpBalance - prevPerpBalance, curReward - prevReward)
+    assert almostEqual(curPerpBalance - prevPerpBalance,
+                       curReward - prevReward)
 
     ######################################################################
     # check mint & burn max_int
@@ -123,7 +127,8 @@ def main():
     print('alice perp balance', curPerpBalance)
     assert curBPTBalance - prevBPTBalance == amt
     print('perp gained', curPerpBalance - prevPerpBalance)
-    print('perp calculated reward', (enRewardPerToken - stRewardPerToken) * amt // (10**18))
+    print('perp calculated reward',
+          (enRewardPerToken - stRewardPerToken) * amt // (10**18))
     assert almostEqual(curPerpBalance - prevPerpBalance,
                        (enRewardPerToken - stRewardPerToken) * amt // (10**18))
 
@@ -138,7 +143,8 @@ def main():
     tx = interface.IStakingRewards(staking).getReward({'from': alice})
     curReward = perp.balanceOf(alice)
     print('perp gained from directly staking', curReward - prevReward)
-    assert almostEqual(curPerpBalance - prevPerpBalance, curReward - prevReward)
+    assert almostEqual(curPerpBalance - prevPerpBalance,
+                       curReward - prevReward)
 
     ######################################################################
     # check mint & burn (try more than available--revert, half, then remaining)
@@ -193,10 +199,12 @@ def main():
 
     chain.sleep(5000)
 
-    tx = interface.IStakingRewards(staking).withdraw(amt-amt//2, {'from': alice})
+    tx = interface.IStakingRewards(staking).withdraw(
+        amt-amt//2, {'from': alice})
 
     tx = interface.IStakingRewards(staking).getReward({'from': alice})
     curReward = perp.balanceOf(alice)
     print('perp gained from wstaking', curPerpBalance - prevPerpBalance)
     print('perp gained from directly staking', curReward - prevReward)
-    assert almostEqual(curPerpBalance - prevPerpBalance, curReward - prevReward)
+    assert almostEqual(curPerpBalance - prevPerpBalance,
+                       curReward - prevReward)
