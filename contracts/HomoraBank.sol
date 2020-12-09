@@ -97,6 +97,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     _;
   }
 
+  event Init(uint pos, address spell);
+
   /// @dev Initialize the bank smart contract, using msg.sender as the first governor.
   /// @param _oracle The oracle smart contract address.
   /// @param _feeBps The fee collected to Homora bank.
@@ -106,6 +108,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     _IN_EXEC_LOCK = _NOT_ENTERED;
     POSITION_ID = _NO_ID;
     SPELL = _NO_ADDRESS;
+    emit Init(POSITION_ID, SPELL);
     caster = address(new HomoraCaster());
     oracle = _oracle;
     feeBps = _feeBps;
@@ -316,6 +319,10 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     emit Liquidate(positionId, msg.sender, debtToken, amountPaid, share, bounty);
   }
 
+  event Yo1(uint positionid, address spell);
+  event Yo2(uint positionid, address spell);
+  event Yo3(uint positionid, address spell);
+
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
   /// @param positionId The position ID to execution the action, or zero for new position.
   /// @param spell The target spell to invoke the execution via HomoraCaster.
@@ -334,12 +341,16 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
     POSITION_ID = positionId;
     SPELL = spell;
+    emit Yo1(POSITION_ID, SPELL);
     HomoraCaster(caster).cast{value: msg.value}(spell, data);
     uint collateralValue = getCollateralETHValue(positionId);
     uint borrowValue = getBorrowETHValue(positionId);
     require(collateralValue >= borrowValue, 'insufficient collateral');
-    POSITION_ID = _NO_ID;
-    SPELL = _NO_ADDRESS;
+    emit Yo2(POSITION_ID, SPELL);
+    nextPositionId = 2;
+    // POSITION_ID = _NO_ID;
+    // SPELL = _NO_ADDRESS;
+    // emit Yo3(POSITION_ID, SPELL);
     return positionId;
   }
 

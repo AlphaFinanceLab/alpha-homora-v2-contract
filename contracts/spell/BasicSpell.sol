@@ -47,11 +47,14 @@ contract BasicSpell is ERC1155NaiveReceiver {
     }
   }
 
+  event TransmitJa(uint pid, address spell, address bank, address caster);
+
   /// @dev Internal call to transmit tokens from the bank if amount is positive.
   /// @param token The token to perform the transmit action.
   /// @param amount The amount to transmit.
   function doTransmit(address token, uint amount) internal {
-    if (amount > 0) {
+    emit TransmitJa(bank.POSITION_ID(), bank.SPELL(), address(bank), msg.sender);
+    if (false && amount > 0) {
       bank.transmit(token, amount);
     }
   }
