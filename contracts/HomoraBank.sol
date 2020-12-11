@@ -258,6 +258,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(!bank.isListed, 'bank already exists');
     bank.isListed = true;
     bank.cToken = cToken;
+    IERC20(token).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, uint(-1));
     allBanks.push(token);
     emit AddBank(token, cToken);
@@ -269,6 +270,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function setCToken(address token, address cToken) external onlyGov {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
+    IERC20(token).safeApprove(cToken, 0);
+    IERC20(token).safeApprove(cToken, uint(-1));
     bank.cToken = cToken;
     emit SetCToken(token, cToken);
   }
