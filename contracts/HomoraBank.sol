@@ -108,6 +108,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     SPELL = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     oracle = _oracle;
+    require(_oracle != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
     emit SetOracle(address(_oracle));
