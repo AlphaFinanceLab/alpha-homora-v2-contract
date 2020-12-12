@@ -141,7 +141,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
-  /// @dev Convenient function to trigger interest accrual for the list of banks.
+  /// @dev Convenient function to trigger interest accrual for a list of banks.
   /// @param tokens The list of banks to trigger interest accrual.
   function accrueAll(address[] memory tokens) external {
     for (uint idx = 0; idx < tokens.length; idx++) {
@@ -317,7 +317,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   }
 
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
-  /// @param positionId The position ID to execution the action, or zero for new position.
+  /// @param positionId The position ID to execute the action, or zero for new position.
   /// @param spell The target spell to invoke the execution via HomoraCaster.
   /// @param data Extra data to pass to the target for the execution.
   function execute(
@@ -343,7 +343,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     return positionId;
   }
 
-  /// @dev Borrow tokens from tha bank. Must only be called while under execution.
+  /// @dev Borrow tokens from that bank. Must only be called while under execution.
   /// @param token The token to borrow from the bank.
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
