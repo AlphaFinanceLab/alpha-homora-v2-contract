@@ -31,7 +31,7 @@ def simple_oracle(a, weth, usdt, usdc, dai, SimpleOracle):
     contract = SimpleOracle.deploy({'from': a[0]})
     contract.setETHPx(
         [weth, usdt, usdc, dai],
-        [2**112, 2**112//600, 2**112//600, 2**112*10**12//600],
+        [2**112, 2**112*10**12//600, 2**112*10**12//600, 2**112//600],
         {'from': a[0]},
     )
     return contract
