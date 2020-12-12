@@ -16,7 +16,7 @@ contract SimpleOracle is IBaseOracle, Governable {
 
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
   /// @param token The ERC-20 token to check the value.
-  function getETHPx(address token) external override view returns (uint) {
+  function getETHPx(address token) external view override returns (uint) {
     return prices[token];
   }
 
@@ -27,6 +27,7 @@ contract SimpleOracle is IBaseOracle, Governable {
     require(tokens.length == pxs.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
       prices[tokens[idx]] = pxs[idx];
+      emit SetETHPx(tokens[idx], pxs[idx]);
     }
   }
 }

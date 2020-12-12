@@ -7,9 +7,9 @@ abstract contract IKeep3rV1Oracle {
     uint price1Cumulative;
   }
 
-  function WETH() public pure virtual returns (address);
+  function WETH() external pure virtual returns (address);
 
-  function factory() public pure virtual returns (address);
+  function factory() external pure virtual returns (address);
 
   mapping(address => Observation[]) public observations;
 
