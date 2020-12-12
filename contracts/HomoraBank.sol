@@ -108,6 +108,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     SPELL = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     oracle = _oracle;
+    require(_oracle != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
     emit SetOracle(address(_oracle));
@@ -258,6 +259,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(!bank.isListed, 'bank already exists');
     bank.isListed = true;
     bank.cToken = cToken;
+    IERC20(token).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, uint(-1));
     allBanks.push(token);
     emit AddBank(token, cToken);
@@ -269,6 +271,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function setCToken(address token, address cToken) external onlyGov {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
+    IERC20(token).safeApprove(cToken, 0);
+    IERC20(token).safeApprove(cToken, uint(-1));
     bank.cToken = cToken;
     emit SetCToken(token, cToken);
   }
@@ -312,6 +316,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     Position storage pos = positions[positionId];
     (uint amountPaid, uint share) = repayInternal(positionId, debtToken, amountCall);
     uint bounty = oracle.convertForLiquidation(debtToken, pos.collToken, pos.collId, amountPaid);
+    pos.collateralSize = pos.collateralSize.sub(bounty);
     IERC1155(pos.collToken).safeTransferFrom(address(this), msg.sender, pos.collId, bounty, '');
     emit Liquidate(positionId, msg.sender, debtToken, amountPaid, share, bounty);
   }
@@ -352,7 +357,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint share = totalShare == 0 ? amount : amount.mul(totalDebt).div(totalShare);
+    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt);
     bank.totalShare = bank.totalShare.add(share);
     pos.debtShareOf[token] = pos.debtShareOf[token].add(share);
     IERC20(token).safeTransfer(msg.sender, doBorrow(token, amount));
