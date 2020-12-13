@@ -42,7 +42,7 @@ contract CurveOracle is IBaseOracle {
       address[8] memory tokens = registry.get_coins(pool);
       for (uint i = 0; i < n; i++) {
         ulTokens[lp].push(
-          UnderlyingToken({token: tokens[i], decimals: uint8(IERC20Decimal(tokens[i]).decimals())})
+          UnderlyingToken({token: tokens[i], decimals: IERC20Decimal(tokens[i]).decimals()})
         );
       }
     }
