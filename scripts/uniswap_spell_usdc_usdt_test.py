@@ -1,11 +1,7 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, SimpleOracle, WERC20
+    HomoraBank, ProxyOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20
 )
-
-
-KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
-WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 
 
 def almostEqual(a, b):
@@ -47,8 +43,10 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([usdt, usdc, lp], [8343331721347310729683379470025550036595362,
-                                              8344470555541464992529317899641128796042472, 18454502573009087919612273470304975922 * 10**6])
+    simple_oracle.setETHPx([usdt, usdc], [8343331721347310729683379470025550036595362,
+                                          8344470555541464992529317899641128796042472])
+
+    uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
@@ -61,7 +59,7 @@ def main():
         [
             [simple_oracle, 10000, 10000, 10000],
             [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
+            [uniswap_oracle, 10000, 10000, 10000],
         ],
         {'from': admin},
     )

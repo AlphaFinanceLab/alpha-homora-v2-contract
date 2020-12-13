@@ -1,17 +1,20 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, SimpleOracle, WERC20
+    HomoraBank, ProxyOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20
 )
 import brownie
 
 
-KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
 MAX_INT = 2**256-1
 
-# add collateral for the bank
+
+def almostEqual(a, b):
+    thresh = 0.01
+    return a <= b + thresh * abs(b) and a >= b - thresh * abs(b)
 
 
 def setup_bank_hack(homora):
+    # add collateral for the bank
     donator = accounts[5]
     fake = accounts.at(homora.address, force=True)
     controller = interface.IComptroller(
@@ -25,11 +28,6 @@ def setup_bank_hack(homora):
 def setup_transfer(asset, fro, to, amt):
     print(f'sending from {fro} {amt} {asset.name()} to {to}')
     asset.transfer(to, amt, {'from': fro})
-
-
-def almostEqual(a, b):
-    thresh = 0.01
-    return a < b + thresh * abs(b) and a > b - thresh * abs(b)
 
 
 def main():
@@ -47,9 +45,15 @@ def main():
         '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
     werc20 = WERC20.deploy({'from': admin})
+
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([usdt, usdc, lp], [8343331721347310729683379470025550036595362,
-                                              8344470555541464992529317899641128796042472, 18454502573009087919612273470304975922 * 10**6])
+    simple_oracle.setETHPx([usdt, usdc], [
+                           8343331721347310729683379470025550036595362, 8344470555541464992529317899641128796042472])
+
+    oracle = ProxyOracle.deploy({'from': admin})
+    oracle.setWhitelistERC1155([werc20], True, {'from': admin})
+
+    uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
@@ -60,9 +64,9 @@ def main():
             '0x3041cbd36888becc7bbcbc0045e3b1f144466f5f',  # USDT-USDC
         ],
         [
-            [simple_oracle, 10500, 9950, 10500],
-            [simple_oracle, 10500, 9950, 10500],
-            [simple_oracle, 10500, 9950, 10500],
+            [simple_oracle, 10000, 10000, 10000],
+            [simple_oracle, 10000, 10000, 10000],
+            [uniswap_oracle, 10000, 10000, 10000],
         ],
         {'from': admin},
     )
@@ -531,6 +535,7 @@ def main():
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
+    print('Alice delta lp balance', curLPBal - prevLPBal)
     print('add liquidity gas', tx.gas_used)
     print('bank lp balance', curLPBal_bank)
 
@@ -564,6 +569,8 @@ def main():
 
     #####################################################################################
     # remove all liquidity from the same position
+    print('=========================================================================')
+    print('Case 6.')
 
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
