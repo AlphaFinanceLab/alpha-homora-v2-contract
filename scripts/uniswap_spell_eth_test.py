@@ -1,11 +1,7 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, WERC20
+    HomoraBank, ProxyOracle, SimpleOracle, UniswapV2Oracle, UniswapV2SpellV1, WERC20
 )
-
-
-KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
-WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 
 
 def almostEqual(a, b):
@@ -34,28 +30,39 @@ def main():
 
     alice = accounts[1]
     usdt = interface.IERC20Ex('0xdAC17F958D2ee523a2206206994597C13D831ec7')
-    lpusdt = interface.IERC20Ex('0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852')
+    weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+
+    lp = interface.IERC20Ex('0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852')
     crusdt = interface.ICErc20('0x797AAB1ce7c01eB727ab980762bA88e7133d2157')
-    weth = interface.IERC20Ex(WETH_ADDRESS)
     router = interface.IUniswapV2Router02(
         '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
     werc20 = WERC20.deploy({'from': admin})
-    erc20_oracle = ERC20KP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
-    lp_oracle = UniswapV2LPKP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
+
+    simple_oracle = SimpleOracle.deploy({'from': admin})
+    simple_oracle.setETHPx([usdt, weth], [
+                           9011535487953795006625883219171279625142296, 2**112])
+
+    oracle = ProxyOracle.deploy({'from': admin})
+    oracle.setWhitelistERC1155([werc20], True, {'from': admin})
+
+    uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     oracle.setOracles(
         [
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
-            '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
+            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
+            '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-WETH
         ],
         [
-            [erc20_oracle, 10000, 10000, 10000],
-            [lp_oracle, 10000, 10000, 10000],
+            [simple_oracle, 10000, 10000, 10000],
+            [simple_oracle, 10000, 10000, 10000],
+            [uniswap_oracle, 10000, 10000, 10000],
         ],
         {'from': admin},
     )
+
     homora = HomoraBank.deploy({'from': admin})
     homora.initialize(oracle, 1000, {'from': admin})  # 10% fee
     setup_bank_hack(homora)
@@ -78,16 +85,16 @@ def main():
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lpusdt.transfer(alice, 1*10**17, {'from': accounts.at(
+    lp.transfer(alice, 1*10**17, {'from': accounts.at(
         '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
-    lpusdt.transfer(homora, 2*10**17, {'from': accounts.at(
+    lp.transfer(homora, 2*10**17, {'from': accounts.at(
         '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
     usdt.approve(crusdt, 2**256-1, {'from': alice})
     weth.approve(homora, 2**256-1, {'from': alice})
-    lpusdt.approve(homora, 2**256-1, {'from': alice})
+    lp.approve(homora, 2**256-1, {'from': alice})
 
     uniswap_spell = UniswapV2SpellV1.deploy(
         homora, werc20, router, {'from': admin})
@@ -101,14 +108,14 @@ def main():
     prevABal = usdt.balanceOf(alice)
     prevBBal = weth.balanceOf(alice)
     prevETHBal = alice.balance()
-    prevLPBal = lpusdt.balanceOf(alice)
-    prevLPBal_bank = lpusdt.balanceOf(homora)
-    prevLPBal_werc20 = lpusdt.balanceOf(werc20)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
 
-    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
-        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
     else:
-        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
     usdt_amt = 400 * 10**6
     weth_amt = 10**18
@@ -141,16 +148,16 @@ def main():
     curABal = usdt.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
     curETHBal = alice.balance()
-    curLPBal = lpusdt.balanceOf(alice)
-    curLPBal_bank = lpusdt.balanceOf(homora)
-    curLPBal_werc20 = lpusdt.balanceOf(werc20)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
 
-    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
-        curARes, curBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        curARes, curBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
     else:
-        curBRes, curARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+        curBRes, curARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
-    print('spell lp balance', lpusdt.balanceOf(uniswap_spell))
+    print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
     print('add liquidity gas', tx.gas_used)
@@ -176,7 +183,7 @@ def main():
     assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
     assert weth.balanceOf(uniswap_spell) == 0, 'non-zero spell WETH balance'
     assert uniswap_spell.balance() == 0, 'non-zero spell ETH balance'
-    assert lpusdt.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
     assert totalDebt == borrow_usdt_amt
 
     # check balance and pool reserves
@@ -192,15 +199,15 @@ def main():
     # remove liquidity from the same position
     prevABal = usdt.balanceOf(alice)
     prevBBal = weth.balanceOf(alice)
-    prevLPBal = lpusdt.balanceOf(alice)
-    prevLPBal_bank = lpusdt.balanceOf(homora)
-    prevLPBal_werc20 = lpusdt.balanceOf(werc20)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
     prevETHBal = alice.balance()
 
-    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
-        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
     else:
-        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
     lp_take_amt = 1 * 10**16
     lp_want = 1 * 10**15
@@ -228,17 +235,17 @@ def main():
 
     curABal = usdt.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
-    curLPBal = lpusdt.balanceOf(alice)
-    curLPBal_bank = lpusdt.balanceOf(homora)
-    curLPBal_werc20 = lpusdt.balanceOf(werc20)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
     curETHBal = alice.balance()
 
-    if interface.IUniswapV2Pair(lpusdt).token0() == usdt:
-        curARes, curBRes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        curARes, curBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
     else:
-        curBRes, curARes, _ = interface.IUniswapV2Pair(lpusdt).getReserves()
+        curBRes, curARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
-    print('spell lp balance', lpusdt.balanceOf(uniswap_spell))
+    print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('spell usdt balance', usdt.balanceOf(uniswap_spell))
     print('spell weth balance', weth.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
@@ -272,7 +279,7 @@ def main():
     assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
     assert weth.balanceOf(uniswap_spell) == 0, 'non-zero spell WETH balance'
     assert uniswap_spell.balance() == 0, 'non-zero spell ETH balance'
-    assert lpusdt.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
 
     # check balance and pool reserves
     assert almostEqual(curABal - prevABal + real_usdt_repay, -
