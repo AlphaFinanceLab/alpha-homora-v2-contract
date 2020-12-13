@@ -95,6 +95,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   }
 
   /// @dev Internal call to put collateral tokens to the bank.
+  /// @param token The token to put to the bank.
   /// @param amount The amount to put to the bank.
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
@@ -104,7 +105,8 @@ contract BasicSpell is ERC1155NaiveReceiver {
     }
   }
 
-  /// @dev Internal call to take collateral tokens bank from the bank.
+  /// @dev Internal call to take collateral tokens from the bank.
+  /// @param token The token to take back.
   /// @param amount The amount to take back.
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
