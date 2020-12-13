@@ -16,7 +16,12 @@ contract CurveOracle is IBaseOracle {
   IBaseOracle public tokenOracle;
   ICurveRegistry public registry;
 
-  mapping(address => address[]) public ulTokens; // lpToken -> underlying token array
+  struct UnderlyingToken {
+    uint8 decimals; // token decimals
+    address token; // token address
+  }
+
+  mapping(address => UnderlyingToken[]) public ulTokens; // lpToken -> underlying tokens array
   mapping(address => address) public poolOf; // lpToken -> pool
 
   constructor(IBaseOracle _tokenOracle, ICurveRegistry _registry) public {
@@ -31,12 +36,14 @@ contract CurveOracle is IBaseOracle {
     if (pool == address(0)) {
       require(lp != address(0), 'no lp token');
       pool = registry.get_pool_from_lp_token(lp);
+      require(pool != address(0), 'no corresponding pool for lp token');
       poolOf[lp] = pool;
       uint n = registry.get_n_coins(pool);
       address[8] memory tokens = registry.get_coins(pool);
-      ulTokens[lp] = new address[](n);
       for (uint i = 0; i < n; i++) {
-        ulTokens[lp][i] = tokens[i];
+        ulTokens[lp].push(
+          UnderlyingToken({token: tokens[i], decimals: uint8(IERC20Decimal(tokens[i]).decimals())})
+        );
       }
     }
     return pool;
@@ -47,14 +54,13 @@ contract CurveOracle is IBaseOracle {
   function getETHPx(address lp) external view override returns (uint) {
     ICurvePool pool = ICurvePool(poolOf[lp]);
     uint minPx = uint(-1);
-    address[] memory tokens = ulTokens[lp];
+    UnderlyingToken[] memory tokens = ulTokens[lp];
     uint n = tokens.length;
     for (uint idx = 0; idx < n; idx++) {
-      address token = tokens[idx];
-      uint decimals = IERC20Decimal(token).decimals();
-      uint tokenPx = tokenOracle.getETHPx(token);
-      if (decimals < 18) tokenPx = tokenPx.div(10**(18 - decimals));
-      if (decimals > 18) tokenPx = tokenPx.mul(10**(decimals - 18));
+      UnderlyingToken memory ulToken = tokens[idx];
+      uint tokenPx = tokenOracle.getETHPx(ulToken.token);
+      if (ulToken.decimals < 18) tokenPx = tokenPx.div(10**(18 - uint(ulToken.decimals)));
+      if (ulToken.decimals > 18) tokenPx = tokenPx.mul(10**(uint(ulToken.decimals) - 18));
       if (tokenPx < minPx) minPx = tokenPx;
     }
     require(minPx != uint(-1), 'no min px');
