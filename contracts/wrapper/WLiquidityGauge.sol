@@ -5,6 +5,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.s
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/utils/ReentrancyGuard.sol';
 
+import '../Governable.sol';
 import '../utils/HomoraMath.sol';
 import '../../interfaces/IERC20Wrapper.sol';
 import '../../interfaces/ICurveRegistry.sol';
@@ -14,7 +15,7 @@ interface ILiquidityGaugeMinter {
   function mint(address gauge) external;
 }
 
-contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20Wrapper {
+contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20Wrapper, Governable {
   using SafeMath for uint;
   using HomoraMath for uint;
   using SafeERC20 for IERC20;
@@ -23,6 +24,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
   mapping(uint => mapping(uint => ILiquidityGauge)) public gauges;
 
   constructor(ICurveRegistry _registry) public {
+    Governable.initialize();
     registry = _registry;
   }
 
@@ -64,20 +66,23 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     return totalCrv.mul(1e18).div(totalStake);
   }
 
+  function registerGauge(uint pid, uint gid) external onlyGov {
+    require(address(gauges[pid][gid]) == address(0), 'gauge already exists');
+    address pool = registry.pool_list(pid);
+    require(pool != address(0), 'no pool');
+    (address[10] memory _gauges, ) = registry.get_gauges(pool);
+    address gauge = _gauges[gid];
+    require(gauge != address(0), 'no gauge');
+    gauges[pid][gid] = ILiquidityGauge(gauge);
+  }
+
   function mint(
     uint pid,
     uint gid,
     uint amount
   ) external nonReentrant returns (uint) {
     ILiquidityGauge gauge = gauges[pid][gid];
-    if (address(gauge) == address(0)) {
-      address pool = registry.pool_list(pid);
-      require(pool != address(0), 'no pool');
-      (address[10] memory _gauges, ) = registry.get_gauges(pool);
-      gauge = ILiquidityGauge(_gauges[gid]);
-      require(address(gauge) != address(0), 'no gauge');
-      gauges[pid][gid] = gauge;
-    }
+    require(address(gauge) != address(0), 'gauge not registered');
     IERC20 lpToken = IERC20(gauge.lp_token());
     if (lpToken.allowance(address(this), address(gauge)) == 0) {
       // We only need to do this once per gauge, as it's practically impossible to spend MAX_UINT.
@@ -97,6 +102,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     (uint pid, uint gid, uint stCrvPerShare) = decodeId(id);
     _burn(msg.sender, id, amount);
     ILiquidityGauge gauge = gauges[pid][gid];
+    require(address(gauge) != address(0), 'gauge not registered');
     gauge.withdraw(amount);
     uint enCrvPerShare = getCrvPerShare(gauge);
     IERC20(gauge.lp_token()).safeTransfer(msg.sender, amount);
