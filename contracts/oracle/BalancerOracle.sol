@@ -6,10 +6,6 @@ import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/IBalancerPool.sol';
 import '../utils/BNum.sol';
 
-interface IERC20Decimal {
-  function decimals() external view returns (uint8);
-}
-
 contract BalancerOracle is IBaseOracle, BNum {
   using SafeMath for uint;
 
