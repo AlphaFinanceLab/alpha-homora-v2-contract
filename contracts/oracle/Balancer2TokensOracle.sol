@@ -36,18 +36,13 @@ contract Balancer2TokensOracle is IBaseOracle, BNum {
     // fairResB = resB * (r0 / r1) ^ wA
     if (r0 > r1) {
       uint ratio = bdiv(r1, r0);
-      uint powA = bpow(ratio, wB);
-      uint powB = bpow(ratio, wA);
-      fairResA = bmul(resA, powA);
-      fairResB = bdiv(resB, powB);
+      fairResA = bmul(resA, bpow(ratio, wB));
+      fairResB = bdiv(resB, bpow(ratio, wA));
     } else {
       uint ratio = bdiv(r0, r1);
-      uint powA = bpow(ratio, wB);
-      uint powB = bpow(ratio, wA);
-      fairResA = bdiv(resA, powA);
-      fairResB = bmul(resB, powB);
+      fairResA = bdiv(resA, bpow(ratio, wB));
+      fairResB = bmul(resB, bpow(ratio, wA));
     }
-    return (fairResA, fairResB);
   }
 
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
