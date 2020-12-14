@@ -71,6 +71,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   address[] public allBanks; // The list of all listed banks.
   mapping(address => Bank) public banks; // Mapping from token to bank data.
+  mapping(address => bool) public cTokenInBank; // Mapping from cToken to its existence in bank.
   mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
   /// @dev Reentrancy lock guard.
@@ -100,7 +101,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @dev Initialize the bank smart contract, using msg.sender as the first governor.
   /// @param _oracle The oracle smart contract address.
   /// @param _feeBps The fee collected to Homora bank.
-  function initialize(IOracle _oracle, uint _feeBps) public initializer {
+  function initialize(IOracle _oracle, uint _feeBps) external initializer {
     Governable.initialize();
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
@@ -230,6 +231,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function getCollateralETHValue(uint positionId) public view returns (uint) {
     Position storage pos = positions[positionId];
     uint size = pos.collateralSize;
+    require(pos.collToken != address(0), 'bad collateral token');
     return size == 0 ? 0 : oracle.asETHCollateral(pos.collToken, pos.collId, size);
   }
 
@@ -256,7 +258,9 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param cToken The address of the cToken smart contract.
   function addBank(address token, address cToken) external onlyGov {
     Bank storage bank = banks[token];
+    require(!cTokenInBank[cToken], 'cToken already exists');
     require(!bank.isListed, 'bank already exists');
+    cTokenInBank[cToken] = true;
     bank.isListed = true;
     bank.cToken = cToken;
     IERC20(token).safeApprove(cToken, 0);
@@ -270,7 +274,11 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param cToken The address of the cToken smart contract.
   function setCToken(address token, address cToken) external onlyGov {
     Bank storage bank = banks[token];
+    require(!cTokenInBank[cToken], 'cToken already exists');
     require(bank.isListed, 'bank not exists');
+    cTokenInBank[bank.cToken] = false;
+    cTokenInBank[cToken] = true;
+    IERC20(bank.cToken).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, uint(-1));
     bank.cToken = cToken;
@@ -296,6 +304,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param amount The amount of tokens to withdraw.
   function withdrawReserve(address token, uint amount) external onlyGov lock {
     Bank storage bank = banks[token];
+    require(bank.isListed, 'bank not exists');
     bank.reserve = bank.reserve.sub(amount);
     IERC20(token).safeTransfer(msg.sender, amount);
     emit WithdrawReserve(msg.sender, token, amount);
@@ -315,6 +324,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(collateralValue < borrowValue, 'position still healthy');
     Position storage pos = positions[positionId];
     (uint amountPaid, uint share) = repayInternal(positionId, debtToken, amountCall);
+    require(pos.collToken != address(0), 'bad collateral token');
     uint bounty = oracle.convertForLiquidation(debtToken, pos.collToken, pos.collId, amountPaid);
     pos.collateralSize = pos.collateralSize.sub(bounty);
     IERC1155(pos.collToken).safeTransferFrom(address(this), msg.sender, pos.collId, bounty, '');
