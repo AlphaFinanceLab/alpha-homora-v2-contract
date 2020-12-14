@@ -109,6 +109,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     SPELL = _NO_ADDRESS;
     caster = address(new HomoraCaster());
     oracle = _oracle;
+    require(address(_oracle) != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
     emit SetOracle(address(_oracle));
@@ -142,7 +143,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
-  /// @dev Convenient function to trigger interest accrual for the list of banks.
+  /// @dev Convenient function to trigger interest accrual for a list of banks.
   /// @param tokens The list of banks to trigger interest accrual.
   function accrueAll(address[] memory tokens) external {
     for (uint idx = 0; idx < tokens.length; idx++) {
@@ -262,6 +263,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     cTokenInBank[cToken] = true;
     bank.isListed = true;
     bank.cToken = cToken;
+    IERC20(token).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, uint(-1));
     allBanks.push(token);
     emit AddBank(token, cToken);
@@ -276,6 +278,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(bank.isListed, 'bank not exists');
     cTokenInBank[bank.cToken] = false;
     cTokenInBank[cToken] = true;
+    IERC20(token).safeApprove(cToken, 0);
+    IERC20(token).safeApprove(cToken, uint(-1));
     bank.cToken = cToken;
     emit SetCToken(token, cToken);
   }
@@ -321,12 +325,13 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     (uint amountPaid, uint share) = repayInternal(positionId, debtToken, amountCall);
     require(pos.collToken != address(0), 'bad collateral token');
     uint bounty = oracle.convertForLiquidation(debtToken, pos.collToken, pos.collId, amountPaid);
+    pos.collateralSize = pos.collateralSize.sub(bounty);
     IERC1155(pos.collToken).safeTransferFrom(address(this), msg.sender, pos.collId, bounty, '');
     emit Liquidate(positionId, msg.sender, debtToken, amountPaid, share, bounty);
   }
 
   /// @dev Execute the action via HomoraCaster, calling its function with the supplied data.
-  /// @param positionId The position ID to execution the action, or zero for new position.
+  /// @param positionId The position ID to execute the action, or zero for new position.
   /// @param spell The target spell to invoke the execution via HomoraCaster.
   /// @param data Extra data to pass to the target for the execution.
   function execute(
@@ -352,7 +357,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     return positionId;
   }
 
-  /// @dev Borrow tokens from tha bank. Must only be called while under execution.
+  /// @dev Borrow tokens from that bank. Must only be called while under execution.
   /// @param token The token to borrow from the bank.
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
@@ -361,7 +366,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint share = totalShare == 0 ? amount : amount.mul(totalDebt).div(totalShare);
+    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt);
     bank.totalShare = bank.totalShare.add(share);
     pos.debtShareOf[token] = pos.debtShareOf[token].add(share);
     IERC20(token).safeTransfer(msg.sender, doBorrow(token, amount));

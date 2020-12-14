@@ -14,7 +14,7 @@ contract CurveSpellV1 is BasicSpell {
   using HomoraMath for uint;
 
   ICurveRegistry registry;
-  mapping(address => address[]) public pools; // lpToken -> underlying token array
+  mapping(address => address[]) public ulTokens; // lpToken -> underlying token array
   mapping(address => address) public poolOf; // lpToken -> pool
 
   constructor(
@@ -25,23 +25,27 @@ contract CurveSpellV1 is BasicSpell {
     registry = ICurveRegistry(_registry);
   }
 
+  /// @dev Return pool address given LP token and update pool info if not exist.
+  /// @param lp LP token to find the corresponding pool.
   function getPool(address lp) public returns (address) {
     address pool = poolOf[lp];
     if (pool == address(0)) {
       require(lp != address(0), 'no lp token');
       pool = registry.get_pool_from_lp_token(lp);
+      require(pool != address(0), 'no corresponding pool for lp token');
       poolOf[lp] = pool;
       uint n = registry.get_n_coins(pool);
       address[8] memory tokens = registry.get_coins(pool);
-      pools[lp] = new address[](n);
+      ulTokens[lp] = new address[](n);
       for (uint i = 0; i < n; i++) {
-        pools[lp][i] = tokens[i];
+        ulTokens[lp][i] = tokens[i];
       }
     }
     return pool;
   }
 
   function ensureApprove3(address lp) public {
+    require(ulTokens[lp].length == 3, 'incorrect pool length');
     address pool = poolOf[lp];
     for (uint idx = 0; idx < 3; idx++) {
       address coin = ICurvePool(pool).coins(idx);
@@ -58,7 +62,9 @@ contract CurveSpellV1 is BasicSpell {
     uint amtLPBorrow,
     uint minLPMint
   ) external payable {
-    address[] memory tokens = pools[lp];
+    address pool = getPool(lp);
+    require(ulTokens[lp].length == 3, 'incorrect pool length');
+    address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve 3 underlying tokens
     ensureApprove3(lp);
@@ -76,7 +82,7 @@ contract CurveSpellV1 is BasicSpell {
     for (uint i = 0; i < 3; i++) {
       suppliedAmts[i] = IERC20(tokens[i]).balanceOf(address(this));
     }
-    ICurvePool(poolOf[lp]).add_liquidity(suppliedAmts, minLPMint);
+    ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
 
     // 4. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
@@ -93,9 +99,9 @@ contract CurveSpellV1 is BasicSpell {
     uint amtLPRepay,
     uint[3] calldata amtsMin
   ) external payable {
+    address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
-    address[] memory tokens = pools[lp];
-    address pool = poolOf[lp];
+    address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
     ensureApprove3(lp);
