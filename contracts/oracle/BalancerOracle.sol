@@ -33,7 +33,7 @@ contract BalancerOracle is IBaseOracle, BNum {
     uint wB,
     uint pA,
     uint pB
-  ) internal view returns (uint, uint) {
+  ) internal pure returns (uint, uint) {
     uint r = bdiv(resA, resB);
     uint r1;
     {
