@@ -51,7 +51,7 @@ def main():
                                                9011535487953795006625883219171279625142296])
 
     curve_oracle = CurveOracle.deploy(simple_oracle, registry, {'from': admin})
-    curve_oracle.getPool(lp)  # update pool info
+    curve_oracle.registerPool(lp)  # update pool info
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
@@ -76,8 +76,6 @@ def main():
     print('=========================================================================')
     print('Case 1.')
 
-    tx = curve_oracle.getPool(lp)
-    print('pool addr', tx.return_value)
     print('pool virtual price', pool.get_virtual_price())
 
     lp_price = curve_oracle.getETHPx(lp)

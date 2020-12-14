@@ -6,7 +6,7 @@ import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/IBalancerPool.sol';
 import '../utils/BNum.sol';
 
-contract BalancerOracle is IBaseOracle, BNum {
+contract Balancer2TokensOracle is IBaseOracle, BNum {
   using SafeMath for uint;
 
   IBaseOracle public tokenOracle;
@@ -20,37 +20,28 @@ contract BalancerOracle is IBaseOracle, BNum {
   /// @param resB Reserev of the second asset
   /// @param wA Weight of the first asset
   /// @param wB Weight of the second asset
-  /// @param pA Fair price of the first asset
-  /// @param pB Fair price of the second asset
+  /// @param pxA Fair price of the first asset
+  /// @param pxB Fair price of the second asset
   function computeFairReserves(
     uint resA,
     uint resB,
     uint wA,
     uint wB,
-    uint pA,
-    uint pB
-  ) internal pure returns (uint, uint) {
-    uint r = bdiv(resA, resB);
-    uint r1;
-    {
-      uint num = bmul(wA, pB);
-      uint den = bmul(wB, pA);
-      r1 = bdiv(num, den);
-    }
-
-    uint fairResA;
-    uint fairResB;
-
+    uint pxA,
+    uint pxB
+  ) internal pure returns (uint fairResA, uint fairResB) {
+    uint r0 = bdiv(resA, resB);
+    uint r1 = bdiv(bmul(wA, pxB), bmul(wB, pxA));
     // fairResA = resA * (r1 / r) ^ wB
     // fairResB = resB * (r / r1) ^ wA
-    if (r > r1) {
-      uint ratio = bdiv(r1, r);
+    if (r0 > r1) {
+      uint ratio = bdiv(r1, r0);
       uint powA = bpow(ratio, wB);
       uint powB = bpow(ratio, wA);
       fairResA = bmul(resA, powA);
       fairResB = bdiv(resB, powB);
     } else {
-      uint ratio = bdiv(r, r1);
+      uint ratio = bdiv(r0, r1);
       uint powA = bpow(ratio, wB);
       uint powB = bpow(ratio, wA);
       fairResA = bdiv(resA, powA);
@@ -63,24 +54,21 @@ contract BalancerOracle is IBaseOracle, BNum {
   /// @param token The ERC-20 token to check the value.
   function getETHPx(address token) external view override returns (uint) {
     IBalancerPool pool = IBalancerPool(token);
-    uint n = pool.getNumTokens();
-    require(n == 2, 'num tokens not 2');
+    require(pool.getNumTokens() == 2, 'num tokens must be 2');
     address[] memory tokens = pool.getFinalTokens();
     address tokenA = tokens[0];
     address tokenB = tokens[1];
-    uint wA = pool.getNormalizedWeight(tokenA);
-    uint wB = pool.getNormalizedWeight(tokenB);
-
-    uint pA = tokenOracle.getETHPx(tokenA);
-    uint pB = tokenOracle.getETHPx(tokenB);
-
-    uint resA = pool.getBalance(tokenA);
-    uint resB = pool.getBalance(tokenB);
-
-    (uint fairResA, uint fairResB) = computeFairReserves(resA, resB, wA, wB, pA, pB);
-
-    uint totalSupply = pool.totalSupply();
-
-    return fairResA.mul(pA).add(fairResB.mul(pB)).div(totalSupply);
+    uint pxA = tokenOracle.getETHPx(tokenA);
+    uint pxB = tokenOracle.getETHPx(tokenB);
+    (uint fairResA, uint fairResB) =
+      computeFairReserves(
+        pool.getBalance(tokenA),
+        pool.getBalance(tokenB),
+        pool.getNormalizedWeight(tokenA),
+        pool.getNormalizedWeight(tokenB),
+        pxA,
+        pxB
+      );
+    return fairResA.mul(pxA).add(fairResB.mul(pxB)).div(pool.totalSupply());
   }
 }

@@ -120,7 +120,7 @@ def main():
         homora, werc20, registry, {'from': admin})
 
     # set up pools
-    curve_spell.getPool(lp)
+    curve_spell.registerPool(lp)
 
     # first time call to reduce gas
     curve_spell.ensureApprove3(lp, {'from': admin})
