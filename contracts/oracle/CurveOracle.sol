@@ -29,32 +29,30 @@ contract CurveOracle is IBaseOracle {
     registry = _registry;
   }
 
-  /// @dev Return pool address given LP token and update pool info if not exist.
+  /// @dev Register the pool given LP token address and set the pool info.
   /// @param lp LP token to find the corresponding pool.
-  function getPool(address lp) public returns (address) {
+  function registerPool(address lp) external {
     address pool = poolOf[lp];
-    if (pool == address(0)) {
-      require(lp != address(0), 'no lp token');
-      pool = registry.get_pool_from_lp_token(lp);
-      require(pool != address(0), 'no corresponding pool for lp token');
-      poolOf[lp] = pool;
-      uint n = registry.get_n_coins(pool);
-      address[8] memory tokens = registry.get_coins(pool);
-      for (uint i = 0; i < n; i++) {
-        ulTokens[lp].push(
-          UnderlyingToken({token: tokens[i], decimals: IERC20Decimal(tokens[i]).decimals()})
-        );
-      }
+    require(pool == address(0), 'lp is already registered');
+    pool = registry.get_pool_from_lp_token(lp);
+    require(pool != address(0), 'no corresponding pool for lp token');
+    poolOf[lp] = pool;
+    uint n = registry.get_n_coins(pool);
+    address[8] memory tokens = registry.get_coins(pool);
+    for (uint i = 0; i < n; i++) {
+      ulTokens[lp].push(
+        UnderlyingToken({token: tokens[i], decimals: IERC20Decimal(tokens[i]).decimals()})
+      );
     }
-    return pool;
   }
 
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
   /// @param lp The ERC-20 LP token to check the value.
   function getETHPx(address lp) external view override returns (uint) {
-    ICurvePool pool = ICurvePool(poolOf[lp]);
-    uint minPx = uint(-1);
+    address pool = poolOf[lp];
+    require(pool != address(0), 'lp is not registered');
     UnderlyingToken[] memory tokens = ulTokens[lp];
+    uint minPx = uint(-1);
     uint n = tokens.length;
     for (uint idx = 0; idx < n; idx++) {
       UnderlyingToken memory ulToken = tokens[idx];
@@ -64,6 +62,6 @@ contract CurveOracle is IBaseOracle {
       if (tokenPx < minPx) minPx = tokenPx;
     }
     require(minPx != uint(-1), 'no min px');
-    return minPx.mul(pool.get_virtual_price()).div(1e18);
+    return minPx.mul(ICurvePool(pool).get_virtual_price()).div(1e18);
   }
 }
