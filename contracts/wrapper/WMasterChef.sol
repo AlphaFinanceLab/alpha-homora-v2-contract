@@ -46,7 +46,7 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
     (address lpToken, , , ) = chef.poolInfo(pid);
     IERC20(lpToken).safeTransferFrom(msg.sender, address(this), amount);
     if (IERC20(lpToken).allowance(address(this), address(chef)) != uint(-1)) {
-      // We only need to this once per pool id, as LP token's allowance won't decrease if it's -1.
+      // We only need to do this once per pool, as LP token's allowance won't decrease if it's -1.
       IERC20(lpToken).approve(address(chef), uint(-1));
     }
     chef.deposit(pid, amount);
