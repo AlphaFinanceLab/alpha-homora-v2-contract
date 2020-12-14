@@ -278,6 +278,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(bank.isListed, 'bank not exists');
     cTokenInBank[bank.cToken] = false;
     cTokenInBank[cToken] = true;
+    IERC20(bank.cToken).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, uint(-1));
     bank.cToken = cToken;
