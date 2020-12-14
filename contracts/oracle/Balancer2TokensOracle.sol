@@ -32,8 +32,8 @@ contract Balancer2TokensOracle is IBaseOracle, BNum {
   ) internal pure returns (uint fairResA, uint fairResB) {
     uint r0 = bdiv(resA, resB);
     uint r1 = bdiv(bmul(wA, pxB), bmul(wB, pxA));
-    // fairResA = resA * (r1 / r) ^ wB
-    // fairResB = resB * (r / r1) ^ wA
+    // fairResA = resA * (r1 / r0) ^ wB
+    // fairResB = resB * (r0 / r1) ^ wA
     if (r0 > r1) {
       uint ratio = bdiv(r1, r0);
       uint powA = bpow(ratio, wB);
