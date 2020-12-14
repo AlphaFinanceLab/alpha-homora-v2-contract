@@ -79,7 +79,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
       gauges[pid][gid] = gauge;
     }
     IERC20 lpToken = IERC20(gauge.lp_token());
-    if (lpToken.allowance(address(this), address(gauge)) != 0) {
+    if (lpToken.allowance(address(this), address(gauge)) == 0) {
       // We only need to do this once per gauge, as it's practically impossible to spend MAX_UINT.
       lpToken.approve(address(gauge), uint(-1));
     }
