@@ -12,6 +12,4 @@ interface ILiquidityGauge {
   function deposit(uint value) external;
 
   function withdraw(uint value) external;
-
-  function integrate_fraction(address addr) external view returns (uint);
 }
