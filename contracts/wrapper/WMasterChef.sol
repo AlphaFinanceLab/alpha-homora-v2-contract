@@ -14,8 +14,8 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   using HomoraMath for uint;
   using SafeERC20 for IERC20;
 
-  IMasterChef public chef;
-  IERC20 public sushi;
+  IMasterChef public immutable chef;
+  IERC20 public immutable sushi;
 
   constructor(IMasterChef _chef) public {
     chef = _chef;
