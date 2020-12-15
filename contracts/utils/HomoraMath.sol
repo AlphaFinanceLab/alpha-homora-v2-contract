@@ -6,7 +6,7 @@ library HomoraMath {
   using SafeMath for uint;
 
   function divCeil(uint lhs, uint rhs) internal pure returns (uint) {
-    return lhs.add(rhs).sub(1) / rhs;
+    return rhs == 1 ? lhs : lhs.add(rhs).sub(1) / rhs;
   }
 
   function fmul(uint lhs, uint rhs) internal pure returns (uint) {
