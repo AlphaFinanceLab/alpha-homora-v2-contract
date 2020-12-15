@@ -50,7 +50,7 @@ def main():
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     oracle.setOracles(
         [
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # WETH
+            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
             '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # DAI
             '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490',  # lp
         ],
