@@ -29,7 +29,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
   mapping(uint => mapping(uint => GaugeInfo)) public gauges;
 
   constructor(ICurveRegistry _registry) public {
-    Governable.initialize();
+    __Governable__init();
     registry = _registry;
   }
 

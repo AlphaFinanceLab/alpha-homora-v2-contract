@@ -11,7 +11,7 @@ contract SimpleOracle is IBaseOracle, Governable {
 
   /// @dev Create the contract and initialize the first governor.
   constructor() public {
-    Governable.initialize();
+    __Governable__init();
   }
 
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.

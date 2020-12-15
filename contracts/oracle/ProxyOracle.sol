@@ -28,7 +28,7 @@ contract ProxyOracle is IOracle, Governable {
 
   /// @dev Create the contract and initialize the first governor.
   constructor() public {
-    Governable.initialize();
+    __Governable__init();
   }
 
   /// @dev Set oracle information for the given list of token addresses.
