@@ -104,7 +104,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param _oracle The oracle smart contract address.
   /// @param _feeBps The fee collected to Homora bank.
   function initialize(IOracle _oracle, uint _feeBps) external initializer {
-    Governable.initialize();
+    __Governable__init();
     _GENERAL_LOCK = _NOT_ENTERED;
     _IN_EXEC_LOCK = _NOT_ENTERED;
     POSITION_ID = _NO_ID;
