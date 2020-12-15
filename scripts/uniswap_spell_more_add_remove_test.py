@@ -50,9 +50,6 @@ def main():
     simple_oracle.setETHPx([usdt, usdc], [
                            8343331721347310729683379470025550036595362, 8344470555541464992529317899641128796042472])
 
-    oracle = ProxyOracle.deploy({'from': admin})
-    oracle.setWhitelistERC1155([werc20], True, {'from': admin})
-
     uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 
     oracle = ProxyOracle.deploy({'from': admin})
