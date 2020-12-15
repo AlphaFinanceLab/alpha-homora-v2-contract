@@ -57,7 +57,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     address collToken; // The ERC1155 token used as collateral for this position.
     uint collId; // The token id used as collateral.
     uint collateralSize; // The size of collateral token for this position.
-    uint debtMap; // Bitmap of nonzero debt. i^th bit is set ff debt share of i^th bank is nonzero.
+    uint debtMap; // Bitmap of nonzero debt. i^th bit is set iff debt share of i^th bank is nonzero.
     mapping(address => uint) debtShareOf; // The debt share for each token.
   }
 
