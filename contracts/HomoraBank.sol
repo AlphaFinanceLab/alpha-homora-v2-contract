@@ -380,7 +380,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint newShare = pos.debtShareOf[token].add(share);
     pos.debtShareOf[token] = newShare;
     if (newShare > 0) {
-      pos.debtMap |= (1 << bank.index);
+      pos.debtMap |= (1 << uint(bank.index));
     }
     IERC20(token).safeTransfer(msg.sender, doBorrow(token, amount));
     emit Borrow(POSITION_ID, msg.sender, token, amount, share);
@@ -420,7 +420,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint newShare = oldShare.sub(lessShare);
     pos.debtShareOf[token] = newShare;
     if (newShare == 0) {
-      pos.debtMap &= ~(1 << bank.index);
+      pos.debtMap &= ~(1 << uint(bank.index));
     }
     return (paid, lessShare);
   }
