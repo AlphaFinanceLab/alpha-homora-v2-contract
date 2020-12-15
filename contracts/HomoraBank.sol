@@ -44,6 +44,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   struct Bank {
     bool isListed; // Whether this market exists.
+    uint8 index; // Reverse look up index for this bank.
     address cToken; // The CToken to draw liquidity from.
     uint reserve; // The reserve portion allocated to Homora protocol.
     uint pendingReserve; // The pending reserve portion waiting to be resolve.
@@ -56,6 +57,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     address collToken; // The ERC1155 token used as collateral for this position.
     uint collId; // The token id used as collateral.
     uint collateralSize; // The size of collateral token for this position.
+    uint debtMap; // Bitmap of nonzero debt. i^th bit is set ff debt share of i^th bank is nonzero.
     mapping(address => uint) debtShareOf; // The debt share for each token.
   }
 
@@ -241,14 +243,18 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint value = 0;
     uint length = allBanks.length;
     Position storage pos = positions[positionId];
-    for (uint idx = 0; idx < length; idx++) {
-      address token = allBanks[idx];
-      uint share = pos.debtShareOf[token];
-      if (share != 0) {
+    uint bitMap = pos.debtMap;
+    uint idx = 0;
+    while (bitMap > 0) {
+      if ((bitMap & 1) != 0) {
+        address token = allBanks[idx];
+        uint share = pos.debtShareOf[token];
         Bank storage bank = banks[token];
         uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
         value = value.add(oracle.asETHBorrow(token, debt));
       }
+      idx++;
+      bitMap >>= 1;
     }
     return value;
   }
@@ -262,6 +268,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(!bank.isListed, 'bank already exists');
     cTokenInBank[cToken] = true;
     bank.isListed = true;
+    require(allBanks.length < 256, 'reach bank limit');
+    bank.index = uint8(allBanks.length);
     bank.cToken = cToken;
     IERC20(token).safeApprove(cToken, 0);
     IERC20(token).safeApprove(cToken, uint(-1));
@@ -369,7 +377,11 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint totalDebt = bank.totalDebt;
     uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt);
     bank.totalShare = bank.totalShare.add(share);
-    pos.debtShareOf[token] = pos.debtShareOf[token].add(share);
+    uint newShare = pos.debtShareOf[token].add(share);
+    pos.debtShareOf[token] = newShare;
+    if (newShare > 0) {
+      pos.debtMap |= (1 << bank.index);
+    }
     IERC20(token).safeTransfer(msg.sender, doBorrow(token, amount));
     emit Borrow(POSITION_ID, msg.sender, token, amount, share);
   }
@@ -405,7 +417,11 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(paid <= oldDebt, 'paid exceeds debt'); // prevent share overflow attack
     uint lessShare = paid == oldDebt ? oldShare : paid.mul(totalShare).div(totalDebt);
     bank.totalShare = totalShare.sub(lessShare);
-    pos.debtShareOf[token] = oldShare.sub(lessShare);
+    uint newShare = oldShare.sub(lessShare);
+    pos.debtShareOf[token] = newShare;
+    if (newShare == 0) {
+      pos.debtMap &= ~(1 << bank.index);
+    }
     return (paid, lessShare);
   }
 
