@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, SimpleOracle, Balancer2TokensOracle, WERC20
+    HomoraBank, ProxyOracle, SimpleOracle, BalancerPairOracle, WERC20
 )
 
 
@@ -44,7 +44,7 @@ def main():
     simple_oracle.setETHPx([weth, dai], [
                            5192296858534827628530496329220096, 8887571220661441971398610676149])
 
-    balancer_oracle = Balancer2TokensOracle.deploy(simple_oracle, {'from': admin})
+    balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': admin})
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})

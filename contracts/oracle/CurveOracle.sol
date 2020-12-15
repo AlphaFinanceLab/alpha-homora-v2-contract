@@ -2,6 +2,7 @@ pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
+import './UsingBaseOracle.sol';
 import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/ICurvePool.sol';
 import '../../interfaces/ICurveRegistry.sol';
@@ -10,11 +11,10 @@ interface IERC20Decimal {
   function decimals() external view returns (uint8);
 }
 
-contract CurveOracle is IBaseOracle {
+contract CurveOracle is UsingBaseOracle, IBaseOracle {
   using SafeMath for uint;
 
-  IBaseOracle public tokenOracle;
-  ICurveRegistry public registry;
+  ICurveRegistry public immutable registry;
 
   struct UnderlyingToken {
     uint8 decimals; // token decimals
@@ -24,8 +24,7 @@ contract CurveOracle is IBaseOracle {
   mapping(address => UnderlyingToken[]) public ulTokens; // lpToken -> underlying tokens array
   mapping(address => address) public poolOf; // lpToken -> pool
 
-  constructor(IBaseOracle _tokenOracle, ICurveRegistry _registry) public {
-    tokenOracle = _tokenOracle;
+  constructor(IBaseOracle _base, ICurveRegistry _registry) public UsingBaseOracle(_base) {
     registry = _registry;
   }
 
@@ -56,7 +55,7 @@ contract CurveOracle is IBaseOracle {
     uint n = tokens.length;
     for (uint idx = 0; idx < n; idx++) {
       UnderlyingToken memory ulToken = tokens[idx];
-      uint tokenPx = tokenOracle.getETHPx(ulToken.token);
+      uint tokenPx = base.getETHPx(ulToken.token);
       if (ulToken.decimals < 18) tokenPx = tokenPx.div(10**(18 - uint(ulToken.decimals)));
       if (ulToken.decimals > 18) tokenPx = tokenPx.mul(10**(uint(ulToken.decimals) - 18));
       if (tokenPx < minPx) minPx = tokenPx;

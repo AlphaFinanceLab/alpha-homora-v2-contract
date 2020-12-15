@@ -2,18 +2,15 @@ pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
+import './UsingBaseOracle.sol';
+import '../utils/BNum.sol';
 import '../../interfaces/IBaseOracle.sol';
 import '../../interfaces/IBalancerPool.sol';
-import '../utils/BNum.sol';
 
-contract Balancer2TokensOracle is IBaseOracle, BNum {
+contract BalancerPairOracle is UsingBaseOracle, IBaseOracle, BNum {
   using SafeMath for uint;
 
-  IBaseOracle public tokenOracle;
-
-  constructor(IBaseOracle _tokenOracle) public {
-    tokenOracle = _tokenOracle;
-  }
+  constructor(IBaseOracle _base) public UsingBaseOracle(_base) {}
 
   /// @dev Return fair reserve amounts given spot reserves, weights, and fair prices.
   /// @param resA Reserve of the first asset
@@ -53,8 +50,8 @@ contract Balancer2TokensOracle is IBaseOracle, BNum {
     address[] memory tokens = pool.getFinalTokens();
     address tokenA = tokens[0];
     address tokenB = tokens[1];
-    uint pxA = tokenOracle.getETHPx(tokenA);
-    uint pxB = tokenOracle.getETHPx(tokenB);
+    uint pxA = base.getETHPx(tokenA);
+    uint pxB = base.getETHPx(tokenB);
     (uint fairResA, uint fairResB) =
       computeFairReserves(
         pool.getBalance(tokenA),
