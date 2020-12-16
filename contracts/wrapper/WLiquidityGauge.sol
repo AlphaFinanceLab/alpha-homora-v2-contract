@@ -26,11 +26,13 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
   }
 
   ICurveRegistry public immutable registry;
+  IERC20 public immutable crv;
   mapping(uint => mapping(uint => GaugeInfo)) public gauges;
 
-  constructor(ICurveRegistry _registry) public {
+  constructor(ICurveRegistry _registry, IERC20 _crv) public {
     __Governable__init();
     registry = _registry;
+    crv = _crv;
   }
 
   function encodeId(
@@ -72,6 +74,9 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     (address[10] memory _gauges, ) = registry.get_gauges(pool);
     address gauge = _gauges[gid];
     require(gauge != address(0), 'no gauge');
+    IERC20 lpToken = IERC20(ILiquidityGauge(gauge).lp_token());
+    lpToken.approve(gauge, 0);
+    lpToken.approve(gauge, uint(-1));
     gauges[pid][gid] = GaugeInfo({impl: ILiquidityGauge(gauge), accCrvPerShare: 0});
   }
 
@@ -85,10 +90,6 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     require(address(impl) != address(0), 'gauge not registered');
     mintCrv(gauge);
     IERC20 lpToken = IERC20(impl.lp_token());
-    if (lpToken.allowance(address(this), address(impl)) == 0) {
-      // We only need to do this once per gauge, as it's practically impossible to spend MAX_UINT.
-      lpToken.approve(address(impl), uint(-1));
-    }
     lpToken.safeTransferFrom(msg.sender, address(this), amount);
     impl.deposit(amount);
     uint id = encodeId(pid, gid, gauge.accCrvPerShare);
@@ -111,17 +112,16 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     uint stCrv = stCrvPerShare.mul(amount).divCeil(1e18);
     uint enCrv = gauge.accCrvPerShare.mul(amount).div(1e18);
     if (enCrv > stCrv) {
-      IERC20(impl.crv_token()).safeTransfer(msg.sender, enCrv.sub(stCrv));
+      crv.safeTransfer(msg.sender, enCrv.sub(stCrv));
     }
     return pid;
   }
 
   function mintCrv(GaugeInfo storage gauge) internal {
     ILiquidityGauge impl = gauge.impl;
-    address crv = impl.crv_token();
-    uint balanceBefore = IERC20(crv).balanceOf(address(this));
+    uint balanceBefore = crv.balanceOf(address(this));
     ILiquidityGaugeMinter(impl.minter()).mint(address(impl));
-    uint balanceAfter = IERC20(crv).balanceOf(address(this));
+    uint balanceAfter = crv.balanceOf(address(this));
     uint gain = balanceAfter.sub(balanceBefore);
     uint supply = impl.balanceOf(address(this));
     if (gain > 0 && supply > 0) {

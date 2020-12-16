@@ -34,7 +34,7 @@ def main():
 
     gauge = accounts.at(
         '0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A', force=True)
-    wgauge = WLiquidityGauge.deploy(registry, {'from': admin})
+    wgauge = WLiquidityGauge.deploy(registry, '0xD533a949740bb3306d119CC777fa900bA034cd52', {'from': admin})
 
     # set approval
     dai.approve(wgauge, 2**256-1, {'from': alice})
