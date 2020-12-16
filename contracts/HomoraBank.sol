@@ -233,15 +233,18 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function getCollateralETHValue(uint positionId) public view returns (uint) {
     Position storage pos = positions[positionId];
     uint size = pos.collateralSize;
-    require(pos.collToken != address(0), 'bad collateral token');
-    return size == 0 ? 0 : oracle.asETHCollateral(pos.collToken, pos.collId, size);
+    if (size == 0) {
+      return 0;
+    } else {
+      require(pos.collToken != address(0), 'bad collateral token');
+      return oracle.asETHCollateral(pos.collToken, pos.collId, size);
+    }
   }
 
   /// @dev Return the total borrow value of the given position in ETH.
   /// @param positionId The position ID to query for the borrow value.
   function getBorrowETHValue(uint positionId) public view returns (uint) {
     uint value = 0;
-    uint length = allBanks.length;
     Position storage pos = positions[positionId];
     uint bitMap = pos.debtMap;
     uint idx = 0;
