@@ -18,6 +18,8 @@ def main():
     admin = accounts[0]
 
     alice = accounts[1]
+    bob = accounts[2]
+
     dai = interface.IERC20Ex('0x6B175474E89094C44Da98b954EedeAC495271d0F')
     usdc = interface.IERC20Ex('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
     usdt = interface.IERC20Ex('0xdAC17F958D2ee523a2206206994597C13D831ec7')
@@ -34,7 +36,8 @@ def main():
 
     gauge = accounts.at(
         '0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A', force=True)
-    wgauge = WLiquidityGauge.deploy(registry, '0xD533a949740bb3306d119CC777fa900bA034cd52', {'from': admin})
+    wgauge = WLiquidityGauge.deploy(
+        registry, '0xD533a949740bb3306d119CC777fa900bA034cd52', {'from': admin})
 
     # set approval
     dai.approve(wgauge, 2**256-1, {'from': alice})
@@ -47,6 +50,16 @@ def main():
     lp_btc.approve(wgauge, 2**256-1, {'from': alice})
     lp_btc.approve(gauge, 2**256-1, {'from': alice})
 
+    dai.approve(wgauge, 2**256-1, {'from': bob})
+    usdc.approve(wgauge, 2**256-1, {'from': bob})
+    usdt.approve(wgauge, 2**256-1, {'from': bob})
+    renbtc.approve(wgauge, 2**256-1, {'from': bob})
+    btc.approve(wgauge, 2**256-1, {'from': bob})
+    lp_3pool.approve(wgauge, 2**256-1, {'from': bob})
+    lp_3pool.approve(gauge, 2**256-1, {'from': bob})
+    lp_btc.approve(wgauge, 2**256-1, {'from': bob})
+    lp_btc.approve(gauge, 2**256-1, {'from': bob})
+
     # setup initial funds to alice
     setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
                                     force=True), alice, 10**6 * 10**18)
@@ -55,15 +68,30 @@ def main():
     setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
                                      force=True), alice, 10**6 * 10**6)
     setup_transfer(renbtc, accounts.at('0x53463cd0b074e5fdafc55dce7b1c82adf1a43b2e',
-                                       force=True), alice, 10**3 * 10**8)
+                                       force=True), alice, 10**2 * 10**8)
     setup_transfer(btc, accounts.at('0x2bf792ffe8803585f74e06907900c2dc2c29adcb',
-                                    force=True), alice, 10**3 * 10**8)
+                                    force=True), alice, 10**2 * 10**8)
 
+    setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
+                                    force=True), bob, 10**6 * 10**18)
+    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
+                                     force=True), bob, 10**6 * 10**6)
+    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+                                     force=True), bob, 10**6 * 10**6)
+    setup_transfer(renbtc, accounts.at('0x53463cd0b074e5fdafc55dce7b1c82adf1a43b2e',
+                                       force=True), bob, 10**2 * 10**8)
+    setup_transfer(btc, accounts.at('0x2bf792ffe8803585f74e06907900c2dc2c29adcb',
+                                    force=True), bob, 10**2 * 10**8)
     # steal some LP from the staking pool
     setup_transfer(lp_3pool, accounts.at(
         '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), alice, 10**6 * 10**18)
     setup_transfer(lp_btc, accounts.at(
         '0x9aa8f427a17d6b0d91b6262989edc7d45d6aedf8', force=True), alice, 100 * 10**18)
+
+    setup_transfer(lp_3pool, accounts.at(
+        '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), bob, 10**6 * 10**18)
+    setup_transfer(lp_btc, accounts.at(
+        '0x9aa8f427a17d6b0d91b6262989edc7d45d6aedf8', force=True), bob, 100 * 10**18)
 
     # register gauges
     wgauge.registerGauge(0, 0, {'from': admin})
@@ -195,7 +223,7 @@ def main():
 
     print('alice lp 3pool balance', lp_3pool.balanceOf(alice))
 
-    # mint
+    # mint alice
     tx = wgauge.mint(pid, gid, amt, {'from': alice})
     encoded_id = tx.return_value
     print('tx status', tx.status)
@@ -207,9 +235,15 @@ def main():
     assert tx.status == 1
     assert wgauge.balanceOf(alice, encoded_id) == amt
 
-    chain.sleep(20000)
+    # mint bob
+    prevCrvBob = crv.balanceOf(bob)
+    print('bob lp_3pool balance', interface.IERC20Ex(lp_3pool).balanceOf(bob))
+    gauge, _ = wgauge.gauges(pid, gid)
+    tx = interface.ILiquidityGauge(gauge).deposit(amt, {'from': bob})
 
-    # burn max_int
+    chain.sleep(10000)
+
+    # burn max_int alice
     prevCrvBalance = crv.balanceOf(alice)
     tx = wgauge.burn(encoded_id, 2**256-1, {'from': alice})
 
@@ -223,18 +257,15 @@ def main():
     assert tx.return_value == pid
     assert wgauge.balanceOf(alice, encoded_id) == 0  # remove all
 
-    # check reward same as staking directly
-    prevCrv = crv.balanceOf(alice)
-    print('alice lp_3pool balance', interface.IERC20Ex(lp_3pool).balanceOf(alice))
-    gauge, _ = wgauge.gauges(pid, gid)
-    tx = interface.ILiquidityGauge(gauge).deposit(amt, {'from': alice})
-    chain.sleep(20000)
+    # burn all bob
     minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
     print('minter', minter)
-    tx = minter.mint(gauge, {'from': alice})
+    tx = minter.mint(gauge, {'from': bob})
     print('tx status', tx.status)
-    tx = interface.ILiquidityGauge(gauge).withdraw(amt, {'from': alice})
-    receivedCrvFromGauge = crv.balanceOf(alice) - prevCrv
+    tx = interface.ILiquidityGauge(gauge).withdraw(amt, {'from': bob})
+    receivedCrvFromGauge = crv.balanceOf(bob) - prevCrvBob
+
+    print('receivedCrv', receivedCrv)
     print('receivedCrvFromGauge', receivedCrvFromGauge)
     assert almostEqual(receivedCrv, receivedCrvFromGauge)
 
@@ -250,7 +281,7 @@ def main():
 
     print('alice lp 3pool balance', lp_3pool.balanceOf(alice))
 
-    # mint
+    # mint alice
     tx = wgauge.mint(pid, gid, amt, {'from': alice})
     encoded_id = tx.return_value
     print('tx status', tx.status)
@@ -261,6 +292,12 @@ def main():
     print('alice wlp_3pool balance', wgauge.balanceOf(alice, encoded_id))
     assert tx.status == 1
     assert wgauge.balanceOf(alice, encoded_id) == amt
+
+    # mint bob
+    prevCrvBob = crv.balanceOf(bob)
+    print('bob lp_3pool balance', interface.IERC20Ex(lp_3pool).balanceOf(bob))
+    gauge, _ = wgauge.gauges(pid, gid)
+    tx = interface.ILiquidityGauge(gauge).deposit(amt, {'from': bob})
 
     chain.sleep(10000)
 
@@ -277,7 +314,7 @@ def main():
     assert prevCrvBalance == crv.balanceOf(alice)
     assert wgauge.balanceOf(alice, encoded_id) == amt
 
-    # burn half
+    # burn half alice
     prevCrvBalance = crv.balanceOf(alice)
     tx = wgauge.burn(encoded_id, amt // 2, {'from': alice})
 
@@ -291,9 +328,16 @@ def main():
     assert tx.return_value == pid
     assert wgauge.balanceOf(alice, encoded_id) == amt - amt // 2  # remove half
 
+    # burn half bob
+    minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
+    print('minter', minter)
+    tx = minter.mint(gauge, {'from': bob})
+    print('tx status', tx.status)
+    tx = interface.ILiquidityGauge(gauge).withdraw(amt // 2, {'from': bob})
+
     chain.sleep(10000)
 
-    # burn remaining
+    # burn remaining alice
     tx = wgauge.burn(encoded_id, 2**256-1, {'from': alice})
 
     print('tx status', tx.status)
@@ -302,27 +346,19 @@ def main():
     print('alice crv balance', crv.balanceOf(alice))
     receivedCrv = crv.balanceOf(alice) - prevCrvBalance
 
-    print('receivedCrv', receivedCrv)
-
     assert tx.status == 1
     assert tx.return_value == pid
+
+    # burn remaining bob
+    tx = minter.mint(gauge, {'from': bob})
+    print('tx status', tx.status)
+    tx = interface.ILiquidityGauge(gauge).withdraw(amt - amt // 2, {'from': bob})
+    receivedCrvFromGauge = crv.balanceOf(bob) - prevCrvBob
+
+    print('receivedCrv alice', receivedCrv)
+    print('receivedCrvFromGauge bob', receivedCrvFromGauge)
+
     assert wgauge.balanceOf(alice, encoded_id) == 0  # remove all
 
     # check reward same as staking directly
-    prevCrv = crv.balanceOf(alice)
-    print('alice lp_3pool balance', interface.IERC20Ex(lp_3pool).balanceOf(alice))
-    gauge, _ = wgauge.gauges(pid, gid)
-    tx = interface.ILiquidityGauge(gauge).deposit(amt, {'from': alice})
-    chain.sleep(10000)
-    minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
-    print('minter', minter)
-    tx = minter.mint(gauge, {'from': alice})
-    print('tx status', tx.status)
-    tx = interface.ILiquidityGauge(gauge).withdraw(amt // 2, {'from': alice})
-    chain.sleep(10000)
-    tx = minter.mint(gauge, {'from': alice})
-    print('tx status', tx.status)
-    tx = interface.ILiquidityGauge(gauge).withdraw(amt - amt // 2, {'from': alice})
-    receivedCrvFromGauge = crv.balanceOf(alice) - prevCrv
-    print('receivedCrvFromGauge', receivedCrvFromGauge)
     assert almostEqual(receivedCrv, receivedCrvFromGauge)
