@@ -12,4 +12,20 @@ interface IBalancerPool {
   function getBalance(address token) external view returns (uint);
 
   function totalSupply() external view returns (uint);
+
+  function joinPool(uint poolAmountOut, uint[] calldata maxAmountsIn) external;
+
+  function joinswapExternAmountIn(
+    address tokenIn,
+    uint tokenAmountIn,
+    uint minPoolAmountOut
+  ) external returns (uint poolAmountOut);
+
+  function exitPool(uint poolAmoutnIn, uint[] calldata minAmountsOut) external;
+
+  function exitswapExternAmountOut(
+    address tokenOut,
+    uint tokenAmountOut,
+    uint maxPoolAmountIn
+  ) external returns (uint poolAmountIn);
 }
