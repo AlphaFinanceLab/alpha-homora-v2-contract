@@ -14,9 +14,9 @@ contract WStakingRewards is ERC1155('WStakingRewards'), ReentrancyGuard, IERC20W
   using HomoraMath for uint;
   using SafeERC20 for IERC20;
 
-  address public staking;
-  address public underlying;
-  address public reward;
+  address public immutable staking;
+  address public immutable underlying;
+  address public immutable reward;
 
   constructor(
     address _staking,
@@ -26,7 +26,7 @@ contract WStakingRewards is ERC1155('WStakingRewards'), ReentrancyGuard, IERC20W
     staking = _staking;
     underlying = _underlying;
     reward = _reward;
-    IERC20(underlying).approve(staking, uint(-1));
+    IERC20(_underlying).approve(_staking, uint(-1));
   }
 
   function getUnderlying(uint) external view override returns (address) {

@@ -11,9 +11,9 @@ import '../../interfaces/IWETH.sol';
 contract BasicSpell is ERC1155NaiveReceiver {
   using SafeERC20 for IERC20;
 
-  IBank public bank;
-  IWERC20 public werc20;
-  address public weth;
+  IBank public immutable bank;
+  IWERC20 public immutable werc20;
+  address public immutable weth;
 
   mapping(address => mapping(address => bool)) public approved;
 
@@ -26,7 +26,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
     werc20 = IWERC20(_werc20);
     weth = _weth;
     ensureApprove(_weth, address(_bank));
-    werc20.setApprovalForAll(address(bank), true);
+    IWERC20(_werc20).setApprovalForAll(address(_bank), true);
   }
 
   /// @dev Ensure that the spell approve the given spender to spend all of its tokens.
@@ -95,6 +95,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   }
 
   /// @dev Internal call to put collateral tokens to the bank.
+  /// @param token The token to put to the bank.
   /// @param amount The amount to put to the bank.
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
@@ -104,7 +105,8 @@ contract BasicSpell is ERC1155NaiveReceiver {
     }
   }
 
-  /// @dev Internal call to take collateral tokens bank from the bank.
+  /// @dev Internal call to take collateral tokens from the bank.
+  /// @param token The token to take back.
   /// @param amount The amount to take back.
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {

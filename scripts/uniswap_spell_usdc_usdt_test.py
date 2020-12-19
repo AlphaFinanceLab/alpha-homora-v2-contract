@@ -1,11 +1,7 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, SimpleOracle, WERC20
+    HomoraBank, ProxyOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20
 )
-
-
-KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
-WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 
 
 def almostEqual(a, b):
@@ -17,7 +13,8 @@ def almostEqual(a, b):
 def setup_bank_hack(homora):
     donator = accounts[5]
     fake = accounts.at(homora.address, force=True)
-    controller = interface.IComptroller('0x3d5BC3c8d13dcB8bF317092d84783c2697AE9258')
+    controller = interface.IComptroller(
+        '0x3d5BC3c8d13dcB8bF317092d84783c2697AE9258')
     creth = interface.ICEtherEx('0xD06527D5e56A3495252A528C4987003b712860eE')
     creth.mint({'value': '90 ether', 'from': donator})
     creth.transfer(fake, creth.balanceOf(donator), {'from': donator})
@@ -40,13 +37,16 @@ def main():
     crusdt = interface.ICErc20('0x797AAB1ce7c01eB727ab980762bA88e7133d2157')
     crusdc = interface.ICErc20('0x44fbebd2f576670a6c33f6fc0b00aa8c5753b322')
 
-    router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
+    router = interface.IUniswapV2Router02(
+        '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([usdt, usdc, lp], [8343331721347310729683379470025550036595362,
-                                              8344470555541464992529317899641128796042472, 18454502573009087919612273470304975922 * 10**6])
+    simple_oracle.setETHPx([usdt, usdc], [8343331721347310729683379470025550036595362,
+                                          8344470555541464992529317899641128796042472])
+
+    uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
@@ -59,7 +59,7 @@ def main():
         [
             [simple_oracle, 10000, 10000, 10000],
             [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
+            [uniswap_oracle, 10000, 10000, 10000],
         ],
         {'from': admin},
     )
@@ -100,7 +100,8 @@ def main():
     usdc.approve(crusdc, 2**256-1, {'from': alice})
     lp.approve(homora, 2**256-1, {'from': alice})
 
-    uniswap_spell = UniswapV2SpellV1.deploy(homora, werc20, router, {'from': admin})
+    uniswap_spell = UniswapV2SpellV1.deploy(
+        homora, werc20, router, {'from': admin})
     # first time call to reduce gas
     uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
@@ -256,7 +257,8 @@ def main():
     assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
 
     # werc20
-    assert almostEqual(curLPBal_werc20 - prevLPBal_werc20, -collSize), 'incorrect werc20 LP amt'
+    assert almostEqual(curLPBal_werc20 - prevLPBal_werc20, -
+                       collSize), 'incorrect werc20 LP amt'
 
     # spell
     assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'

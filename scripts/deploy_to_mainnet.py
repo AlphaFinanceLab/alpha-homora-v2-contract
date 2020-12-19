@@ -12,13 +12,12 @@ def main():
         {'from': deployer},
     )
 
-
     # usdt
     data = oracle.getETHPx('0xdac17f958d2ee523a2206206994597c13d831ec7')
     print(data)
     print(1 / (data / (2**112)))
 
-    # usdc 
+    # usdc
     data = oracle.getETHPx('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
     print(data)
     print(1 / (data / (2**112)))

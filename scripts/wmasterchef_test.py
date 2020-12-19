@@ -23,10 +23,13 @@ def main():
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
     sushi = interface.IERC20Ex('0x6b3595068778dd592e39a122f4f5a5cf09c90fe2')
 
-    lpusdc = interface.IERC20Ex('0x397ff1542f962076d0bfe58ea045ffa2d347aca0')  # pid 1
-    lpusdt = interface.IERC20Ex('0x06da0fd433c1a5d7a4faa01111c044910a184553')  # pid 0
+    lpusdc = interface.IERC20Ex(
+        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0')  # pid 1
+    lpusdt = interface.IERC20Ex(
+        '0x06da0fd433c1a5d7a4faa01111c044910a184553')  # pid 0
 
-    chef = accounts.at('0xc2edad668740f1aa35e4d8f227fb8e17dca888cd', force=True)
+    chef = accounts.at(
+        '0xc2edad668740f1aa35e4d8f227fb8e17dca888cd', force=True)
     wchef = WMasterChef.deploy(chef, {'from': admin})
 
     # set approval
@@ -113,7 +116,8 @@ def main():
 
     assert tx.status == 1
     assert wchef.balanceOf(alice, encoded_id) == 0  # remove all
-    assert almostEqual(receivedSushi, (newAccSushiPerShare-prevAccSushiPerShare)*amt//10**12)
+    assert almostEqual(receivedSushi, (newAccSushiPerShare -
+                                       prevAccSushiPerShare)*amt//10**12)
 
     # check reward same as staking directly
     prevSushi = sushi.balanceOf(alice)
@@ -246,9 +250,12 @@ def main():
     # check reward same as staking directly
     prevSushi = sushi.balanceOf(alice)
     print('alice lpusdt balance', interface.IERC20Ex(lpusdt).balanceOf(alice))
-    tx = interface.IMasterChef(chef).deposit(pid, amt, {'from': alice})  # stake all
-    tx = interface.IMasterChef(chef).withdraw(pid, amt//2, {'from': alice})  # redeem half
-    tx = interface.IMasterChef(chef).withdraw(pid, amt-amt//2, {'from': alice})  # redeem remaining
+    tx = interface.IMasterChef(chef).deposit(
+        pid, amt, {'from': alice})  # stake all
+    tx = interface.IMasterChef(chef).withdraw(
+        pid, amt//2, {'from': alice})  # redeem half
+    tx = interface.IMasterChef(chef).withdraw(
+        pid, amt-amt//2, {'from': alice})  # redeem remaining
     receivedSushiFromChef = sushi.balanceOf(alice) - prevSushi
     print('receivedSushiFromChef', receivedSushiFromChef)
     assert almostEqual(receivedSushi, receivedSushiFromChef)

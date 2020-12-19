@@ -1,17 +1,20 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, UniswapV2SpellV1, SimpleOracle, WERC20
+    HomoraBank, ProxyOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20
 )
 import brownie
 
 
-KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
-WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+MAX_INT = 2**256-1
 
-# add collateral for the bank
+
+def almostEqual(a, b):
+    thresh = 0.01
+    return a <= b + thresh * abs(b) and a >= b - thresh * abs(b)
 
 
 def setup_bank_hack(homora):
+    # add collateral for the bank
     donator = accounts[5]
     fake = accounts.at(homora.address, force=True)
     controller = interface.IComptroller(
@@ -27,11 +30,6 @@ def setup_transfer(asset, fro, to, amt):
     asset.transfer(to, amt, {'from': fro})
 
 
-def almostEqual(a, b):
-    thresh = 0.01
-    return a < b + thresh * abs(b) and a > b - thresh * abs(b)
-
-
 def main():
     admin = accounts[0]
 
@@ -43,12 +41,16 @@ def main():
     crusdt = interface.ICErc20('0x797AAB1ce7c01eB727ab980762bA88e7133d2157')
     crusdc = interface.ICErc20('0x44fbebd2f576670a6c33f6fc0b00aa8c5753b322')
 
-    router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
+    router = interface.IUniswapV2Router02(
+        '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
     werc20 = WERC20.deploy({'from': admin})
+
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([usdt, usdc, lp], [8343331721347310729683379470025550036595362,
-                                              8344470555541464992529317899641128796042472, 18454502573009087919612273470304975922 * 10**6])
+    simple_oracle.setETHPx([usdt, usdc], [
+                           8343331721347310729683379470025550036595362, 8344470555541464992529317899641128796042472])
+
+    uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
@@ -59,9 +61,9 @@ def main():
             '0x3041cbd36888becc7bbcbc0045e3b1f144466f5f',  # USDT-USDC
         ],
         [
-            [simple_oracle, 10500, 9950, 10500],
-            [simple_oracle, 10500, 9950, 10500],
-            [simple_oracle, 10500, 9950, 10500],
+            [simple_oracle, 10000, 10000, 10000],
+            [simple_oracle, 10000, 10000, 10000],
+            [uniswap_oracle, 10000, 10000, 10000],
         ],
         {'from': admin},
     )
@@ -102,33 +104,48 @@ def main():
     usdc.approve(crusdc, 2**256-1, {'from': alice})
     lp.approve(homora, 2**256-1, {'from': alice})
 
-    uniswap_spell = UniswapV2SpellV1.deploy(homora, werc20, router, {'from': admin})
+    uniswap_spell = UniswapV2SpellV1.deploy(
+        homora, werc20, router, {'from': admin})
     # first time call to reduce gas
     uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
     #####################################################################################
     # add liquidity
 
+    print('=========================================================================')
+    print('Case 1.')
+
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
 
-    amt_usdt = 40000 * 10**6
-    amt_usdc = 50000 * 10**6
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
+    else:
+        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lp).getReserves()
+
+    usdt_amt = 40000 * 10**6
+    usdc_amt = 50000 * 10**6
+    lp_amt = 1 * 10**7
+    borrow_usdt_amt = 1000 * 10**6
+    borrow_usdc_amt = 200 * 10**6
 
     tx = homora.execute(
         0,
         uniswap_spell,
         uniswap_spell.addLiquidity.encode_input(
-            usdt,
-            usdc,
-            [amt_usdt,  # 40000 USDT
-             amt_usdc,   # 50000 USDC
-             1 * 10**7,  # some LP
-             1000 * 10**6,  # borrow 1000 USDT
-             200 * 10**6,  # borrow 200 USDC
-             0,  # 2*10**16,  # borrow 0 LP tokens
-             0,  # min 0 USDT
-             0],  # min 0 USDC
+            usdt,  # token 0
+            usdc,  # token 1
+            [usdt_amt,  # supply USDT
+             usdc_amt,   # supply USDC
+             lp_amt,  # supply LP
+             borrow_usdt_amt,  # borrow USDT
+             borrow_usdc_amt,  # borrow USDC
+             0,  # borrow 0 LP tokens
+             0,  # min USDT
+             0],  # min USDC
         ),
         {'from': alice}
     )
@@ -138,46 +155,96 @@ def main():
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
+
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        curARes, curBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
+    else:
+        curBRes, curARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
     print('add liquidity gas', tx.gas_used)
-    print('bank lp balance', werc20.balanceOfERC20(lp, homora))
+    print('bank lp balance', curLPBal_bank)
 
-    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
-    print('bank usdt totalDebt', totalDebt)
-    print('bank usdt totalShare', totalShare)
-    assert position_id == 1  # position doesn't increase
-    assert almostEqual(curABal - prevABal, -amt_usdt)
-    assert almostEqual(curBBal - prevBBal, -amt_usdc)
-    assert lp.balanceOf(uniswap_spell) == 0
-    assert usdt.balanceOf(uniswap_spell) == 0
-    assert usdc.balanceOf(uniswap_spell) == 0
+    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
+    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
+    print('bank usdt debt', usdtDebt)
+    print('bank usdt debt share', usdtDebtShare)
+
+    print('bank usdc debt', usdcDebt)
+    print('bank usdc debt share', usdcDebtShare)
+
+    print('bank prev LP balance', prevLPBal_bank)
+    print('bank cur LP balance', curLPBal_bank)
+
+    print('werc20 prev LP balance', prevLPBal_werc20)
+    print('werc20 cur LP balance', curLPBal_werc20)
+
+    print('prev usdt res', prevARes)
+    print('cur usdt res', curARes)
+
+    print('prev usdc res', prevBRes)
+    print('cur usdc res', curBRes)
+
+    # alice
+    assert almostEqual(curABal - prevABal, -usdt_amt), 'incorrect USDT amt'
+    assert almostEqual(curBBal - prevBBal, -usdc_amt), 'incorrect USDC amt'
+    assert curLPBal - prevLPBal == -lp_amt, 'incorrect LP amt'
+
+    # spell
+    assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
+    assert usdc.balanceOf(uniswap_spell) == 0, 'non-zero spell USDC balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+    assert usdtDebt == borrow_usdt_amt
+    assert usdcDebt == borrow_usdc_amt
+
+    # check balance and pool reserves
+    assert curABal - prevABal - borrow_usdt_amt == - \
+        (curARes - prevARes), 'not all USDT tokens go to LP pool'
+    assert curBBal - prevBBal - borrow_usdc_amt == - \
+        (curBRes - prevBRes), 'not all USDC tokens go to LP pool'
 
     #####################################################################################
     # add liquidity to the same position
 
+    print('=========================================================================')
+    print('Case 2.')
+
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
 
-    amt_usdt = 20000 * 10**6
-    amt_usdc = 30000 * 10**6
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        prevARes, prevBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
+    else:
+        prevBRes, prevARes, _ = interface.IUniswapV2Pair(lp).getReserves()
+
+    usdt_amt = 20000 * 10**6
+    usdc_amt = 30000 * 10**6
+    lp_amt = 1 * 10**7
+    borrow_usdt_amt = 1000 * 10**6
+    borrow_usdc_amt = 200 * 10**6
 
     tx = homora.execute(
         1,
         uniswap_spell,
         uniswap_spell.addLiquidity.encode_input(
-            usdt,
-            usdc,
-            [amt_usdt,  # 20000 USDT
-             amt_usdc,   # 30000 USDC
-             1 * 10**7,  # some LP
-             1000 * 10**6,  # borrow 1000 USDT
-             200 * 10**6,  # borrow 200 USDC
-             0,  # 2*10**16,  # borrow 0 LP tokens
-             0,  # min 0 USDT
-             0],  # min 0 USDC
+            usdt,  # token 0
+            usdc,  # token 1
+            [usdt_amt,  # supply USDT
+             usdc_amt,   # supply USDC
+             lp_amt,  # supply LP
+             borrow_usdt_amt,  # borrow USDT
+             borrow_usdc_amt,  # borrow USDC
+             0,  # borrow LP
+             0,  # min USDT
+             0],  # min USDC
         ),
         {'from': alice}
     )
@@ -187,136 +254,268 @@ def main():
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
+
+    if interface.IUniswapV2Pair(lp).token0() == usdt:
+        curARes, curBRes, _ = interface.IUniswapV2Pair(lp).getReserves()
+    else:
+        curBRes, curARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
     print('add liquidity gas', tx.gas_used)
-    print('bank lp balance', werc20.balanceOfERC20(lp, homora))
+    print('bank lp balance', curLPBal_bank)
 
-    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
-    print('bank usdt totalDebt', totalDebt)
-    print('bank usdt totalShare', totalShare)
+    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
+    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
+    print('bank usdt debt', usdtDebt)
+    print('bank usdt debt share', usdtDebtShare)
+
+    print('bank usdc debt', usdcDebt)
+    print('bank usdc debt share', usdcDebtShare)
+
+    print('bank prev LP balance', prevLPBal_bank)
+    print('bank cur LP balance', curLPBal_bank)
+
+    print('werc20 prev LP balance', prevLPBal_werc20)
+    print('werc20 cur LP balance', curLPBal_werc20)
+
+    print('prev usdt res', prevARes)
+    print('cur usdt res', curARes)
+
+    print('prev usdc res', prevBRes)
+    print('cur usdc res', curBRes)
+
+    # assert position_id
     assert position_id == 1  # position doesn't increase
-    assert almostEqual(curABal - prevABal, -amt_usdt)
-    assert almostEqual(curBBal - prevBBal, -amt_usdc)
-    assert lp.balanceOf(uniswap_spell) == 0
-    assert usdt.balanceOf(uniswap_spell) == 0
-    assert usdc.balanceOf(uniswap_spell) == 0
+
+    # alice
+    assert almostEqual(curABal - prevABal, -usdt_amt), 'incorrect USDT amt'
+    assert almostEqual(curBBal - prevBBal, -usdc_amt), 'incorrect USDC amt'
+    assert curLPBal - prevLPBal == -lp_amt, 'incorrect LP amt'
+
+    # spell
+    assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
+    assert usdc.balanceOf(uniswap_spell) == 0, 'non-zero spell USDC balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+    # borrow same amount twice (with small interest accrued)
+    assert usdtDebt >= borrow_usdt_amt * 2
+    # borrow same amount twice (with small interest accrued)
+    assert usdcDebt >= borrow_usdc_amt * 2
+
+    # check balance and pool reserves
+    assert curABal - prevABal - borrow_usdt_amt == - \
+        (curARes - prevARes), 'not all USDT tokens go to LP pool'
+    assert curBBal - prevBBal - borrow_usdc_amt == - \
+        (curBRes - prevBRes), 'not all USDC tokens go to LP pool'
 
     #####################################################################################
     # remove half liquidity from the same position
 
+    print('=========================================================================')
+    print('Case 3.')
+
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
-    prevLPBal = werc20.balanceOfERC20(lp, homora)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
+
+    _, _, _, collSize = homora.getPositionInfo(position_id)
+
+    lp_take_amt = collSize // 2
+    lp_want = 1 * 10**5
+    usdt_repay = MAX_INT
+    usdc_repay = MAX_INT
 
     tx = homora.execute(
         position_id,
         uniswap_spell,
         uniswap_spell.removeLiquidity.encode_input(
-            usdt,
-            usdc,
-            [prevLPBal // 2,  # take out half LP tokens
-             1 * 10**5,   # withdraw 1e5 LP tokens to wallet
-             2**256-1,  # repay max USDT
-             2**256-1,   # repay max USDC
-             0,   # repay 0 LP
-             0,   # min 0 USDT
-             0],  # min 0 USDC
+            usdt,  # token 0
+            usdc,  # token 1
+            [lp_take_amt,  # take out LP
+             lp_want,   # withdraw LP to wallet
+             usdt_repay,  # repay USDT
+             usdc_repay,   # repay USDC
+             0,   # repay LP
+             0,   # min USDT
+             0],  # min USDC
         ),
         {'from': alice}
     )
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
-    curLPBal = werc20.balanceOfERC20(lp, homora)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('spell usdt balance', usdt.balanceOf(uniswap_spell))
     print('spell usdc balance', usdc.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
+    print('Alice delta LP balance', curLPBal - prevLPBal)
     print('remove liquidity gas', tx.gas_used)
-    print('bank delta lp balance', curLPBal - prevLPBal)
-    print('bank total lp balance', curLPBal)
+    print('bank delta lp balance', curLPBal_bank - prevLPBal_bank)
+    print('bank total lp balance', curLPBal_bank)
 
-    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
-    print('bank usdt totalDebt', totalDebt)
-    print('bank usdt totalShare', totalShare)
+    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
+    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
+    print('bank usdt totalDebt', usdtDebt)
+    print('bank usdt totalShare', usdtDebtShare)
 
-    assert(lp.balanceOf(uniswap_spell) == 0)
-    assert(usdt.balanceOf(uniswap_spell) == 0)
-    assert(usdc.balanceOf(uniswap_spell) == 0)
+    print('bank usdc totalDebt', usdcDebt)
+    print('bank usdc totalShare', usdcDebtShare)
+
+    print('LP want', lp_want)
+
+    print('bank delta LP amount', curLPBal_bank - prevLPBal_bank)
+    print('LP take amount', lp_take_amt)
+
+    print('prev werc20 LP balance', prevLPBal_werc20)
+    print('cur werc20 LP balance', curLPBal_werc20)
+
+    print('coll size', collSize)
+
+    # alice
+    assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
+
+    # werc20
+    assert almostEqual(curLPBal_werc20 - prevLPBal_werc20, -
+                       lp_take_amt), 'incorrect werc20 LP amt'
+
+    # spell
+    assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
+    assert usdc.balanceOf(uniswap_spell) == 0, 'non-zero spell USDC balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+
+    # debt
+    assert usdtDebt == 0, 'usdtDebt should be 0'
+    assert usdcDebt == 0, 'usdcDebt should be 0'
 
     #####################################################################################
-    # remove half liquidity from the same position
+    # remove remaining liquidity from the same position
+
+    print('=========================================================================')
+    print('Case 4.')
 
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
-    prevLPBal = werc20.balanceOfERC20(lp, homora)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
+
+    _, _, _, collSize = homora.getPositionInfo(position_id)
+
+    lp_take_amt = MAX_INT
+    lp_want = 1 * 10**5
+    usdt_repay = MAX_INT
+    usdc_repay = MAX_INT
 
     tx = homora.execute(
         position_id,
         uniswap_spell,
         uniswap_spell.removeLiquidity.encode_input(
-            usdt,
-            usdc,
-            [2**256-1,  # take out all LP tokens
-             1 * 10 ** 5,   # withdraw 1e5 LP tokens to wallet
-             2**256-1,  # repay max USDT
-             2**256-1,   # repay max USDC
-             0,   # repay 0 LP
-             0,   # min 0 USDT
-             0],  # min 0 USDC
+            usdt,  # token 0
+            usdc,  # token 1
+            [lp_take_amt,  # take out LP
+             lp_want,   # withdraw LP to wallet
+             usdt_repay,  # repay USDT
+             usdc_repay,   # repay USDC
+             0,   # repay LP
+             0,   # min USDT
+             0],  # min USDC
         ),
         {'from': alice}
     )
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
-    curLPBal = werc20.balanceOfERC20(lp, homora)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('spell usdt balance', usdt.balanceOf(uniswap_spell))
     print('spell usdc balance', usdc.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
+    print('Alice delta LP balance', curLPBal - prevLPBal)
     print('remove liquidity gas', tx.gas_used)
-    print('bank delta lp balance', curLPBal - prevLPBal)
-    print('bank total lp balance', curLPBal)
+    print('bank delta lp balance', curLPBal_bank - prevLPBal_bank)
+    print('bank total lp balance', curLPBal_bank)
 
-    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
-    print('bank usdt totalDebt', totalDebt)
-    print('bank usdt totalShare', totalShare)
+    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
+    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
+    print('bank usdt totalDebt', usdtDebt)
+    print('bank usdt totalShare', usdtDebtShare)
 
-    assert lp.balanceOf(uniswap_spell) == 0
-    assert usdt.balanceOf(uniswap_spell) == 0
-    assert usdc.balanceOf(uniswap_spell) == 0
+    print('bank usdc totalDebt', usdcDebt)
+    print('bank usdc totalShare', usdcDebtShare)
+
+    print('LP want', lp_want)
+
+    print('bank delta LP amount', curLPBal_bank - prevLPBal_bank)
+    print('LP take amount', lp_take_amt)
+
+    print('prev werc20 LP balance', prevLPBal_werc20)
+    print('cur werc20 LP balance', curLPBal_werc20)
+
+    print('coll size', collSize)
+
+    # alice
+    assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
+
+    # werc20
+    assert almostEqual(curLPBal_werc20 - prevLPBal_werc20, -
+                       collSize), 'incorrect werc20 LP amt'
+
+    # spell
+    assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
+    assert usdc.balanceOf(uniswap_spell) == 0, 'non-zero spell USDC balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+
+    # debt
+    assert usdtDebt == 0, 'usdtDebt should be 0'
+    assert usdcDebt == 0, 'usdcDebt should be 0'
 
     #####################################################################################
     # add liquidity without borrowing (1x)
+    print('=========================================================================')
+    print('Case 5.')
 
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
 
-    amt_usdt = 2000 * 10**6
-    amt_usdc = 3000 * 10**6
+    usdt_amt = 2000 * 10**6  # 2000 USDT
+    usdc_amt = 3000 * 10**6  # 3000 USDC
+    lp_amt = 0
+    borrow_usdt_amt = 0
+    borrow_usdc_amt = 0
+    prevBBal = usdc.balanceOf(alice)
 
     tx = homora.execute(
         1,
         uniswap_spell,
         uniswap_spell.addLiquidity.encode_input(
-            usdt,
-            usdc,
-            [amt_usdt,  # 20000 USDT
-             amt_usdc,   # 30000 USDC
-             0,  # some LP
-             0,  # borrow 1000 USDT
-             0,  # borrow 200 USDC
-             0,  # 2*10**16,  # borrow 0 LP tokens
-             0,  # min 0 USDT
-             0],  # min 0 USDC
+            usdt,  # token 0
+            usdc,  # token 1
+            [usdt_amt,  # supply USDT
+             usdc_amt,   # supply USDC
+             lp_amt,  # supply LP
+             borrow_usdt_amt,  # borrow USDT
+             borrow_usdc_amt,  # borrow USDC
+             0,  # borrow LP
+             0,  # min USDT
+             0],  # min USDC
         ),
         {'from': alice}
     )
@@ -326,29 +525,62 @@ def main():
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
+    print('Alice delta lp balance', curLPBal - prevLPBal)
     print('add liquidity gas', tx.gas_used)
-    print('bank lp balance', werc20.balanceOfERC20(lp, homora))
+    print('bank lp balance', curLPBal_bank)
 
-    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
-    print('bank usdt totalDebt', totalDebt)
-    print('bank usdt totalShare', totalShare)
-    assert position_id == 1  # position doesn't increase
-    assert almostEqual(curABal - prevABal, -amt_usdt)
-    assert almostEqual(curBBal - prevBBal, -amt_usdc)
-    assert lp.balanceOf(uniswap_spell) == 0
-    assert usdt.balanceOf(uniswap_spell) == 0
-    assert usdc.balanceOf(uniswap_spell) == 0
+    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
+    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
+    print('bank usdt totalDebt', usdtDebt)
+    print('bank usdt totalShare', usdtDebtShare)
+
+    print('bank usdc totalDebt', usdcDebt)
+    print('bank usdc totalShare', usdcDebtShare)
+
+    print('bank prev LP balance', prevLPBal_bank)
+    print('bank cur LP balance', curLPBal_bank)
+
+    print('werc20 prev LP balance', prevLPBal_werc20)
+    print('werc20 cur LP balance', curLPBal_werc20)
+
+    # alice
+    assert almostEqual(curABal - prevABal, -usdt_amt), 'incorrect USDT amt'
+    assert almostEqual(curBBal - prevBBal, -usdc_amt), 'incorrect USDC amt'
+    assert almostEqual(curLPBal - prevLPBal, -lp_amt), 'incorrect LP amt'
+
+    # spell
+    assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
+    assert usdc.balanceOf(uniswap_spell) == 0, 'non-zero spell USDC balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+
+    # debt
+    assert usdtDebt == borrow_usdt_amt
+    assert usdcDebt == borrow_usdc_amt
 
     #####################################################################################
     # remove all liquidity from the same position
+    print('=========================================================================')
+    print('Case 6.')
 
     prevABal = usdt.balanceOf(alice)
     prevBBal = usdc.balanceOf(alice)
-    prevLPBal = werc20.balanceOfERC20(lp, homora)
+    prevLPBal = lp.balanceOf(alice)
+    prevLPBal_bank = lp.balanceOf(homora)
+    prevLPBal_werc20 = lp.balanceOf(werc20)
+
+    _, _, _, collSize = homora.getPositionInfo(position_id)
+
+    lp_take_amt = MAX_INT  # max
+    lp_want = 0
+    usdt_repay = 0  # max
+    usdc_repay = 0  # max
 
     tx = homora.execute(
         position_id,
@@ -356,36 +588,65 @@ def main():
         uniswap_spell.removeLiquidity.encode_input(
             usdt,
             usdc,
-            [2**256-1,  # take out half LP tokens
-             0,   # withdraw 1e5 LP tokens to wallet
-             0,  # repay max USDT
-             0,   # repay max USDC
-             0,   # repay 0 LP
-             0,   # min 0 USDT
-             0],  # min 0 USDC
+            [lp_take_amt,  # take out LP
+             lp_want,   # withdraw LP to wallet
+             usdt_repay,  # repay USDT
+             usdc_repay,   # repay USDC
+             0,   # repay LP
+             0,   # min USDT
+             0],  # min USDC
         ),
         {'from': alice}
     )
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
-    curLPBal = werc20.balanceOfERC20(lp, homora)
+    curLPBal = lp.balanceOf(alice)
+    curLPBal_bank = lp.balanceOf(homora)
+    curLPBal_werc20 = lp.balanceOf(werc20)
 
     print('spell lp balance', lp.balanceOf(uniswap_spell))
     print('spell usdt balance', usdt.balanceOf(uniswap_spell))
     print('spell usdc balance', usdc.balanceOf(uniswap_spell))
     print('Alice delta A balance', curABal - prevABal)
     print('Alice delta B balance', curBBal - prevBBal)
+    print('Alice delta LP balance', curLPBal - prevLPBal)
     print('remove liquidity gas', tx.gas_used)
-    print('bank delta lp balance', curLPBal - prevLPBal)
-    print('bank total lp balance', curLPBal)
+    print('bank delta lp balance', curLPBal_bank - prevLPBal_bank)
+    print('bank total lp balance', curLPBal_bank)
 
-    _, _, _, totalDebt, totalShare = homora.getBankInfo(usdt)
-    print('bank usdt totalDebt', totalDebt)
-    print('bank usdt totalShare', totalShare)
+    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
+    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
+    print('bank usdt totalDebt', usdtDebt)
+    print('bank usdt totalShare', usdtDebtShare)
 
-    assert lp.balanceOf(uniswap_spell) == 0
-    assert usdt.balanceOf(uniswap_spell) == 0
-    assert usdc.balanceOf(uniswap_spell) == 0
+    print('bank usdc totalDebt', usdcDebt)
+    print('bank usdc totalShare', usdcDebtShare)
+
+    print('LP want', lp_want)
+
+    print('bank delta LP amount', curLPBal_bank - prevLPBal_bank)
+    print('LP take amount', lp_take_amt)
+
+    print('prev werc20 LP balance', prevLPBal_werc20)
+    print('cur werc20 LP balance', curLPBal_werc20)
+
+    print('coll size', collSize)
+
+    # alice
+    assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
+
+    # werc20
+    assert almostEqual(curLPBal_werc20 - prevLPBal_werc20, -
+                       collSize), 'incorrect werc20 LP amt'
+
+    # spell
+    assert usdt.balanceOf(uniswap_spell) == 0, 'non-zero spell USDT balance'
+    assert usdc.balanceOf(uniswap_spell) == 0, 'non-zero spell USDC balance'
+    assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
+
+    # debt
+    assert usdtDebt == 0, 'usdtDebt should be 0'
+    assert usdcDebt == 0, 'usdcDebt should be 0'
 
     return tx

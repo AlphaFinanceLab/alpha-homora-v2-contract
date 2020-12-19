@@ -9,9 +9,9 @@ contract BaseKP3ROracle is Initializable {
   uint public constant MIN_TWAP_TIME = 15 minutes;
   uint public constant MAX_TWAP_TIME = 60 minutes;
 
-  IKeep3rV1Oracle public kp3r;
-  address public factory;
-  address public weth;
+  IKeep3rV1Oracle public immutable kp3r;
+  address public immutable factory;
+  address public immutable weth;
 
   constructor(IKeep3rV1Oracle _kp3r) public {
     kp3r = _kp3r;
