@@ -3,13 +3,13 @@ from brownie import interface
 
 
 def test_uniswap_add_two_tokens(
-    a, chain, bank, werc20, ufactory, urouter, simple_oracle, oracle, usdc, usdt, UniswapV2SpellV1, UniswapLPOracle,
+    admin, alice, chain, bank, werc20, ufactory, urouter, simple_oracle, oracle, usdc, usdt, UniswapV2SpellV1, UniswapV2Oracle,
 ):
-    spell = UniswapV2SpellV1.deploy(bank, werc20, urouter, {'from': a[0]})
-    usdc.mint(a[0], 10000000 * 10**6, {'from': a[0]})
-    usdt.mint(a[0], 10000000 * 10**6, {'from': a[0]})
-    usdc.approve(urouter, 2**256-1, {'from': a[0]})
-    usdt.approve(urouter, 2**256-1, {'from': a[0]})
+    spell = UniswapV2SpellV1.deploy(bank, werc20, urouter, {'from': admin})
+    usdc.mint(admin, 10000000 * 10**6, {'from': admin})
+    usdt.mint(admin, 10000000 * 10**6, {'from': admin})
+    usdc.approve(urouter, 2**256-1, {'from': admin})
+    usdt.approve(urouter, 2**256-1, {'from': admin})
     urouter.addLiquidity(
         usdc,
         usdt,
@@ -17,14 +17,14 @@ def test_uniswap_add_two_tokens(
         1000000 * 10**6,
         0,
         0,
-        a[0],
+        admin,
         chain.time() + 60,
-        {'from': a[0]},
+        {'from': admin},
     )
 
     lp = ufactory.getPair(usdc, usdt)
-    print('admin lp bal', interface.IERC20(lp).balanceOf(a[0]))
-    uniswap_lp_oracle = UniswapLPOracle.deploy(simple_oracle, {'from': a[0]})
+    print('admin lp bal', interface.IERC20(lp).balanceOf(admin))
+    uniswap_lp_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 
     print('usdt Px', simple_oracle.getETHPx(usdt))
     print('usdc Px', simple_oracle.getETHPx(usdc))
@@ -37,13 +37,13 @@ def test_uniswap_add_two_tokens(
             [simple_oracle, 10000, 10000, 10000],
             [uniswap_lp_oracle, 10000, 10000, 10000],
         ],
-        {'from': a[0]},
+        {'from': admin},
     )
-    usdc.mint(a[1], 10000000 * 10**6, {'from': a[0]})
-    usdt.mint(a[1], 10000000 * 10**6, {'from': a[0]})
-    usdc.approve(bank, 2**256-1, {'from': a[1]})
-    usdt.approve(bank, 2**256-1, {'from': a[1]})
-    spell.getPair(usdc, usdt, {'from': a[0]})
+    usdc.mint(alice, 10000000 * 10**6, {'from': admin})
+    usdt.mint(alice, 10000000 * 10**6, {'from': admin})
+    usdc.approve(bank, 2**256-1, {'from': alice})
+    usdt.approve(bank, 2**256-1, {'from': alice})
+    spell.getPair(usdc, usdt, {'from': admin})
     tx = bank.execute(
         0,
         spell,
@@ -61,7 +61,7 @@ def test_uniswap_add_two_tokens(
                 0,  # min USDC
             ],
         ),
-        {'from': a[1]}
+        {'from': alice}
     )
 
     position_id = tx.return_value

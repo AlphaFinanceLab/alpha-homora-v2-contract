@@ -44,7 +44,7 @@ def oracle(a, werc20, ProxyOracle):
     return contract
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def bank(a, oracle, weth, dai, usdt, usdc, HomoraBank, MockCErc20):
     contract = HomoraBank.deploy({'from': a[0]})
     contract.initialize(oracle, 2000, {'from': a[0]})
