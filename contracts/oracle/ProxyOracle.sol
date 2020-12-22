@@ -72,7 +72,7 @@ contract ProxyOracle is IOracle, Governable {
     Oracle memory oracleOut = oracles[tokenOutUnderlying];
     uint amountOut =
       amountIn.mul(oracleIn.source.getETHPx(tokenIn)).div(
-        oracleIn.source.getETHPx(tokenOutUnderlying)
+        oracleOut.source.getETHPx(tokenOutUnderlying)
       );
     return amountOut.mul(oracleIn.liqIncentive).mul(oracleOut.liqIncentive).div(10000 * 10000);
   }
