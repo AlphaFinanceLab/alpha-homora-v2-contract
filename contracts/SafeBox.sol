@@ -40,9 +40,9 @@ contract SafeBox is Governable, ERC20, ReentrancyGuard {
     root = _root;
   }
 
-  function deposit(uint amountCall) external nonReentrant {
+  function deposit(uint amount) external nonReentrant {
     uint uBalanceBefore = uToken.balanceOf(address(this));
-    uToken.safeTransferFrom(msg.sender, address(this), amountCall);
+    uToken.safeTransferFrom(msg.sender, address(this), amount);
     uint uBalanceAfter = uToken.balanceOf(address(this));
     uint cBalanceBefore = cToken.balanceOf(address(this));
     require(cToken.mint(uBalanceAfter.sub(uBalanceBefore)) == 0, '!mint');
