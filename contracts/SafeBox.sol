@@ -5,10 +5,11 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.s
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/cryptography/MerkleProof.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/utils/ReentrancyGuard.sol';
 import './Governable.sol';
 import '../interfaces/ICErc20.sol';
 
-contract SafeBox is Governable, ERC20 {
+contract SafeBox is Governable, ERC20, ReentrancyGuard {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
 
@@ -39,7 +40,7 @@ contract SafeBox is Governable, ERC20 {
     root = _root;
   }
 
-  function deposit(uint amountCall) external {
+  function deposit(uint amountCall) external nonReentrant {
     uint uBalanceBefore = uToken.balanceOf(address(this));
     uToken.safeTransferFrom(msg.sender, address(this), amountCall);
     uint uBalanceAfter = uToken.balanceOf(address(this));
@@ -49,7 +50,7 @@ contract SafeBox is Governable, ERC20 {
     _mint(msg.sender, cBalanceAfter.sub(cBalanceBefore));
   }
 
-  function withdraw(uint amount) public {
+  function withdraw(uint amount) public nonReentrant {
     _burn(msg.sender, amount);
     uint uBalanceBefore = uToken.balanceOf(address(this));
     require(cToken.redeem(amount) == 0, '!redeem');
@@ -57,16 +58,16 @@ contract SafeBox is Governable, ERC20 {
     uToken.safeTransfer(msg.sender, uBalanceAfter.sub(uBalanceBefore));
   }
 
-  function adminWithdraw(uint amount) external onlyGov {
-    uToken.safeTransfer(msg.sender, amount);
-  }
-
-  function claim(uint totalReward, bytes32[] memory proof) public {
+  function claim(uint totalReward, bytes32[] memory proof) public nonReentrant {
     bytes32 leaf = keccak256(abi.encodePacked(msg.sender, totalReward));
     require(MerkleProof.verify(proof, root, leaf), '!proof');
     uint send = totalReward.sub(claimed[msg.sender]);
     claimed[msg.sender] = totalReward;
     uToken.safeTransfer(msg.sender, send);
+  }
+
+  function adminClaim(uint amount) external onlyGov {
+    uToken.safeTransfer(msg.sender, amount);
   }
 
   function claimAndWithdraw(
