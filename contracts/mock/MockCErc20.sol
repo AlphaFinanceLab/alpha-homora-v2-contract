@@ -18,6 +18,25 @@ contract MockCErc20 is ICErc20 {
     token = _token;
   }
 
+  function underlying() external override returns (address) {
+    return address(token);
+  }
+
+  function mint(uint mintAmount) external override returns (uint) {
+    // Not implemented
+    return 0;
+  }
+
+  function redeem(uint redeemTokens) external override returns (uint) {
+    // Not implemented
+    return 0;
+  }
+
+  function balanceOf(address user) external view override returns (uint) {
+    // Not implemented
+    return 0;
+  }
+
   function borrowBalanceCurrent(address account) public override returns (uint) {
     uint timePast = now - lastBlock[account];
     if (timePast > 0) {

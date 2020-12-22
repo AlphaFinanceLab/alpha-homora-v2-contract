@@ -15,8 +15,10 @@ contract BaseKP3ROracle is Initializable {
 
   constructor(IKeep3rV1Oracle _kp3r) public {
     kp3r = _kp3r;
-    factory = _kp3r.factory();
-    weth = _kp3r.WETH();
+    factory = address(_kp3r);
+    weth = address(_kp3r);
+    // factory = _kp3r.factory();
+    // weth = _kp3r.WETH();
   }
 
   /// @dev Return the TWAP value price0. Revert if TWAP time range is not within the threshold.
