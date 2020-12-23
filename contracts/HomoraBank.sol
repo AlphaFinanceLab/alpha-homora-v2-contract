@@ -4,6 +4,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.s
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC1155/IERC1155.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/Math.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/proxy/Initializable.sol';
 
 import './Governable.sol';
@@ -336,7 +337,11 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     Position storage pos = positions[positionId];
     (uint amountPaid, uint share) = repayInternal(positionId, debtToken, amountCall);
     require(pos.collToken != address(0), 'bad collateral token');
-    uint bounty = oracle.convertForLiquidation(debtToken, pos.collToken, pos.collId, amountPaid);
+    uint bounty =
+      Math.min(
+        oracle.convertForLiquidation(debtToken, pos.collToken, pos.collId, amountPaid),
+        pos.collateralSize
+      );
     pos.collateralSize = pos.collateralSize.sub(bounty);
     IERC1155(pos.collToken).safeTransferFrom(address(this), msg.sender, pos.collId, bounty, '');
     emit Liquidate(positionId, msg.sender, debtToken, amountPaid, share, bounty);
