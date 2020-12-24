@@ -95,7 +95,8 @@ def main():
     weth.approve(homora, 2**256-1, {'from': alice})
     lp.approve(homora, 2**256-1, {'from': alice})
 
-    balancer_spell = BalancerSpellV1.deploy(homora, werc20, {'from': admin})
+    balancer_spell = BalancerSpellV1.deploy(
+        homora, werc20, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', {'from': admin})
     # first time call to reduce gas
     balancer_spell.getPair(lp, {'from': admin})
 

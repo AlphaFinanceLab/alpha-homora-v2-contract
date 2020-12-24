@@ -117,7 +117,7 @@ def main():
     lp.approve(homora, 2**256-1, {'from': alice})
 
     curve_spell = CurveSpellV1.deploy(
-        homora, werc20, registry, {'from': admin})
+        homora, werc20, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', registry, {'from': admin})
 
     # set up pools
     curve_spell.registerPool(lp)

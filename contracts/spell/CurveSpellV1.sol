@@ -20,8 +20,9 @@ contract CurveSpellV1 is BasicSpell {
   constructor(
     IBank _bank,
     address _werc20,
+    address _weth,
     address _registry
-  ) public BasicSpell(_bank, _werc20, 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+  ) public BasicSpell(_bank, _werc20, _weth) {
     registry = ICurveRegistry(_registry);
   }
 
