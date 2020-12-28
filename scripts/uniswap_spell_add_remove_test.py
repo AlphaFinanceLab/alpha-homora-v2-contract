@@ -68,13 +68,13 @@ def main():
 
     # setup initial funds 10^5 USDT + 10^4 WETH to alice
     setup_transfer(usdt, accounts.at(
-        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**5 * 10**6)
+        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), alice, 10**5 * 10**6)
     setup_transfer(weth, accounts.at(
         '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
 
     # setup initial funds 10^6 USDT + 10^5 WETH to homora bank
     setup_transfer(usdt, accounts.at(
-        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
+        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), homora, 10**6 * 10**6)
     setup_transfer(weth, accounts.at(
         '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
 
@@ -83,10 +83,10 @@ def main():
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 1*10**17, {'from': accounts.at(
-        '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
-    lp.transfer(homora, 2*10**17, {'from': accounts.at(
-        '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
+    lp.transfer(alice, 4*10**16, {'from': accounts.at(
+        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
+    lp.transfer(homora, 4*10**16, {'from': accounts.at(
+        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
