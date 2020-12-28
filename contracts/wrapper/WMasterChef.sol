@@ -34,10 +34,15 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Return the underlying ERC-20 for the given ERC-1155 token id.
-  function getUnderlying(uint id) external view override returns (address) {
+  function getUnderlyingToken(uint id) external view override returns (address) {
     (uint pid, ) = decodeId(id);
     (address lpToken, , , ) = chef.poolInfo(pid);
     return lpToken;
+  }
+
+  /// @dev Return the conversion rate from ERC-1155 to ERC-20, multiplied by 2**112.
+  function getUnderlyingRate(uint) external view override returns (uint) {
+    return 2**112;
   }
 
   /// @dev Mint ERC1155 token for the given pool id.

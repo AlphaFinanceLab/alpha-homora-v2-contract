@@ -11,10 +11,15 @@ contract WERC20 is ERC1155('WERC20'), ReentrancyGuard, IWERC20 {
   using SafeERC20 for IERC20;
 
   /// @dev Return the underlying ERC-20 for the given ERC-1155 token id.
-  function getUnderlying(uint id) external view override returns (address) {
+  function getUnderlyingToken(uint id) external view override returns (address) {
     address token = address(id);
     require(uint(token) == id, 'id overflow');
     return token;
+  }
+
+  /// @dev Return the conversion rate from ERC-1155 to ERC-20, multiplied by 2**112.
+  function getUnderlyingRate(uint) external view override returns (uint) {
+    return 2**112;
   }
 
   /// @dev Return the underlying ERC20 balance for the user.

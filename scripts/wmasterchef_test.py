@@ -72,12 +72,12 @@ def main():
     assert d_sushiPerShare == sushiPerShare
 
     ######################################################################
-    # check getUnderlying
+    # check getUnderlyingToken
 
     pid = 10
     sushiPerShare = 210
     id_num = wchef.encodeId(pid, sushiPerShare)
-    lpToken = wchef.getUnderlying(id_num)
+    lpToken = wchef.getUnderlyingToken(id_num)
     print('lpToken', lpToken)
     assert lpToken == '0xCb2286d9471cc185281c4f763d34A962ED212962'
 
