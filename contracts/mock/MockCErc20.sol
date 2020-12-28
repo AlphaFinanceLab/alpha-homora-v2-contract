@@ -58,9 +58,10 @@ contract MockCErc20 is ICErc20 {
     return 0;
   }
 
-  function repayBorrow(uint repayAmount) external override {
+  function repayBorrow(uint repayAmount) external override returns (uint) {
     borrowBalanceCurrent(msg.sender);
     token.transferFrom(msg.sender, address(this), repayAmount);
     borrows[msg.sender] = borrows[msg.sender].sub(repayAmount);
+    return 0;
   }
 }

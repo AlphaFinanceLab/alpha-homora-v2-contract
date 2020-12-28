@@ -503,7 +503,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     Bank storage bank = banks[token]; // assume the input is already sanity checked.
     ICErc20 cToken = ICErc20(bank.cToken);
     uint oldDebt = bank.totalDebt;
-    cToken.repayBorrow(amountCall);
+    require(cToken.repayBorrow(amountCall) == 0, 'bad repay');
     uint newDebt = cToken.borrowBalanceStored(address(this));
     bank.totalDebt = newDebt;
     return oldDebt.sub(newDebt);
