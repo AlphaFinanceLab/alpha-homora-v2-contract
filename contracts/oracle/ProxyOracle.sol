@@ -55,7 +55,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @dev Return whether the oracle supports evaluating collateral value of the given token.
   function support(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
-    address tokenUnderlying = IERC20Wrapper(token).getUnderlying(id);
+    address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     return address(oracles[tokenUnderlying].source) != address(0);
   }
 
@@ -67,13 +67,14 @@ contract ProxyOracle is IOracle, Governable {
     uint amountIn
   ) external view override returns (uint) {
     require(whitelistERC1155[tokenOut], 'bad token');
-    address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlying(tokenOutId);
+    address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlyingToken(tokenOutId);
+    uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
     Oracle memory oracleIn = oracles[tokenIn];
     Oracle memory oracleOut = oracles[tokenOutUnderlying];
-    uint amountOut =
-      amountIn.mul(oracleIn.source.getETHPx(tokenIn)).div(
-        oracleOut.source.getETHPx(tokenOutUnderlying)
-      );
+    uint pxIn = oracleIn.source.getETHPx(tokenIn);
+    uint pxOut = oracleOut.source.getETHPx(tokenOutUnderlying);
+    uint amountOut = amountIn.mul(pxIn).div(pxOut);
+    amountOut = amountOut.mul(2**112).div(rateUnderlying);
     return amountOut.mul(oracleIn.liqIncentive).mul(oracleOut.liqIncentive).div(10000 * 10000);
   }
 
@@ -84,9 +85,11 @@ contract ProxyOracle is IOracle, Governable {
     uint amount
   ) external view override returns (uint) {
     require(whitelistERC1155[token], 'bad token');
-    address tokenUnderlying = IERC20Wrapper(token).getUnderlying(id);
+    address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
+    uint rateUnderlying = IERC20Wrapper(token).getUnderlyingRate(id);
+    uint amountUnderlying = amount.mul(rateUnderlying).div(2**112);
     Oracle memory oracle = oracles[tokenUnderlying];
-    uint ethValue = oracle.source.getETHPx(tokenUnderlying).mul(amount).div(2**112);
+    uint ethValue = oracle.source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
     return ethValue.mul(oracle.collateralFactor).div(10000);
   }
 

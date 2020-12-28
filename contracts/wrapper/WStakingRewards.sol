@@ -29,8 +29,12 @@ contract WStakingRewards is ERC1155('WStakingRewards'), ReentrancyGuard, IERC20W
     IERC20(_underlying).approve(_staking, uint(-1));
   }
 
-  function getUnderlying(uint) external view override returns (address) {
+  function getUnderlyingToken(uint) external view override returns (address) {
     return underlying;
+  }
+
+  function getUnderlyingRate(uint) external view override returns (uint) {
+    return 2**112;
   }
 
   function mint(uint amount) external nonReentrant returns (uint) {

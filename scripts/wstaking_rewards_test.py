@@ -45,11 +45,11 @@ def main():
                                     force=True), alice, 10**2 * 10**18)
 
     ######################################################################
-    # check getUnderlying
+    # check getUnderlyingToken
     print('===========================================================')
     print('Case 1.')
 
-    underlying = wstaking.getUnderlying(0)
+    underlying = wstaking.getUnderlyingToken(0)
     assert underlying == bpt
 
     ######################################################################

@@ -60,11 +60,16 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     crvPerShare = id & ((1 << 240) - 1); // Last 240 bits
   }
 
-  function getUnderlying(uint id) external view override returns (address) {
+  function getUnderlyingToken(uint id) external view override returns (address) {
     (uint pid, uint gid, ) = decodeId(id);
     ILiquidityGauge impl = gauges[pid][gid].impl;
     require(address(impl) != address(0), 'no gauge');
     return impl.lp_token();
+  }
+
+  /// @dev Return the conversion rate from ERC-1155 to ERC-20, multiplied by 2**112.
+  function getUnderlyingRate(uint) external view override returns (uint) {
+    return 2**112;
   }
 
   function registerGauge(uint pid, uint gid) external onlyGov {

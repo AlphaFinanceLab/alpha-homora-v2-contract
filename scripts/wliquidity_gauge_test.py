@@ -139,13 +139,13 @@ def main():
     assert d_crvPerShare == crvPerShare
 
     ######################################################################
-    # check getUnderlying
+    # check getUnderlyingToken
 
     pid = 0
     gid = 0
     crvPerShare = 200
     id_num = wgauge.encodeId(pid, gid, crvPerShare)
-    lpToken = wgauge.getUnderlying(id_num)
+    lpToken = wgauge.getUnderlyingToken(id_num)
     print('lpToken', lpToken)
     assert lpToken == lp_3pool
 
@@ -153,7 +153,7 @@ def main():
     gid = 0
     crvPerShare = 100
     id_num = wgauge.encodeId(pid, gid, crvPerShare)
-    lpToken = wgauge.getUnderlying(id_num)
+    lpToken = wgauge.getUnderlyingToken(id_num)
     print('lpToken', lpToken)
     assert lpToken == lp_btc
 
