@@ -121,7 +121,6 @@ def test_deposit_withdraw(admin, alice, token, cToken, safebox):
     alice_mint_amt = 1000 * 10**18
     token.mint(alice, alice_mint_amt, {'from': admin})
     token.approve(safebox, 2**256-1, {'from': alice})
-    token.approve(cToken, 2**256-1, {'from': safebox})
 
     alice_deposit_amt = 10 * 10**18
     safebox.deposit(alice_deposit_amt, {'from': alice})
@@ -189,7 +188,6 @@ def test_claim_and_withdraw(admin, token, cToken, safebox):
     user_mint_amt = 1000 * 10**18
     token.mint(user, user_mint_amt, {'from': admin})
     token.approve(safebox, 2**256-1, {'from': user})
-    token.approve(cToken, 2**256-1, {'from': safebox})
 
     user_deposit_amt = 10 * 10**18
     safebox.deposit(user_deposit_amt, {'from': user})
