@@ -229,6 +229,44 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     return (pos.owner, pos.collToken, pos.collId, pos.collateralSize);
   }
 
+  /// @dev Return the debt share of the given bank token for the given position id.
+  function getPositionDebtShareOf(uint positionId, address token) external view returns (uint) {
+    return positions[positionId].debtShareOf[token];
+  }
+
+  /// @dev Return the list of all debts for the given position id.
+  function getPositionDebts(uint positionId)
+    external
+    view
+    returns (address[] memory tokens, uint[] memory debts)
+  {
+    Position storage pos = positions[positionId];
+    uint count = 0;
+    uint bitMap = pos.debtMap;
+    while (bitMap > 0) {
+      if ((bitMap & 1) != 0) {
+        count++;
+      }
+      bitMap >>= 1;
+    }
+    tokens = new address[](count);
+    debts = new uint[](count);
+    bitMap = pos.debtMap;
+    count = 0;
+    uint idx = 0;
+    while (bitMap > 0) {
+      if ((bitMap & 1) != 0) {
+        address token = allBanks[idx];
+        Bank storage bank = banks[token];
+        tokens[count] = token;
+        debts[count] = pos.debtShareOf[token].mul(bank.totalDebt).div(bank.totalShare);
+        count++;
+      }
+      idx++;
+      bitMap >>= 1;
+    }
+  }
+
   /// @dev Return the total collateral value of the given position in ETH.
   /// @param positionId The position ID to query for the collateral value.
   function getCollateralETHValue(uint positionId) public view returns (uint) {
