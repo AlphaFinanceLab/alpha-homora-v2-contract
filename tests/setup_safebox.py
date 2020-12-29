@@ -14,3 +14,13 @@ def cToken(a, token, MockCErc20_2):
 @pytest.fixture(scope='function')
 def safebox(a, cToken, SafeBox):
     return SafeBox.deploy(cToken, "ibToken", "ibTOKEN", {'from': a[0]})
+
+
+@pytest.fixture(scope='function')
+def cweth(a, weth, MockCErc20_2):
+    return MockCErc20_2.deploy(weth, {'from': a[0]})
+
+
+@pytest.fixture(scope='function')
+def safebox_eth(a, weth, cweth, SafeBoxETH):
+    return SafeBoxETH.deploy(weth, cweth, "ibEther", "ibETH", {'from': a[0]})
