@@ -1,4 +1,4 @@
-from brownie import accounts, interface, Contract
+from brownie import accounts, interface, Contract, chain
 from brownie import (
     HomoraBank, ProxyOracle, ERC20KP3ROracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge
 )
@@ -33,6 +33,7 @@ def main():
     admin = accounts[0]
 
     alice = accounts[1]
+    bob = accounts[2]
     dai = interface.IERC20Ex('0x6B175474E89094C44Da98b954EedeAC495271d0F')
     usdc = interface.IERC20Ex('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
     usdt = interface.IERC20Ex('0xdAC17F958D2ee523a2206206994597C13D831ec7')
@@ -50,6 +51,7 @@ def main():
         '0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A', force=True)
     wgauge = WLiquidityGauge.deploy(
         registry, '0xD533a949740bb3306d119CC777fa900bA034cd52', {'from': admin})
+    crv = interface.IERC20Ex(wgauge.crv())
 
     werc20 = WERC20.deploy({'from': admin})
 
@@ -111,6 +113,8 @@ def main():
     # steal some LP from the staking pool
     lp.transfer(alice, 10**6 * 10**18,
                 {'from': accounts.at('0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True)})
+    lp.transfer(bob, 10**6 * 10**18,
+                {'from': accounts.at('0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True)})
 
     # set approval
     dai.approve(homora, 2**256-1, {'from': alice})
@@ -120,6 +124,7 @@ def main():
     usdt.approve(homora, 2**256-1, {'from': alice})
     usdt.approve(crusdt, 2**256-1, {'from': alice})
     lp.approve(homora, 2**256-1, {'from': alice})
+    lp.approve(gauge, 2**256-1, {'from': bob})
 
     curve_spell = CurveSpellV1.deploy(
         homora, werc20, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', wgauge, {'from': admin})
@@ -149,9 +154,9 @@ def main():
     dai_amt = 20000 * 10**18  # 20000 DAI
     usdc_amt = 50000 * 10**6  # 50000 USDC
     usdt_amt = 40000 * 10**6  # 40000 USDT
-    lp_amt = 1 * 10**18
+    lp_amt = 0  # 1 * 10**18
     borrow_dai_amt = 0  # 2000 * 10**18  # 2000 DAI
-    borrow_usdc_amt = 200 * 10**6  # 200 USDC
+    borrow_usdc_amt = 0  # 200 * 10**6  # 200 USDC
     borrow_usdt_amt = 0  # 1000 * 10**6  # 1000 USDT
     borrow_lp_amt = 0
     minLPMint = 0
@@ -233,100 +238,87 @@ def main():
     # #####################################################################################
 
     print('=========================================================================')
-    print('Case 2.')
+    print('Case 2. harvest first time')
 
-    # remove liquidity from the same position
-    prevABal = dai.balanceOf(alice)
-    prevBBal = usdc.balanceOf(alice)
-    prevCBal = usdt.balanceOf(alice)
-    prevLPBal = lp.balanceOf(alice)
-    prevLPBal_bank = lp.balanceOf(homora)
-    prevLPBal_gauge = lp.balanceOf(gauge)
+    prevCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance before harvest', prevCRVBalance)
+    _, _, collId, collSize = homora.getPositionInfo(1)
+    print('collSize', collSize)
+    # print('Alice erc1155 balance', wgauge.balanceOf(alice, collId))
 
-    _, _, _, collSize = homora.getPositionInfo(position_id)
+    # staking directly
+    prevCrv = crv.balanceOf(bob)
+    print('bob lp balance', interface.IERC20Ex(lp).balanceOf(bob))
+    pid, gid = 0, 0
+    gauge, _ = wgauge.gauges(pid, gid)
+    tx = interface.ILiquidityGauge(gauge).deposit(collSize, {'from': bob})
 
-    lp_take_amt = 2**256-1  # max
-    lp_want = 1 * 10**17
-    dai_repay = 2**256-1  # max
-    usdc_repay = 2**256-1  # max
-    usdt_repay = 2**256-1  # max
-    lp_repay = 0
+    chain.sleep(20000)
 
     tx = homora.execute(
         position_id,
         curve_spell,
-        curve_spell.removeLiquidity3.encode_input(
-            lp,  # LP token
-            lp_take_amt,  # LP amount to take out
-            lp_want,  # LP amount to withdraw to wallet
-            [dai_repay, usdc_repay, usdt_repay],  # repay amounts
-            lp_repay,  # repay LP amount
-            [0, 0, 0]  # min amounts
-        ),
+        curve_spell.harvest.encode_input(),
         {'from': alice}
     )
 
-    position_id = tx.return_value
-    print('position_id', position_id)
     print('tx gas used', tx.gas_used)
 
-    curABal = dai.balanceOf(alice)
-    curBBal = usdc.balanceOf(alice)
-    curCBal = usdt.balanceOf(alice)
-    curLPBal = lp.balanceOf(alice)
-    curLPBal_bank = lp.balanceOf(homora)
-    curLPBal_gauge = lp.balanceOf(gauge)
+    curCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance after harvest', curCRVBalance)
+    receivedCrv = curCRVBalance - prevCRVBalance
 
-    print('spell lp balance', lp.balanceOf(curve_spell))
-    print('spell dai balance', dai.balanceOf(curve_spell))
-    print('spell usdc balance', usdc.balanceOf(curve_spell))
-    print('spell usdt balance', usdt.balanceOf(curve_spell))
-    print('Alice delta A balance', curABal - prevABal)
-    print('Alice delta B balance', curBBal - prevBBal)
-    print('Alice delta C balance', curCBal - prevCBal)
-    print('Alice delta LP balance', curLPBal - prevLPBal)
-    print('remove liquidity gas', tx.gas_used)
-    print('bank delta lp balance', curLPBal_bank - prevLPBal_bank)
-    print('bank total lp balance', curLPBal_bank)
+    # check with staking directly
+    minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
+    print('minter', minter)
+    tx = minter.mint(gauge, {'from': bob})
+    print('tx status', tx.status)
+    tx = interface.ILiquidityGauge(gauge).withdraw(collSize, {'from': bob})
+    receivedCrvFromGauge = crv.balanceOf(bob) - prevCrv
+    print('receivedCrvFromGauge', receivedCrvFromGauge)
+    assert almostEqual(receivedCrv, receivedCrvFromGauge)
 
-    _, _, _, daiDebt, daiDebtShare = homora.getBankInfo(dai)
-    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
-    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
-    print('bank dai totalDebt', daiDebt)
-    print('bank dai totalDebt', daiDebt)
+    # #####################################################################################
 
-    print('bank usdc totalShare', usdcDebtShare)
-    print('bank usdc totalShare', usdcDebtShare)
+    print('=========================================================================')
+    print('Case 3. harvest second time')
 
-    print('bank usdt totalDebt', usdtDebt)
-    print('bank usdt totalShare', usdtDebtShare)
+    prevCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance before harvest', prevCRVBalance)
+    _, _, collId, collSize = homora.getPositionInfo(1)
+    print('collSize', collSize)
+    print('Bank erc1155 balance', wgauge.balanceOf(homora, collId))
 
-    print('LP want', lp_want)
+    # staking directly
+    prevCrv = crv.balanceOf(bob)
+    print('bob lp balance', interface.IERC20Ex(lp).balanceOf(bob))
+    pid, gid = 0, 0
+    gauge, _ = wgauge.gauges(pid, gid)
+    tx = interface.ILiquidityGauge(gauge).deposit(collSize, {'from': bob})
 
-    print('bank delta LP amount', curLPBal_bank - prevLPBal_bank)
-    print('LP take amount', lp_take_amt)
+    chain.sleep(20000)
 
-    print('prev gauge LP balance', prevLPBal_gauge)
-    print('cur gauge LP balance', curLPBal_gauge)
+    tx = homora.execute(
+        position_id,
+        curve_spell,
+        curve_spell.harvest.encode_input(),
+        {'from': alice}
+    )
 
-    print('coll size', collSize)
+    print('tx gas used', tx.gas_used)
 
-    # alice
-    assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
+    curCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance after harvest', curCRVBalance)
+    receivedCrv = curCRVBalance - prevCRVBalance
 
-    # gauge
-    assert almostEqual(curLPBal_gauge - prevLPBal_gauge, -
-                       collSize), 'incorrect gauge LP amt'
-
-    # spell
-    assert dai.balanceOf(curve_spell) == 0, 'non-zero spell DAI balance'
-    assert usdc.balanceOf(curve_spell) == 0, 'non-zero spell USDC balance'
-    assert usdt.balanceOf(curve_spell) == 0, 'non-zero spell USDT balance'
-    assert lp.balanceOf(curve_spell) == 0, 'non-zero spell LP balance'
-
-    # debt
-    assert usdcDebt == 0, 'usdcDebt should be 0'
-    assert daiDebt == 0, 'daiDebt should be 0'
-    assert usdtDebt == 0, 'usdtDebt should be 0'
+    # check with staking directly
+    minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
+    print('minter', minter)
+    tx = minter.mint(gauge, {'from': bob})
+    print('tx status', tx.status)
+    tx = interface.ILiquidityGauge(gauge).withdraw(collSize, {'from': bob})
+    receivedCrvFromGauge = crv.balanceOf(bob) - prevCrv
+    print('receivedCrvFromGauge', receivedCrvFromGauge)
+    assert almostEqual(receivedCrv, receivedCrvFromGauge)
 
     return tx
