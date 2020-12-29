@@ -22,11 +22,11 @@ contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
   mapping(address => uint) public claimed;
 
   constructor(
-    IWETH _weth,
     ICErc20 _cToken,
     string memory _name,
     string memory _symbol
   ) public ERC20(_name, _symbol) {
+    IWETH _weth = IWETH(_cToken.underlying());
     __Governable__init();
     cToken = _cToken;
     weth = _weth;
@@ -59,7 +59,7 @@ contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
     uint wethAmount = wethBalanceAfter.sub(wethBalanceBefore);
     weth.withdraw(wethAmount);
     (bool success, ) = msg.sender.call{value: wethAmount}(new bytes(0));
-    require(success, 'withdraw ETH failed');
+    require(success, '!withdraw');
   }
 
   function claim(uint totalReward, bytes32[] memory proof) public nonReentrant {
@@ -69,13 +69,13 @@ contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
     claimed[msg.sender] = totalReward;
     weth.withdraw(send);
     (bool success, ) = msg.sender.call{value: send}(new bytes(0));
-    require(success, 'claim ETH failed');
+    require(success, '!claim');
   }
 
   function adminClaim(uint amount) external onlyGov {
     weth.withdraw(amount);
     (bool success, ) = msg.sender.call{value: amount}(new bytes(0));
-    require(success, 'admin claim ETH failed');
+    require(success, '!adminClaim');
   }
 
   function claimAndWithdraw(
@@ -87,5 +87,7 @@ contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
     withdraw(withdrawAmount);
   }
 
-  receive() external payable {}
+  receive() external payable {
+    require(msg.sender == address(weth), '!weth');
+  }
 }
