@@ -9,6 +9,7 @@ import '../utils/HomoraMath.sol';
 import '../../interfaces/ICurvePool.sol';
 import '../../interfaces/ICurveRegistry.sol';
 import '../../interfaces/IWLiquidityGauge.sol';
+import '../../interfaces/IWERC20.sol';
 
 contract CurveSpellV1 is BasicSpell {
   using SafeMath for uint;
@@ -27,6 +28,7 @@ contract CurveSpellV1 is BasicSpell {
     address _wgauge
   ) public BasicSpell(_bank, _werc20, _weth) {
     wgauge = IWLiquidityGauge(_wgauge);
+    IWLiquidityGauge(_wgauge).setApprovalForAll(address(_bank), true);
     registry = IWLiquidityGauge(_wgauge).registry();
     crv = address(IWLiquidityGauge(_wgauge).crv());
   }
@@ -152,6 +154,26 @@ contract CurveSpellV1 is BasicSpell {
       doRefund(tokens[i]);
     }
     doRefund(lp);
+    doRefund(crv);
+  }
+
+  function harvest() external {
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (uint pid, uint gid, ) = wgauge.decodeId(collId);
+    address lp = wgauge.getUnderlying(collId);
+
+    // 1. Take out collateral
+    bank.takeCollateral(address(wgauge), collId, uint(-1));
+    wgauge.burn(collId, uint(-1));
+
+    // 2. Put collateral
+    uint amount = IERC20(lp).balanceOf(address(this));
+    ensureApprove(lp, address(wgauge));
+    uint id = wgauge.mint(pid, gid, amount);
+    bank.putCollateral(address(wgauge), id, amount);
+
+    // 3. Refund crv
     doRefund(crv);
   }
 }
