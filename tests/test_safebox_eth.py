@@ -205,3 +205,8 @@ def test_claim_and_withdraw(a, admin, weth, cweth, safebox_eth):
                                         '0xd279da13820e67ddd2615d2412ffef5470abeb32ba6a387005036fdd0b5ff889'], user_deposit_amt, {'from': user})
 
     assert a.at(user, force=True).balance() - prevUserBalance == user_deposit_amt + 9231
+
+
+def test_receive_eth(admin, eve, weth, safebox_eth):
+    with brownie.reverts('!weth'):
+        eve.transfer(safebox_eth, 10)
