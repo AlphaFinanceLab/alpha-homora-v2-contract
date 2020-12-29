@@ -8,12 +8,15 @@ import './BasicSpell.sol';
 import '../utils/HomoraMath.sol';
 import '../../interfaces/ICurvePool.sol';
 import '../../interfaces/ICurveRegistry.sol';
+import '../../interfaces/IWLiquidityGauge.sol';
 
 contract CurveSpellV1 is BasicSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
-  ICurveRegistry registry;
+  ICurveRegistry public immutable registry;
+  IWLiquidityGauge public immutable wgauge;
+  address public immutable crv;
   mapping(address => address[]) public ulTokens; // lpToken -> underlying token array
   mapping(address => address) public poolOf; // lpToken -> pool
 
@@ -21,9 +24,11 @@ contract CurveSpellV1 is BasicSpell {
     IBank _bank,
     address _werc20,
     address _weth,
-    address _registry
+    address _wgauge
   ) public BasicSpell(_bank, _werc20, _weth) {
-    registry = ICurveRegistry(_registry);
+    wgauge = IWLiquidityGauge(_wgauge);
+    registry = IWLiquidityGauge(_wgauge).registry();
+    crv = address(IWLiquidityGauge(_wgauge).crv());
   }
 
   /// @dev Return pool address given LP token and update pool info if not exist.
@@ -61,7 +66,9 @@ contract CurveSpellV1 is BasicSpell {
     uint amtLPUser,
     uint[3] calldata amtsBorrow,
     uint amtLPBorrow,
-    uint minLPMint
+    uint minLPMint,
+    uint pid,
+    uint gid
   ) external payable {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 3, 'incorrect pool length');
@@ -86,7 +93,10 @@ contract CurveSpellV1 is BasicSpell {
     ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
 
     // 4. Put collateral
-    doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
+    uint amount = IERC20(lp).balanceOf(address(this));
+    ensureApprove(lp, address(wgauge));
+    uint id = wgauge.mint(pid, gid, amount);
+    bank.putCollateral(address(wgauge), id, amount);
 
     // 5. Refund
     for (uint i = 0; i < 3; i++) doRefund(tokens[i]);
@@ -102,6 +112,7 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
+    (, , uint collId, ) = bank.getPositionInfo(positionId);
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
@@ -118,7 +129,8 @@ contract CurveSpellV1 is BasicSpell {
     for (uint i = 0; i < 3; i++) amtsDesired[i] += actualAmtsRepay[i].add(amtsMin[i]); // repay amt + slippage control
 
     // 2. Take out collateral
-    doTakeCollateral(lp, amtLPTake);
+    bank.takeCollateral(address(wgauge), collId, amtLPTake);
+    wgauge.burn(collId, amtLPTake);
 
     // 3. Compute amount to actually remove. Remove to repay just enough
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
@@ -140,5 +152,6 @@ contract CurveSpellV1 is BasicSpell {
       doRefund(tokens[i]);
     }
     doRefund(lp);
+    doRefund(crv);
   }
 }
