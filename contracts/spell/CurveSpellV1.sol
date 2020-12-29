@@ -94,14 +94,24 @@ contract CurveSpellV1 is BasicSpell {
     }
     ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
 
-    // 4. Put collateral
+    // 4. take out collateral
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    if (collSize > 0) {
+      bank.takeCollateral(address(wgauge), collId, collSize);
+      wgauge.burn(collId, collSize);
+    }
+
+    // 5. put collateral
     uint amount = IERC20(lp).balanceOf(address(this));
     ensureApprove(lp, address(wgauge));
+    (uint pid, uint gid, ) = wgauge.decodeId(collId);
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
 
-    // 5. Refund
+    // 6. Refund
     for (uint i = 0; i < 3; i++) doRefund(tokens[i]);
+    doRefund(crv);
   }
 
   function removeLiquidity3(
@@ -159,13 +169,13 @@ contract CurveSpellV1 is BasicSpell {
 
   function harvest() external {
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     (uint pid, uint gid, ) = wgauge.decodeId(collId);
     address lp = wgauge.getUnderlyingToken(collId);
 
     // 1. Take out collateral
-    bank.takeCollateral(address(wgauge), collId, uint(-1));
-    wgauge.burn(collId, uint(-1));
+    bank.takeCollateral(address(wgauge), collId, collSize);
+    wgauge.burn(collId, collSize);
 
     // 2. Put collateral
     uint amount = IERC20(lp).balanceOf(address(this));
