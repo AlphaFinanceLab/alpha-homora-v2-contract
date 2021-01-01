@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, Balancer2TokensOracle, SimpleOracle, BalancerSpellV1, WERC20
+    HomoraBank, ProxyOracle, BalancerPairOracle, SimpleOracle, BalancerSpellV1, WERC20
 )
 
 
@@ -44,7 +44,7 @@ def main():
     simple_oracle.setETHPx([weth, dai], [5192296858534827628530496329220096,
                                          8887571220661441971398610676149])
 
-    balancer_oracle = Balancer2TokensOracle.deploy(simple_oracle, {'from': alice})
+    balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': alice})
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
@@ -133,7 +133,7 @@ def main():
     tx = homora.execute(
         0,
         balancer_spell,
-        balancer_spell.addLiquidity.encode_input(
+        balancer_spell.addLiquidityWERC20.encode_input(
             lp,  # lp token
             [dai_amt,  # supply DAI
              weth_amt,   # supply WETH
@@ -224,7 +224,7 @@ def main():
     tx = homora.execute(
         position_id,
         balancer_spell,
-        balancer_spell.removeLiquidity.encode_input(
+        balancer_spell.removeLiquidityWERC20.encode_input(
             lp,  # LP token
             [lp_take_amt,  # take out LP tokens
              lp_want,   # withdraw LP tokens to wallet
