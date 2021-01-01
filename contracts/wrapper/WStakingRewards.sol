@@ -60,6 +60,6 @@ contract WStakingRewards is ERC1155('WStakingRewards'), ReentrancyGuard, IERC20W
     if (enReward > stReward) {
       IERC20(reward).safeTransfer(msg.sender, enReward.sub(stReward));
     }
-    return amount;
+    return enRewardPerToken;
   }
 }
