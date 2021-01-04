@@ -186,6 +186,9 @@ contract SushiswapSpellV1 is BasicSpell {
     uint pid
   ) external payable {
     address lp = getPair(tokenA, tokenB);
+    (address lpToken, , , ) = wmasterchef.chef().poolInfo(pid);
+    require(lpToken == lp, 'incorrect lp token');
+
     // 1-5. add liquidity
     addLiquidityInternal(tokenA, tokenB, amt);
 
@@ -193,6 +196,8 @@ contract SushiswapSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
+      (uint decodedPid, ) = wmasterchef.decodeId(collId);
+      require(pid == decodedPid, 'incorrect pid');
       bank.takeCollateral(address(wmasterchef), collId, collSize);
       wmasterchef.burn(collId, collSize);
     }
@@ -308,7 +313,8 @@ contract SushiswapSpellV1 is BasicSpell {
   ) external {
     address lp = getPair(tokenA, tokenB);
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    require(IWMasterChef(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wmasterchef), collId, amt.amtLPTake);
