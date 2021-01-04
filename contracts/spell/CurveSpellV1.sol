@@ -52,13 +52,67 @@ contract CurveSpellV1 is BasicSpell {
     return pool;
   }
 
-  function ensureApprove3(address lp) public {
-    require(ulTokens[lp].length == 3, 'incorrect pool length');
+  function ensureApproveN(address lp, uint n) public {
+    require(ulTokens[lp].length == n, 'incorrect pool length');
     address pool = poolOf[lp];
-    for (uint idx = 0; idx < 3; idx++) {
+    for (uint idx = 0; idx < n; idx++) {
       address coin = ICurvePool(pool).coins(idx);
       ensureApprove(coin, pool);
     }
+  }
+
+  /// @dev add liquidity for pools with 2 underlying tokens
+  function addLiquidity2(
+    address lp,
+    uint[2] calldata amtsUser,
+    uint amtLPUser,
+    uint[2] calldata amtsBorrow,
+    uint amtLPBorrow,
+    uint minLPMint,
+    uint pid,
+    uint gid
+  ) external payable {
+    address pool = getPool(lp);
+    require(ulTokens[lp].length == 2, 'incorrect pool length');
+    address[] memory tokens = ulTokens[lp];
+
+    // 0. Ensure approve 3 underlying tokens
+    ensureApproveN(lp, 2);
+
+    // 1. Get user input amounts
+    for (uint i = 0; i < 2; i++) doTransmit(tokens[i], amtsUser[i]);
+    doTransmit(lp, amtLPUser);
+
+    // 2. Borrow specified amounts
+    for (uint i = 0; i < 2; i++) doBorrow(tokens[i], amtsBorrow[i]);
+    doBorrow(lp, amtLPBorrow);
+
+    // 3. add liquidity
+    uint[3] memory suppliedAmts;
+    for (uint i = 0; i < 2; i++) {
+      suppliedAmts[i] = IERC20(tokens[i]).balanceOf(address(this));
+    }
+    ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+
+    // 4. Take out collateral
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    if (collSize > 0) {
+      bank.takeCollateral(address(wgauge), collId, collSize);
+      wgauge.burn(collId, collSize);
+    }
+
+    // 5. Put collateral
+    uint amount = IERC20(lp).balanceOf(address(this));
+    ensureApprove(lp, address(wgauge));
+    uint id = wgauge.mint(pid, gid, amount);
+    bank.putCollateral(address(wgauge), id, amount);
+
+    // 6. Refund
+    for (uint i = 0; i < 2; i++) doRefund(tokens[i]);
+
+    // 7. Refund crv
+    doRefund(crv);
   }
 
   /// @dev add liquidity for pools with 3 underlying tokens
@@ -77,7 +131,7 @@ contract CurveSpellV1 is BasicSpell {
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve 3 underlying tokens
-    ensureApprove3(lp);
+    ensureApproveN(lp, 3);
 
     // 1. Get user input amounts
     for (uint i = 0; i < 3; i++) doTransmit(tokens[i], amtsUser[i]);
@@ -94,14 +148,134 @@ contract CurveSpellV1 is BasicSpell {
     }
     ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
 
-    // 4. Put collateral
+    // 4. Take out collateral
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    if (collSize > 0) {
+      bank.takeCollateral(address(wgauge), collId, collSize);
+      wgauge.burn(collId, collSize);
+    }
+
+    // 5. Put collateral
     uint amount = IERC20(lp).balanceOf(address(this));
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
 
-    // 5. Refund
+    // 6. Refund
     for (uint i = 0; i < 3; i++) doRefund(tokens[i]);
+
+    // 7. Refund crv
+    doRefund(crv);
+  }
+
+  /// @dev add liquidity for pools with 4 underlying tokens
+  function addLiquidity4(
+    address lp,
+    uint[4] calldata amtsUser,
+    uint amtLPUser,
+    uint[4] calldata amtsBorrow,
+    uint amtLPBorrow,
+    uint minLPMint,
+    uint pid,
+    uint gid
+  ) external payable {
+    address pool = getPool(lp);
+    require(ulTokens[lp].length == 4, 'incorrect pool length');
+    address[] memory tokens = ulTokens[lp];
+
+    // 0. Ensure approve 4 underlying tokens
+    ensureApproveN(lp, 4);
+
+    // 1. Get user input amounts
+    for (uint i = 0; i < 4; i++) doTransmit(tokens[i], amtsUser[i]);
+    doTransmit(lp, amtLPUser);
+
+    // 2. Borrow specified amounts
+    for (uint i = 0; i < 4; i++) doBorrow(tokens[i], amtsBorrow[i]);
+    doBorrow(lp, amtLPBorrow);
+
+    // 3. add liquidity
+    uint[3] memory suppliedAmts;
+    for (uint i = 0; i < 4; i++) {
+      suppliedAmts[i] = IERC20(tokens[i]).balanceOf(address(this));
+    }
+    ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+
+    // 4. Take out collateral
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    if (collSize > 0) {
+      bank.takeCollateral(address(wgauge), collId, collSize);
+      wgauge.burn(collId, collSize);
+    }
+
+    // 5. Put collateral
+    uint amount = IERC20(lp).balanceOf(address(this));
+    ensureApprove(lp, address(wgauge));
+    uint id = wgauge.mint(pid, gid, amount);
+    bank.putCollateral(address(wgauge), id, amount);
+
+    // 6. Refund
+    for (uint i = 0; i < 4; i++) doRefund(tokens[i]);
+
+    // 7. Refund crv
+    doRefund(crv);
+  }
+
+  function removeLiquidity2(
+    address lp,
+    uint amtLPTake,
+    uint amtLPWithdraw,
+    uint[2] calldata amtsRepay,
+    uint amtLPRepay,
+    uint[2] calldata amtsMin
+  ) external payable {
+    address pool = getPool(lp);
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    address[] memory tokens = ulTokens[lp];
+
+    // 0. Ensure approve
+    ensureApproveN(lp, 2);
+
+    // 1. Compute repay amount if MAX_INT is supplied (max debt)
+    uint[3] memory actualAmtsRepay;
+    for (uint i = 0; i < 2; i++) {
+      actualAmtsRepay[i] = amtsRepay[i] == uint(-1)
+        ? bank.borrowBalanceCurrent(positionId, tokens[i])
+        : amtsRepay[i];
+    }
+    uint[3] memory amtsDesired;
+    for (uint i = 0; i < 2; i++) amtsDesired[i] += actualAmtsRepay[i].add(amtsMin[i]); // repay amt + slippage control
+
+    // 2. Take out collateral
+    bank.takeCollateral(address(wgauge), collId, amtLPTake);
+    wgauge.burn(collId, amtLPTake);
+
+    // 3. Compute amount to actually remove. Remove to repay just enough
+    uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
+    ICurvePool(pool).remove_liquidity_imbalance(amtsDesired, amtLPToRemove);
+
+    // 4. Compute leftover amount to remove. Remove balancedly.
+    amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
+    uint[3] memory mins;
+    ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+
+    // 5. Repay
+    for (uint i = 0; i < 2; i++) {
+      doRepay(tokens[i], actualAmtsRepay[i]);
+    }
+    doRepay(lp, amtLPRepay);
+
+    // 6. Refund
+    for (uint i = 0; i < 2; i++) {
+      doRefund(tokens[i]);
+    }
+    doRefund(lp);
+
+    // 7. Refund crv
+    doRefund(crv);
   }
 
   function removeLiquidity3(
@@ -118,7 +292,7 @@ contract CurveSpellV1 is BasicSpell {
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
-    ensureApprove3(lp);
+    ensureApproveN(lp, 3);
 
     // 1. Compute repay amount if MAX_INT is supplied (max debt)
     uint[3] memory actualAmtsRepay;
@@ -154,6 +328,63 @@ contract CurveSpellV1 is BasicSpell {
       doRefund(tokens[i]);
     }
     doRefund(lp);
+
+    // 7. Refund crv
+    doRefund(crv);
+  }
+
+  function removeLiquidity4(
+    address lp,
+    uint amtLPTake,
+    uint amtLPWithdraw,
+    uint[4] calldata amtsRepay,
+    uint amtLPRepay,
+    uint[4] calldata amtsMin
+  ) external payable {
+    address pool = getPool(lp);
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    address[] memory tokens = ulTokens[lp];
+
+    // 0. Ensure approve
+    ensureApproveN(lp, 4);
+
+    // 1. Compute repay amount if MAX_INT is supplied (max debt)
+    uint[3] memory actualAmtsRepay;
+    for (uint i = 0; i < 4; i++) {
+      actualAmtsRepay[i] = amtsRepay[i] == uint(-1)
+        ? bank.borrowBalanceCurrent(positionId, tokens[i])
+        : amtsRepay[i];
+    }
+    uint[3] memory amtsDesired;
+    for (uint i = 0; i < 4; i++) amtsDesired[i] += actualAmtsRepay[i].add(amtsMin[i]); // repay amt + slippage control
+
+    // 2. Take out collateral
+    bank.takeCollateral(address(wgauge), collId, amtLPTake);
+    wgauge.burn(collId, amtLPTake);
+
+    // 3. Compute amount to actually remove. Remove to repay just enough
+    uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
+    ICurvePool(pool).remove_liquidity_imbalance(amtsDesired, amtLPToRemove);
+
+    // 4. Compute leftover amount to remove. Remove balancedly.
+    amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
+    uint[3] memory mins;
+    ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+
+    // 5. Repay
+    for (uint i = 0; i < 4; i++) {
+      doRepay(tokens[i], actualAmtsRepay[i]);
+    }
+    doRepay(lp, amtLPRepay);
+
+    // 6. Refund
+    for (uint i = 0; i < 4; i++) {
+      doRefund(tokens[i]);
+    }
+    doRefund(lp);
+
+    // 7. Refund crv
     doRefund(crv);
   }
 
@@ -161,7 +392,7 @@ contract CurveSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, ) = bank.getPositionInfo(positionId);
     (uint pid, uint gid, ) = wgauge.decodeId(collId);
-    address lp = wgauge.getUnderlying(collId);
+    address lp = wgauge.getUnderlyingToken(collId);
 
     // 1. Take out collateral
     bank.takeCollateral(address(wgauge), collId, uint(-1));

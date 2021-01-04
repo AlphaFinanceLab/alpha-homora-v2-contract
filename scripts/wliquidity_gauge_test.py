@@ -65,33 +65,33 @@ def main():
                                     force=True), alice, 10**6 * 10**18)
     setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
                                      force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
                                      force=True), alice, 10**6 * 10**6)
     setup_transfer(renbtc, accounts.at('0x53463cd0b074e5fdafc55dce7b1c82adf1a43b2e',
                                        force=True), alice, 10**2 * 10**8)
-    setup_transfer(btc, accounts.at('0x2bf792ffe8803585f74e06907900c2dc2c29adcb',
+    setup_transfer(btc, accounts.at('0x0f4ee9631f4be0a63756515141281a3e2b293bbe',
                                     force=True), alice, 10**2 * 10**8)
 
     setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
                                     force=True), bob, 10**6 * 10**18)
     setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
                                      force=True), bob, 10**6 * 10**6)
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
                                      force=True), bob, 10**6 * 10**6)
     setup_transfer(renbtc, accounts.at('0x53463cd0b074e5fdafc55dce7b1c82adf1a43b2e',
                                        force=True), bob, 10**2 * 10**8)
-    setup_transfer(btc, accounts.at('0x2bf792ffe8803585f74e06907900c2dc2c29adcb',
+    setup_transfer(btc, accounts.at('0x0f4ee9631f4be0a63756515141281a3e2b293bbe',
                                     force=True), bob, 10**2 * 10**8)
     # steal some LP from the staking pool
     setup_transfer(lp_3pool, accounts.at(
         '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), alice, 10**6 * 10**18)
     setup_transfer(lp_btc, accounts.at(
-        '0x9aa8f427a17d6b0d91b6262989edc7d45d6aedf8', force=True), alice, 100 * 10**18)
+        '0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True), alice, 10 * 10**18)
 
     setup_transfer(lp_3pool, accounts.at(
         '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), bob, 10**6 * 10**18)
     setup_transfer(lp_btc, accounts.at(
-        '0x9aa8f427a17d6b0d91b6262989edc7d45d6aedf8', force=True), bob, 100 * 10**18)
+        '0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True), bob, 10 * 10**18)
 
     # register gauges
     wgauge.registerGauge(0, 0, {'from': admin})
