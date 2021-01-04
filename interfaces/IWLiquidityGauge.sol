@@ -5,6 +5,7 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.s
 
 import './IERC20Wrapper.sol';
 import './ICurveRegistry.sol';
+import './ILiquidityGauge.sol';
 
 interface IWLiquidityGauge is IERC1155, IERC20Wrapper {
   /// @dev Mint ERC1155 token for the given ERC20 token.

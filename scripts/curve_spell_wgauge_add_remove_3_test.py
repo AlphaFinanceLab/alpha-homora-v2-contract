@@ -1,7 +1,9 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge
+    HomoraBank, ProxyOracle, ERC20KP3ROracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge, MockCErc20
 )
+import brownie
+from brownie.exceptions import VirtualMachineError
 
 
 KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
@@ -54,10 +56,12 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dai, usdt, usdc, lp], [9060553589188986552095106856227,
-                                                   9002288773315920458132820329673073223442669,
-                                                   9011535487953795006625883219171279625142296,
-                                                   9002288773315920458132820329673])
+    simple_oracle.setETHPx([dai, usdt, usdc], [9060553589188986552095106856227,
+                                               9002288773315920458132820329673073223442669,
+                                               9011535487953795006625883219171279625142296])
+
+    curve_oracle = CurveOracle.deploy(simple_oracle, registry, {'from': admin})
+    curve_oracle.registerPool(lp)  # update pool info
 
     oracle = ProxyOracle.deploy({'from': admin})
     oracle.setWhitelistERC1155([werc20, wgauge], True, {'from': admin})
@@ -72,7 +76,7 @@ def main():
             [simple_oracle, 10000, 10000, 10000],
             [simple_oracle, 10000, 10000, 10000],
             [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
+            [curve_oracle, 10000, 10000, 10000],
         ],
         {'from': admin},
     )
@@ -131,7 +135,7 @@ def main():
     curve_spell.getPool(lp)
 
     # first time call to reduce gas
-    curve_spell.ensureApprove3(lp, {'from': admin})
+    curve_spell.ensureApproveN(lp, 3, {'from': admin})
 
     #####################################################################################
 
