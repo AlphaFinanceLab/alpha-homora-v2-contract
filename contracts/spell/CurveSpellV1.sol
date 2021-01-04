@@ -98,6 +98,8 @@ contract CurveSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
+      (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
+      require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }
@@ -107,6 +109,7 @@ contract CurveSpellV1 is BasicSpell {
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
+    require(wgauge.getUnderlyingToken(id) == lp, 'incorrect underlying');
 
     // 6. Refund
     for (uint i = 0; i < 2; i++) doRefund(tokens[i]);
@@ -152,6 +155,8 @@ contract CurveSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
+      (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
+      require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }
@@ -161,6 +166,7 @@ contract CurveSpellV1 is BasicSpell {
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
+    require(wgauge.getUnderlyingToken(id) == lp, 'incorrect underlying');
 
     // 6. Refund
     for (uint i = 0; i < 3; i++) doRefund(tokens[i]);
@@ -206,6 +212,8 @@ contract CurveSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
+      (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
+      require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }
@@ -215,6 +223,7 @@ contract CurveSpellV1 is BasicSpell {
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
+    require(wgauge.getUnderlyingToken(id) == lp, 'incorrect underlying');
 
     // 6. Refund
     for (uint i = 0; i < 4; i++) doRefund(tokens[i]);
@@ -233,7 +242,8 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    require(IWLiquidityGauge(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
@@ -288,7 +298,8 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    require(IWLiquidityGauge(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
@@ -343,7 +354,8 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    require(IWLiquidityGauge(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
