@@ -12,6 +12,7 @@ import '../interfaces/ICErc20.sol';
 contract SafeBox is Governable, ERC20, ReentrancyGuard {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
+  event Claim(address user, uint amount);
 
   ICErc20 public immutable cToken;
   IERC20 public immutable uToken;
@@ -66,6 +67,7 @@ contract SafeBox is Governable, ERC20, ReentrancyGuard {
     uint send = totalReward.sub(claimed[msg.sender]);
     claimed[msg.sender] = totalReward;
     uToken.safeTransfer(msg.sender, send);
+    emit Claim(msg.sender, send);
   }
 
   function adminClaim(uint amount) external onlyGov {
