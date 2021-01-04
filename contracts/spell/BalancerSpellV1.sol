@@ -255,7 +255,7 @@ contract BalancerSpellV1 is BasicSpell {
   function harvestWStakingRewards(address wstaking) external {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, ) = bank.getPositionInfo(positionId);
-    address lp = IWStakingRewards(wstaking).getUnderlying(collId);
+    address lp = IWStakingRewards(wstaking).getUnderlyingToken(collId);
 
     // 1. Take out collateral
     bank.takeCollateral(wstaking, collId, uint(-1));
