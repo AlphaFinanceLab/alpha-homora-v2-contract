@@ -185,8 +185,9 @@ contract UniswapV2SpellV1 is BasicSpell {
 
     // 6. Take out collateral
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
+      require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
       bank.takeCollateral(wstaking, collId, collSize);
       IWStakingRewards(wstaking).burn(collId, collSize);
     }
@@ -306,10 +307,11 @@ contract UniswapV2SpellV1 is BasicSpell {
   ) external {
     address lp = getPair(tokenA, tokenB);
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
     address reward = IWStakingRewards(wstaking).reward();
 
     // 1. Take out collateral
+    require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
     bank.takeCollateral(wstaking, collId, amt.amtLPTake);
     IWStakingRewards(wstaking).burn(collId, amt.amtLPTake);
 
@@ -324,7 +326,7 @@ contract UniswapV2SpellV1 is BasicSpell {
     address reward = IWStakingRewards(wstaking).reward();
     uint positionId = bank.POSITION_ID();
     (, , uint collId, ) = bank.getPositionInfo(positionId);
-    address lp = IWStakingRewards(wstaking).getUnderlying(collId);
+    address lp = IWStakingRewards(wstaking).getUnderlyingToken(collId);
 
     // 1. Take out collateral
     bank.takeCollateral(wstaking, collId, uint(-1));
