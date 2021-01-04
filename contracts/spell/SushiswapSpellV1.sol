@@ -148,17 +148,16 @@ contract SushiswapSpellV1 is BasicSpell {
     }
 
     // 5. Add liquidity
-    (, , uint liquidity) =
-      router.addLiquidity(
-        tokenA,
-        tokenB,
-        IERC20(tokenA).balanceOf(address(this)),
-        IERC20(tokenB).balanceOf(address(this)),
-        amt.amtAMin,
-        amt.amtBMin,
-        address(this),
-        now
-      );
+    router.addLiquidity(
+      tokenA,
+      tokenB,
+      IERC20(tokenA).balanceOf(address(this)),
+      IERC20(tokenB).balanceOf(address(this)),
+      amt.amtAMin,
+      amt.amtBMin,
+      address(this),
+      now
+    );
   }
 
   function addLiquidityWERC20(
