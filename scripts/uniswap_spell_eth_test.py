@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, SimpleOracle, UniswapV2Oracle, UniswapV2SpellV1, WERC20
+    HomoraBank, ProxyOracle, SimpleOracle, UniswapV2Oracle, UniswapV2SpellV1, WERC20, WMasterChef
 )
 
 
@@ -37,6 +37,10 @@ def main():
     router = interface.IUniswapV2Router02(
         '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
+    chef = accounts.at(
+        '0xc2edad668740f1aa35e4d8f227fb8e17dca888cd', force=True)
+    wchef = WMasterChef.deploy(chef, {'from': admin})
+
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
@@ -67,13 +71,13 @@ def main():
 
     # setup initial funds 10^5 USDT + 10^4 WETH to alice
     setup_transfer(usdt, accounts.at(
-        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), alice, 10**5 * 10**6)
+        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), alice, 10**5 * 10**6)
     setup_transfer(weth, accounts.at(
         '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
 
     # setup initial funds 10^6 USDT + 10^5 WETH to homora bank
     setup_transfer(usdt, accounts.at(
-        '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8', force=True), homora, 10**6 * 10**6)
+        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), homora, 10**6 * 10**6)
     setup_transfer(weth, accounts.at(
         '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
 
@@ -82,9 +86,9 @@ def main():
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 1*10**17, {'from': accounts.at(
+    lp.transfer(alice, 4*10**16, {'from': accounts.at(
         '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
-    lp.transfer(homora, 2*10**17, {'from': accounts.at(
+    lp.transfer(homora, 4*10**16, {'from': accounts.at(
         '0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b', force=True)})
 
     # set approval
@@ -94,7 +98,7 @@ def main():
     lp.approve(homora, 2**256-1, {'from': alice})
 
     uniswap_spell = UniswapV2SpellV1.deploy(
-        homora, werc20, router, {'from': admin})
+        homora, werc20, router, wchef, {'from': admin})
     # first time call to reduce gas
     uniswap_spell.getPair(weth, usdt, {'from': admin})
 
@@ -124,7 +128,7 @@ def main():
     tx = homora.execute(
         0,
         uniswap_spell,
-        uniswap_spell.addLiquidity.encode_input(
+        uniswap_spell.addLiquidityWERC20.encode_input(
             usdt,  # token 0
             weth,  # token 1
             [usdt_amt,  # supply USDT
@@ -186,8 +190,8 @@ def main():
     # check balance and pool reserves
     assert curABal - prevABal - borrow_usdt_amt == - \
         (curARes - prevARes), 'not all USDT tokens go to LP pool'
-    assert curBBal - prevBBal - borrow_weth_amt - eth_amt == - \
-        (curBRes - prevBRes), 'not all WETH tokens go to LP pool'
+    assert almostEqual(curBBal - prevBBal - borrow_weth_amt - eth_amt, -
+                       (curBRes - prevBRes)), 'not all WETH tokens go to LP pool'
 
     #####################################################################################
     print('=========================================================================')
@@ -216,7 +220,7 @@ def main():
     tx = homora.execute(
         position_id,
         uniswap_spell,
-        uniswap_spell.removeLiquidity.encode_input(
+        uniswap_spell.removeLiquidityWERC20.encode_input(
             usdt,  # token 0
             weth,  # token 1
             [lp_take_amt,  # take out LP tokens
