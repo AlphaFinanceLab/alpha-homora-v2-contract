@@ -2,6 +2,8 @@ from brownie import accounts, interface, Contract, chain
 from brownie import (
     HomoraBank, ProxyOracle, UniswapV2Oracle, SimpleOracle, UniswapV2SpellV1, WERC20, WStakingRewards, MockCErc20
 )
+import brownie
+from brownie.exceptions import VirtualMachineError
 
 
 def almostEqual(a, b):
@@ -32,9 +34,12 @@ def main():
     bob = accounts[2]
     dpi = interface.IERC20Ex('0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+    usdt = interface.IERC20Ex('0xdac17f958d2ee523a2206206994597c13d831ec7')
 
     lp = interface.IERC20Ex('0x4d5ef58aac27d99935e5b6b4a6778ff292059991')
+    lp_usdt = interface.IERC20Ex('0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852')
     crdpi = MockCErc20.deploy(dpi, {'from': admin})
+    crusdt = interface.ICErc20('0x797AAB1ce7c01eB727ab980762bA88e7133d2157')
 
     router = interface.IUniswapV2Router02(
         '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
@@ -47,7 +52,7 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dpi, weth], [2**112 * 100 // 700, 2**112])
+    simple_oracle.setETHPx([dpi, weth, usdt], [2**112 * 100 // 700, 2**112, 2**112 // 700])
 
     uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
     oracle = ProxyOracle.deploy({'from': admin})
@@ -57,9 +62,13 @@ def main():
             '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
             '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
             '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
+            '0xdac17f958d2ee523a2206206994597c13d831ec7',  # USDT
+            '0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852',  # USDT-WETH
         ],
         [
             [simple_oracle, 10000, 10000, 10000],
+            [simple_oracle, 10000, 10000, 10000],
+            [uniswap_oracle, 10000, 10000, 10000],
             [simple_oracle, 10000, 10000, 10000],
             [uniswap_oracle, 10000, 10000, 10000],
         ],
@@ -70,18 +79,23 @@ def main():
     homora.initialize(oracle, 1000, {'from': admin})  # 10% fee
     setup_bank_hack(homora)
     homora.addBank(dpi, crdpi, {'from': admin})
+    homora.addBank(usdt, crusdt, {'from': admin})
 
     # setup initial funds 10^3 DPI + 10^4 WETH to alice
     setup_transfer(dpi, accounts.at(
         '0x96e3d09a600b15341cc266820106a1d6b4aa58c2', force=True), alice, 10**3 * 10**18)
     setup_transfer(weth, accounts.at(
         '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
+    setup_transfer(usdt, accounts.at(
+        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), alice, 10**5 * 10**6)
 
     # setup initial funds 10^3 DPI + 10^5 WETH to homora bank
     setup_transfer(dpi, accounts.at(
         '0x96e3d09a600b15341cc266820106a1d6b4aa58c2', force=True), homora, 10**3 * 10**18)
     setup_transfer(weth, accounts.at(
         '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
+    setup_transfer(usdt, accounts.at(
+        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), homora, 10**5 * 10**6)
 
     # check alice's funds
     print(f'Alice dpi balance {dpi.balanceOf(alice)}')
@@ -95,10 +109,17 @@ def main():
     lp.transfer(bob, 10*10**18, {'from': accounts.at(
         '0xdc7aa225964267c7e0efb35f4931426209e90312', force=True)})
 
+    lp_usdt.transfer(alice, 4*10**13, {'from': accounts.at(
+        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
+    lp_usdt.transfer(bob, 4*10**13, {'from': accounts.at(
+        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
+
     # set approval
     dpi.approve(homora, 2**256-1, {'from': alice})
     dpi.approve(crdpi, 2**256-1, {'from': alice})
     weth.approve(homora, 2**256-1, {'from': alice})
+    usdt.approve(homora, 2**256-1, {'from': alice})
+    usdt.approve(crusdt, 2**256-1, {'from': alice})
     lp.approve(homora, 2**256-1, {'from': alice})
     lp.approve(staking, 2**256-1, {'from': bob})
 
@@ -215,7 +236,69 @@ def main():
 
     #####################################################################################
     print('=========================================================================')
-    print('Case 2. remove liquidity')
+    print('Case 2. add liquidity (failed tx desired)')
+
+    usdt_amt = 10 * 10**6
+    weth_amt = 10**18
+    lp_amt = 0
+    borrow_usdt_amt = 0
+    borrow_weth_amt = 0
+
+    try:
+        tx = homora.execute(
+            1,
+            uniswap_spell,
+            uniswap_spell.addLiquidityWStakingRewards.encode_input(
+                usdt,  # token 0
+                weth,  # token 1
+                [usdt_amt,  # supply USDT
+                    weth_amt,   # supply WETH
+                    lp_amt,  # supply LP
+                    borrow_usdt_amt,  # borrow USDT
+                    borrow_weth_amt,  # borrow WETH
+                    0,  # borrow LP tokens
+                    0,  # min USDT
+                    0],  # min WETH
+                wstaking,
+            ),
+            {'from': alice}
+        )
+    except VirtualMachineError:
+        pass
+
+    #####################################################################################
+    print('=========================================================================')
+    print('Case 3. remove liquidity (failed tx desired)')
+
+    lp_take_amt = collSize
+    lp_want = 0
+    usdt_repay = 0
+    weth_repay = 0
+
+    try:
+        tx = homora.execute(
+            1,
+            uniswap_spell,
+            uniswap_spell.removeLiquidityWStakingRewards.encode_input(
+                usdt,  # token 0
+                weth,  # token 1
+                [lp_take_amt,  # take out LP tokens
+                    lp_want,   # withdraw LP tokens to wallet
+                    usdt_repay,  # repay USDT
+                    weth_repay,  # repay WETH
+                    0,  # repay LP tokens
+                    0,  # min USDT
+                    0],  # min WETH
+                wstaking,
+            ),
+            {'from': alice}
+        )
+    except VirtualMachineError:
+        pass
+
+    #####################################################################################
+    print('=========================================================================')
+    print('Case 4. remove liquidity')
 
     prevABal = dpi.balanceOf(alice)
     prevBBal = weth.balanceOf(alice)
