@@ -161,7 +161,7 @@ contract CurveSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, ) = bank.getPositionInfo(positionId);
     (uint pid, uint gid, ) = wgauge.decodeId(collId);
-    address lp = wgauge.getUnderlying(collId);
+    address lp = wgauge.getUnderlyingToken(collId);
 
     // 1. Take out collateral
     bank.takeCollateral(address(wgauge), collId, uint(-1));

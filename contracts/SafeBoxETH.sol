@@ -10,6 +10,7 @@ import '../interfaces/IWETH.sol';
 
 contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
   using SafeMath for uint;
+  event Claim(address user, uint amount);
 
   ICErc20 public immutable cToken;
   IWETH public immutable weth;
@@ -67,6 +68,7 @@ contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
     weth.withdraw(send);
     (bool success, ) = msg.sender.call{value: send}(new bytes(0));
     require(success, '!claim');
+    emit Claim(msg.sender, send);
   }
 
   function adminClaim(uint amount) external onlyGov {
