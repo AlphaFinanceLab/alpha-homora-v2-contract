@@ -9,6 +9,7 @@ import '../utils/HomoraMath.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
 import '../../interfaces/IUniswapV2Pair.sol';
+import '../../interfaces/IWStakingRewards.sol';
 
 contract UniswapV2SpellV1 is BasicSpell {
   using SafeMath for uint;
@@ -97,11 +98,11 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint amtBMin;
   }
 
-  function addLiquidity(
+  function addLiquidityInternal(
     address tokenA,
     address tokenB,
     Amounts calldata amt
-  ) external payable {
+  ) internal {
     address lp = getPair(tokenA, tokenB);
 
     // 1. Get user input amounts
@@ -150,6 +151,16 @@ contract UniswapV2SpellV1 is BasicSpell {
         address(this),
         now
       );
+  }
+
+  function addLiquidityWERC20(
+    address tokenA,
+    address tokenB,
+    Amounts calldata amt
+  ) external payable {
+    address lp = getPair(tokenA, tokenB);
+    // 1-5. add liquidity
+    addLiquidityInternal(tokenA, tokenB, amt);
 
     // 6. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
@@ -158,6 +169,44 @@ contract UniswapV2SpellV1 is BasicSpell {
     doRefundETH();
     doRefund(tokenA);
     doRefund(tokenB);
+  }
+
+  function addLiquidityWStakingRewards(
+    address tokenA,
+    address tokenB,
+    Amounts calldata amt,
+    address wstaking
+  ) external payable {
+    address lp = getPair(tokenA, tokenB);
+    address reward = IWStakingRewards(wstaking).reward();
+
+    // 1-5. add liquidity
+    addLiquidityInternal(tokenA, tokenB, amt);
+
+    // 6. Take out collateral
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    if (collSize > 0) {
+      bank.takeCollateral(wstaking, collId, collSize);
+      IWStakingRewards(wstaking).burn(collId, collSize);
+    }
+
+    // 7. Put collateral
+    ensureApprove(lp, wstaking);
+    uint amount = IERC20(lp).balanceOf(address(this));
+    uint id = IWStakingRewards(wstaking).mint(amount);
+    if (!IWStakingRewards(wstaking).isApprovedForAll(address(this), address(bank))) {
+      IWStakingRewards(wstaking).setApprovalForAll(address(bank), true);
+    }
+    bank.putCollateral(address(wstaking), id, amount);
+
+    // 8. Refund leftovers to users
+    doRefundETH();
+    doRefund(tokenA);
+    doRefund(tokenB);
+
+    // 9. Refund reward
+    doRefund(reward);
   }
 
   struct RepayAmounts {
@@ -170,18 +219,19 @@ contract UniswapV2SpellV1 is BasicSpell {
     uint amtBMin;
   }
 
-  function removeLiquidity(
+  function removeLiquidityInternal(
     address tokenA,
     address tokenB,
     RepayAmounts calldata amt
-  ) external {
+  ) internal {
     address lp = getPair(tokenA, tokenB);
     uint positionId = bank.POSITION_ID();
+
     uint amtARepay = amt.amtARepay;
     uint amtBRepay = amt.amtBRepay;
     uint amtLPRepay = amt.amtLPRepay;
 
-    // 1. Compute repay amount if MAX_INT is supplied (max debt)
+    // 2. Compute repay amount if MAX_INT is supplied (max debt)
     if (amtARepay == uint(-1)) {
       amtARepay = bank.borrowBalanceCurrent(positionId, tokenA);
     }
@@ -191,9 +241,6 @@ contract UniswapV2SpellV1 is BasicSpell {
     if (amtLPRepay == uint(-1)) {
       amtLPRepay = bank.borrowBalanceCurrent(positionId, lp);
     }
-
-    // 2. Take out collateral
-    doTakeCollateral(lp, amt.amtLPTake);
 
     // 3. Compute amount to actually remove
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
@@ -235,5 +282,61 @@ contract UniswapV2SpellV1 is BasicSpell {
     doRefund(tokenA);
     doRefund(tokenB);
     doRefund(lp);
+  }
+
+  function removeLiquidityWERC20(
+    address tokenA,
+    address tokenB,
+    RepayAmounts calldata amt
+  ) external {
+    address lp = getPair(tokenA, tokenB);
+
+    // 1. Take out collateral
+    doTakeCollateral(lp, amt.amtLPTake);
+
+    // 2-8. remove liquidity
+    removeLiquidityInternal(tokenA, tokenB, amt);
+  }
+
+  function removeLiquidityWStakingRewards(
+    address tokenA,
+    address tokenB,
+    RepayAmounts calldata amt,
+    address wstaking
+  ) external {
+    address lp = getPair(tokenA, tokenB);
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    address reward = IWStakingRewards(wstaking).reward();
+
+    // 1. Take out collateral
+    bank.takeCollateral(wstaking, collId, amt.amtLPTake);
+    IWStakingRewards(wstaking).burn(collId, amt.amtLPTake);
+
+    // 2-8. remove liquidity
+    removeLiquidityInternal(tokenA, tokenB, amt);
+
+    // 9. Refund reward
+    doRefund(reward);
+  }
+
+  function harvestWStakingRewards(address wstaking) external {
+    address reward = IWStakingRewards(wstaking).reward();
+    uint positionId = bank.POSITION_ID();
+    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    address lp = IWStakingRewards(wstaking).getUnderlying(collId);
+
+    // 1. Take out collateral
+    bank.takeCollateral(wstaking, collId, uint(-1));
+    IWStakingRewards(wstaking).burn(collId, uint(-1));
+
+    // 2. put collateral
+    uint amount = IERC20(lp).balanceOf(address(this));
+    ensureApprove(lp, wstaking);
+    uint id = IWStakingRewards(wstaking).mint(amount);
+    bank.putCollateral(wstaking, id, amount);
+
+    // 3. Refund reward
+    doRefund(reward);
   }
 }

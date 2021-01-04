@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20
+    HomoraBank, ProxyOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20, WMasterChef
 )
 
 
@@ -40,6 +40,10 @@ def main():
     router = interface.IUniswapV2Router02(
         '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
 
+    chef = accounts.at(
+        '0xc2edad668740f1aa35e4d8f227fb8e17dca888cd', force=True)
+    wchef = WMasterChef.deploy(chef, {'from': admin})
+
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
@@ -74,13 +78,13 @@ def main():
     homora.addBank(usdc, crusdc, {'from': admin})
 
     # setup initial funds 10^5 USDT + 10^5 USDC to alice
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
                                      force=True), alice, 10**6 * 10**6)
     setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
                                      force=True), alice, 10**6 * 10**6)
 
     # setup initial funds 10^6 USDT + 10^6 USDC to homora bank
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
+    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
                                      force=True), homora, 10**6 * 10**6)
     setup_transfer(usdc, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0',
                                      force=True), homora, 10**6 * 10**6)
@@ -101,7 +105,7 @@ def main():
     lp.approve(homora, 2**256-1, {'from': alice})
 
     uniswap_spell = UniswapV2SpellV1.deploy(
-        homora, werc20, router, {'from': admin})
+        homora, werc20, router, wchef, {'from': admin})
     # first time call to reduce gas
     uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
@@ -125,7 +129,7 @@ def main():
     tx = homora.execute(
         0,
         uniswap_spell,
-        uniswap_spell.addLiquidity.encode_input(
+        uniswap_spell.addLiquidityWERC20.encode_input(
             usdt,  # token 0
             usdc,  # token 1
             [usdt_amt,  # supply USDT
@@ -205,7 +209,7 @@ def main():
     tx = homora.execute(
         position_id,
         uniswap_spell,
-        uniswap_spell.removeLiquidity.encode_input(
+        uniswap_spell.removeLiquidityWERC20.encode_input(
             usdt,  # token 0
             usdc,  # token 1
             [lp_take_amt,  # take out LP tokens
