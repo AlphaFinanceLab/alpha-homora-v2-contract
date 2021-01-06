@@ -11,7 +11,7 @@ contract CoreOracle is IBaseOracle, Governable {
   }
 
   function setRoute(address[] calldata tokens, address[] calldata targets) external onlyGov {
-    require(tokens.length == targets.length, '!length');
+    require(tokens.length == targets.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
       routes[tokens[idx]] = targets[idx];
     }
