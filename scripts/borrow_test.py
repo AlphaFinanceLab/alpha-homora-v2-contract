@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, HouseHoldSpell,
+    HomoraBank, ProxyOracle, CoreOracle, ERC20KP3ROracle, UniswapV2LPKP3ROracle, HouseHoldSpell,
 )
 
 

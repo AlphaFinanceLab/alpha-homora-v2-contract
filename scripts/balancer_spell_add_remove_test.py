@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, BalancerPairOracle, SimpleOracle, BalancerSpellV1, WERC20
+    HomoraBank, ProxyOracle, CoreOracle, BalancerPairOracle, SimpleOracle, BalancerSpellV1, WERC20
 )
 
 
@@ -46,8 +46,18 @@ def main():
 
     balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': alice})
 
-    oracle = ProxyOracle.deploy({'from': admin})
+    core_oracle = CoreOracle.deploy({'from': admin})
+    oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
+    core_oracle.setRoute(
+        [
+            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # WETH
+            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # DAI
+            '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a',  # lp
+        ],
+        [simple_oracle, simple_oracle, balancer_oracle],
+        {'from': admin},
+    )
     oracle.setOracles(
         [
             '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # WETH
@@ -55,9 +65,9 @@ def main():
             '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a',  # lp
         ],
         [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [balancer_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )

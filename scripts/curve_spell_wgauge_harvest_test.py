@@ -1,7 +1,6 @@
 from brownie import accounts, interface, Contract, chain
-from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge
-)
+from brownie import (HomoraBank, ProxyOracle, CoreOracle, ERC20KP3ROracle,
+                     SimpleOracle, CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge)
 
 
 KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'

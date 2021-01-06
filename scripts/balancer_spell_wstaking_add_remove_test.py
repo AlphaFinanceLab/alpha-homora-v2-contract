@@ -1,7 +1,6 @@
 from brownie import accounts, interface, Contract, chain
-from brownie import (
-    HomoraBank, ProxyOracle, BalancerPairOracle, SimpleOracle, BalancerSpellV1, WERC20, MockCErc20, WStakingRewards
-)
+from brownie import (HomoraBank, ProxyOracle, CoreOracle, BalancerPairOracle,
+                     SimpleOracle, BalancerSpellV1, WERC20, MockCErc20, WStakingRewards)
 
 
 def almostEqual(a, b):
@@ -52,7 +51,8 @@ def main():
 
     balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': alice})
 
-    oracle = ProxyOracle.deploy({'from': admin})
+    core_oracle = CoreOracle.deploy({'from': admin})
+    oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wstaking], True, {'from': admin})
     oracle.setOracles(
         [

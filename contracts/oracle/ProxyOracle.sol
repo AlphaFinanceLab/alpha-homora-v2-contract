@@ -13,21 +13,24 @@ contract ProxyOracle is IOracle, Governable {
 
   /// The governor sets oracle information for a token.
   event SetOracle(address token, Oracle info);
+  /// The governor unsets oracle information for a token.
+  event UnsetOracle(address token);
   /// The governor sets token whitelist for an ERC1155 token.
   event SetWhitelist(address token, bool ok);
 
   struct Oracle {
-    IBaseOracle source; // The address to query price data, or zero if not supported.
     uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
     uint16 collateralFactor; // The collateral factor for this token, multiplied by 1e4.
     uint16 liqIncentive; // The liquidation incentive, multiplied by 1e4.
   }
 
+  IBaseOracle immutable source;
   mapping(address => Oracle) public oracles; // Mapping from token address to oracle info.
   mapping(address => bool) public whitelistERC1155;
 
   /// @dev Create the contract and initialize the first governor.
-  constructor() public {
+  constructor(IBaseOracle _source) public {
+    source = _source;
     __Governable__init();
   }
 
@@ -44,6 +47,13 @@ contract ProxyOracle is IOracle, Governable {
     }
   }
 
+  function unsetOracles(address[] memory tokens) external onlyGov {
+    for (uint idx = 0; idx < tokens.length; idx++) {
+      oracles[tokens[idx]] = Oracle(0, 0, 0);
+      emit UnsetOracle(tokens[idx]);
+    }
+  }
+
   /// @dev Set whitelist status for the given list of token addresses.
   function setWhitelistERC1155(address[] memory tokens, bool ok) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
@@ -56,7 +66,7 @@ contract ProxyOracle is IOracle, Governable {
   function support(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
-    return address(oracles[tokenUnderlying].source) != address(0);
+    return oracles[tokenUnderlying].liqIncentive != 0;
   }
 
   /// @dev Return the amount of token out as liquidation reward for liquidating token in.
@@ -71,8 +81,8 @@ contract ProxyOracle is IOracle, Governable {
     uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
     Oracle memory oracleIn = oracles[tokenIn];
     Oracle memory oracleOut = oracles[tokenOutUnderlying];
-    uint pxIn = oracleIn.source.getETHPx(tokenIn);
-    uint pxOut = oracleOut.source.getETHPx(tokenOutUnderlying);
+    uint pxIn = source.getETHPx(tokenIn);
+    uint pxOut = source.getETHPx(tokenOutUnderlying);
     uint amountOut = amountIn.mul(pxIn).div(pxOut);
     amountOut = amountOut.mul(2**112).div(rateUnderlying);
     return amountOut.mul(oracleIn.liqIncentive).mul(oracleOut.liqIncentive).div(10000 * 10000);
@@ -89,14 +99,14 @@ contract ProxyOracle is IOracle, Governable {
     uint rateUnderlying = IERC20Wrapper(token).getUnderlyingRate(id);
     uint amountUnderlying = amount.mul(rateUnderlying).div(2**112);
     Oracle memory oracle = oracles[tokenUnderlying];
-    uint ethValue = oracle.source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
+    uint ethValue = source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
     return ethValue.mul(oracle.collateralFactor).div(10000);
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
   function asETHBorrow(address token, uint amount) external view override returns (uint) {
     Oracle memory oracle = oracles[token];
-    uint ethValue = oracle.source.getETHPx(token).mul(amount).div(2**112);
+    uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
   }
 }
