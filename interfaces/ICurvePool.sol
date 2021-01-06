@@ -1,8 +1,6 @@
 pragma solidity 0.6.12;
 
 interface ICurvePool {
-  function coins(uint index) external view returns (address);
-
   function add_liquidity(uint[2] calldata, uint) external;
 
   function add_liquidity(uint[3] calldata, uint) external;

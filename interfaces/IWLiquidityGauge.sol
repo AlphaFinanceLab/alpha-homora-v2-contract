@@ -22,6 +22,12 @@ interface IWLiquidityGauge is IERC1155, IERC20Wrapper {
 
   function registry() external returns (ICurveRegistry);
 
+  function encodeId(
+    uint,
+    uint,
+    uint
+  ) external pure returns (uint);
+
   function decodeId(uint id)
     external
     pure
