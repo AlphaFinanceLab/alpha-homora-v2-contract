@@ -55,9 +55,9 @@ contract CurveSpellV1 is BasicSpell {
   function ensureApproveN(address lp, uint n) public {
     require(ulTokens[lp].length == n, 'incorrect pool length');
     address pool = poolOf[lp];
+    address[] memory tokens = ulTokens[lp];
     for (uint idx = 0; idx < n; idx++) {
-      address coin = ICurvePool(pool).coins(idx);
-      ensureApprove(coin, pool);
+      ensureApprove(tokens[idx], pool);
     }
   }
 
@@ -74,6 +74,7 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 2, 'incorrect pool length');
+    require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve 2 underlying tokens
@@ -109,7 +110,6 @@ contract CurveSpellV1 is BasicSpell {
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
-    require(wgauge.getUnderlyingToken(id) == lp, 'incorrect underlying');
 
     // 6. Refund
     for (uint i = 0; i < 2; i++) doRefund(tokens[i]);
@@ -131,6 +131,7 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 3, 'incorrect pool length');
+    require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve 3 underlying tokens
@@ -166,7 +167,6 @@ contract CurveSpellV1 is BasicSpell {
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
-    require(wgauge.getUnderlyingToken(id) == lp, 'incorrect underlying');
 
     // 6. Refund
     for (uint i = 0; i < 3; i++) doRefund(tokens[i]);
@@ -188,6 +188,7 @@ contract CurveSpellV1 is BasicSpell {
   ) external payable {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 4, 'incorrect pool length');
+    require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve 4 underlying tokens
@@ -223,7 +224,6 @@ contract CurveSpellV1 is BasicSpell {
     ensureApprove(lp, address(wgauge));
     uint id = wgauge.mint(pid, gid, amount);
     bank.putCollateral(address(wgauge), id, amount);
-    require(wgauge.getUnderlyingToken(id) == lp, 'incorrect underlying');
 
     // 6. Refund
     for (uint i = 0; i < 4; i++) doRefund(tokens[i]);
