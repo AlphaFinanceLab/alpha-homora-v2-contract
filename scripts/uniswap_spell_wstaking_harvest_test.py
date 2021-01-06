@@ -1,7 +1,6 @@
 from brownie import accounts, interface, Contract, chain
-from brownie import (
-    HomoraBank, ProxyOracle, UniswapV2Oracle, SimpleOracle, UniswapV2SpellV1, WERC20, WStakingRewards, MockCErc20
-)
+from brownie import (HomoraBank, ProxyOracle, CoreOracle, UniswapV2Oracle, SimpleOracle,
+                     UniswapV2SpellV1, WERC20, WStakingRewards, MockCErc20)
 
 
 def almostEqual(a, b):

@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, SimpleOracle, UniswapV2Oracle, UniswapV2SpellV1, WERC20, WMasterChef
+    HomoraBank, ProxyOracle, CoreOracle, SimpleOracle, UniswapV2Oracle, UniswapV2SpellV1, WERC20, WMasterChef
 )
 
 

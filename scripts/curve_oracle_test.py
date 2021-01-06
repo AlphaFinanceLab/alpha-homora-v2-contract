@@ -1,6 +1,6 @@
 from brownie import accounts, interface, Contract
 from brownie import (
-    HomoraBank, ProxyOracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20
+    HomoraBank, ProxyOracle, CoreOracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20
 )
 
 

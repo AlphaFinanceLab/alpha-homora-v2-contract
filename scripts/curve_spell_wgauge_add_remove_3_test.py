@@ -1,7 +1,6 @@
 from brownie import accounts, interface, Contract
-from brownie import (
-    HomoraBank, ProxyOracle, ERC20KP3ROracle, SimpleOracle, CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge, MockCErc20
-)
+from brownie import (HomoraBank, ProxyOracle, CoreOracle, ERC20KP3ROracle, SimpleOracle,
+                     CurveOracle, CurveSpellV1, WERC20, WLiquidityGauge, MockCErc20)
 import brownie
 from brownie.exceptions import VirtualMachineError
 
