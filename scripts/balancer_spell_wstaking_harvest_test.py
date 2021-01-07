@@ -54,6 +54,15 @@ def main():
     core_oracle = CoreOracle.deploy({'from': admin})
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wstaking], True, {'from': admin})
+    core_oracle.setRoute(
+        [
+            '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A',  # DFD
+            '0x5BC25f649fc4e26069dDF4cF4010F9f706c23831',  # DUSD
+            '0xd8e9690eff99e21a2de25e0b148ffaf47f47c972',  # lp
+        ],
+        [simple_oracle, simple_oracle, balancer_oracle],
+        {'from': admin},
+    )
     oracle.setOracles(
         [
             '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A',  # DFD
@@ -61,9 +70,9 @@ def main():
             '0xd8e9690eff99e21a2de25e0b148ffaf47f47c972',  # lp
         ],
         [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [balancer_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )
