@@ -1,32 +1,32 @@
 import pytest
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def weth(a, MockWETH):
     return MockWETH.deploy({'from': a[0]})
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def werc20(a, WERC20):
     return WERC20.deploy({'from': a[0]})
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def usdt(a, MockERC20):
     return MockERC20.deploy('USDT', 'USDT', 6, {'from': a[0]})
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def usdc(a, MockERC20):
     return MockERC20.deploy('USDC', 'USDC', 6, {'from': a[0]})
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def dai(a, MockERC20):
     return MockERC20.deploy('DAI', 'DAI', 18, {'from': a[0]})
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def simple_oracle(a, weth, usdt, usdc, dai, SimpleOracle):
     contract = SimpleOracle.deploy({'from': a[0]})
     contract.setETHPx(
@@ -37,9 +37,15 @@ def simple_oracle(a, weth, usdt, usdc, dai, SimpleOracle):
     return contract
 
 
-@pytest.fixture(scope='module')
-def oracle(a, werc20, ProxyOracle):
-    contract = ProxyOracle.deploy({'from': a[0]})
+@pytest.fixture(scope='function')
+def core_oracle(a, CoreOracle):
+    contract = CoreOracle.deploy({'from': a[0]})
+    return contract
+
+
+@pytest.fixture(scope='function')
+def oracle(a, werc20, ProxyOracle, core_oracle):
+    contract = ProxyOracle.deploy(core_oracle, {'from': a[0]})
     contract.setWhitelistERC1155([werc20], True, {'from': a[0]})
     return contract
 
