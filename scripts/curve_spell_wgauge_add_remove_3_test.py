@@ -62,8 +62,19 @@ def main():
     curve_oracle = CurveOracle.deploy(simple_oracle, registry, {'from': admin})
     curve_oracle.registerPool(lp)  # update pool info
 
-    oracle = ProxyOracle.deploy({'from': admin})
+    core_oracle = CoreOracle.deploy({'from': admin})
+    oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wgauge], True, {'from': admin})
+    core_oracle.setRoute(
+        [
+            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # DAI
+            '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',  # USDC
+            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
+            '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490',  # lp
+        ],
+        [simple_oracle, simple_oracle, simple_oracle, curve_oracle],
+        {'from': admin},
+    )
     oracle.setOracles(
         [
             '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # DAI
@@ -72,10 +83,10 @@ def main():
             '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490',  # lp
         ],
         [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [curve_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )

@@ -48,8 +48,18 @@ def main():
     simple_oracle.setETHPx([usdt, weth], [2**112 // 700, 2**112])
 
     uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
-    oracle = ProxyOracle.deploy({'from': admin})
+    core_oracle = CoreOracle.deploy({'from': admin})
+    oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wchef], True, {'from': admin})
+    core_oracle.setRoute(
+        [
+            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
+            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
+            '0x06da0fd433C1A5d7a4faa01111c044910A184553',  # USDT-WETH
+        ],
+        [simple_oracle, simple_oracle, uniswap_oracle],
+        {'from': admin},
+    )
     oracle.setOracles(
         [
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
@@ -57,9 +67,9 @@ def main():
             '0x06da0fd433C1A5d7a4faa01111c044910A184553',  # USDT-WETH
         ],
         [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [uniswap_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )

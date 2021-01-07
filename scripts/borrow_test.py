@@ -27,15 +27,24 @@ def main():
     router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
     erc20_oracle = ERC20KP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
     lp_oracle = UniswapV2LPKP3ROracle.deploy(KP3R_ADDRESS, {'from': admin})
-    oracle = ProxyOracle.deploy({'from': admin})
+    core_oracle = CoreOracle.deploy({'from': admin})
+    oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
+    core_oracle.setRoute(
+        [
+            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
+            '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
+        ],
+        [erc20_oracle, lp_oracle],
+        {'from': admin},
+    )
     oracle.setOracles(
         [
             '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
             '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # USDT-ETH
         ],
         [
-            [erc20_oracle, 10000, 10000, 10000],
-            [lp_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )

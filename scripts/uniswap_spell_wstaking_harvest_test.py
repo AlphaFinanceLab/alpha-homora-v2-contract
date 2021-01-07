@@ -49,8 +49,18 @@ def main():
     simple_oracle.setETHPx([dpi, weth], [2**112 * 100 // 700, 2**112])
 
     uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
-    oracle = ProxyOracle.deploy({'from': admin})
+    core_oracle = CoreOracle.deploy({'from': admin})
+    oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wstaking], True, {'from': admin})
+    core_oracle.setRoute(
+        [
+            '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
+            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
+            '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
+        ],
+        [simple_oracle, simple_oracle, uniswap_oracle],
+        {'from': admin},
+    )
     oracle.setOracles(
         [
             '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
@@ -58,9 +68,9 @@ def main():
             '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
         ],
         [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [uniswap_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )
