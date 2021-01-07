@@ -4,6 +4,7 @@ import '../../interfaces/IBaseOracle.sol';
 import '../Governable.sol';
 
 contract CoreOracle is IBaseOracle, Governable {
+  event SetRoute(address token, address route);
   mapping(address => address) public routes;
 
   constructor() public {
@@ -14,6 +15,7 @@ contract CoreOracle is IBaseOracle, Governable {
     require(tokens.length == targets.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
       routes[tokens[idx]] = targets[idx];
+      emit SetRoute(tokens[idx], targets[idx]);
     }
   }
 
