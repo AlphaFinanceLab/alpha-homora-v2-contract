@@ -20,6 +20,8 @@ contract CoreOracle is IBaseOracle, Governable {
   }
 
   function getETHPx(address token) external view override returns (uint) {
-    return IBaseOracle(routes[token]).getETHPx(token);
+    uint px = IBaseOracle(routes[token]).getETHPx(token);
+    require(px != 0, 'no px');
+    return px;
   }
 }
