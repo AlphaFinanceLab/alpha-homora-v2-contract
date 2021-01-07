@@ -19,6 +19,7 @@ WBTC = '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'
 RENBTC = '0xeb4c2781e4eba804ce9a9803c67d0893436bb27d'
 PERP = '0xbC396689893D065F41bc2C6EcbeE5e0085233447'
 DFD = '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A'
+DUSD = '0x5bc25f649fc4e26069ddf4cf4010f9f706c23831'
 
 CRV_LP_SUSD = '0xC25a3A3b969415c80451098fa907EC722572917F'
 CRV_LP_3POOL = '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490'
@@ -95,3 +96,6 @@ def mint_tokens(token, to, amount=None):
     elif token == DFD:
         gov = token.governance()
         token.mint(to, amount, {'from': gov})
+    elif token == DUSD:
+        core = token.core()
+        token.mint(to, amount, {'from': core})

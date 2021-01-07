@@ -1,6 +1,7 @@
 from brownie import accounts, interface, Contract, chain
 from brownie import (HomoraBank, ProxyOracle, CoreOracle, BalancerPairOracle,
                      SimpleOracle, BalancerSpellV1, WERC20, MockCErc20, WStakingRewards)
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -34,7 +35,7 @@ def main():
 
     lp = interface.IERC20Ex('0xd8e9690eff99e21a2de25e0b148ffaf47f47c972')
     # pool is lp for balancer
-    pool = interface.ICurvePool('0xd8e9690eff99e21a2de25e0b148ffaf47f47c972')
+    pool = interface.IBalancerPool('0xd8e9690eff99e21a2de25e0b148ffaf47f47c972')
 
     crdfd = MockCErc20.deploy(dfd, {'from': admin})
     crdusd = MockCErc20.deploy(dusd, {'from': admin})
@@ -46,8 +47,7 @@ def main():
     wstaking = WStakingRewards.deploy(staking, lp, dfd, {'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dfd, dusd], [2**112 // 2 // 700,
-                                         2**112 * 2 // 700])
+    simple_oracle.setETHPx([dfd, dusd], [2**112 // 2 // 700, 2**112 * 2 // 700])
 
     balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': alice})
 
@@ -75,17 +75,9 @@ def main():
     homora.addBank(dfd, crdfd, {'from': admin})
     homora.addBank(dusd, crdusd, {'from': admin})
 
-    # setup initial funds 10^5 DFD + 10^4 DUSD to alice
-    setup_transfer(dfd, accounts.at(
-        '0xde157688a36ac94b6e5f52e99c196f79ac71cea3', force=True), alice, 10**6 * 10**18)
-    setup_transfer(dusd, accounts.at(
-        '0x42600c4f6d84aa4d246a3957994da411fa8a4e1c', force=True), alice, 10**4 * 10**18)
-
-    # setup initial funds 10^6 DFD + 10^4 DUSD to homora bank
-    setup_transfer(dfd, accounts.at(
-        '0xde157688a36ac94b6e5f52e99c196f79ac71cea3', force=True), homora, 10**6 * 10**6)
-    setup_transfer(dusd, accounts.at(
-        '0x42600c4f6d84aa4d246a3957994da411fa8a4e1c', force=True), homora, 10**4 * 10**18)
+    # setup initial funds to alice
+    mint_tokens(dfd, alice)
+    mint_tokens(dusd, alice)
 
     # check alice's funds
     print(f'Alice dusd balance {dusd.balanceOf(alice)}')
