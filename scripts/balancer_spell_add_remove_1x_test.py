@@ -42,7 +42,8 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([weth, dai], [2**112, 2**112 // 700])
+    simple_oracle.setETHPx([weth, dai], [5192296858534827628530496329220096,
+                                         8887571220661441971398610676149])
 
     balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': alice})
 
@@ -110,7 +111,7 @@ def main():
     dai_amt = 40000 * 10**18
     weth_amt = 10 ** 18
     lp_amt = 1 * 10**16
-    borrow_dai_amt = 1000 * 10**18
+    borrow_dai_amt = 0
     borrow_weth_amt = 0
 
     # calculate slippage control

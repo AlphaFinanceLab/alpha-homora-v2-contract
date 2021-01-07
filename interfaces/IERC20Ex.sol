@@ -51,4 +51,6 @@ interface IERC20Ex is IERC20 {
   function addMinter(address) external;
 
   function governance() external view returns (address);
+
+  function core() external view returns (address);
 }

@@ -113,8 +113,9 @@ contract BalancerSpellV1 is BasicSpell {
 
     // 5. Take out collateral
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
+      require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
       bank.takeCollateral(wstaking, collId, collSize);
       IWStakingRewards(wstaking).burn(collId, collSize);
     }
@@ -203,10 +204,11 @@ contract BalancerSpellV1 is BasicSpell {
     }
 
     // 3.3 Remove remaining liquidity
-    IBalancerPool(lp).exitPool(
-      IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw.add(amt.amtLPRepay)),
-      minAmountsOut
-    );
+    uint poolAmountOut1 =
+      IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw.add(amt.amtLPRepay));
+    if (poolAmountOut1 > 0) {
+      IBalancerPool(lp).exitPool(poolAmountOut1, minAmountsOut);
+    }
 
     // 4. Repay
     doRepay(tokenA, amtARepay);
@@ -239,9 +241,10 @@ contract BalancerSpellV1 is BasicSpell {
     address wstaking
   ) external {
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
 
     // 1. Take out collateral
+    require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
     bank.takeCollateral(wstaking, collId, amt.amtLPTake);
     IWStakingRewards(wstaking).burn(collId, amt.amtLPTake);
 
