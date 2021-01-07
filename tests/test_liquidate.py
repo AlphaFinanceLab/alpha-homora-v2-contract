@@ -4,7 +4,7 @@ import brownie
 from utils import *
 
 
-def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain, UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle):
+def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain, UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle):
     spell = UniswapV2SpellV1.deploy(bank, werc20, urouter, {'from': admin})
     usdc.mint(admin, 10000000 * 10**6, {'from': admin})
     usdt.mint(admin, 10000000 * 10**6, {'from': admin})
@@ -29,13 +29,14 @@ def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, cha
     print('usdt Px', simple_oracle.getETHPx(usdt))
     print('usdc Px', simple_oracle.getETHPx(usdc))
 
+    core_oracle.setRoute([usdc, usdt, lp], [simple_oracle, simple_oracle, uniswap_lp_oracle])
     print('lp Px', uniswap_lp_oracle.getETHPx(lp))
     oracle.setOracles(
         [usdc, usdt, lp],
         [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [uniswap_lp_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )
@@ -47,12 +48,12 @@ def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, cha
     return spell
 
 
-def execute_uniswap(admin, alice, bank, token0, token1, spell, pos_id=0):
+def execute_uniswap_werc20(admin, alice, bank, token0, token1, spell, pos_id=0):
     spell.getPair(token0, token1, {'from': admin})
     tx = bank.execute(
         pos_id,
         spell,
-        spell.addLiquidity.encode_input(
+        spell.addLiquidityWERC20.encode_input(
             token0,  # token 0
             token1,  # token 1
             [
@@ -77,13 +78,13 @@ def setup_bob(admin, bob, bank, usdt, usdc):
     usdc.approve(bank, 2**256-1, {'from': bob})
 
 
-def test_liquidate(admin, alice, bob, bank, chain, werc20, ufactory, urouter, simple_oracle, oracle, usdc, usdt, UniswapV2SpellV1, UniswapV2Oracle):
+def test_liquidate(admin, alice, bob, bank, chain, werc20, ufactory, urouter, simple_oracle, oracle, usdc, usdt, UniswapV2SpellV1, UniswapV2Oracle, core_oracle):
     setup_bob(admin, bob, bank, usdt, usdc)
 
     # execute
     spell = setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain,
-                          UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle)
-    execute_uniswap(admin, alice, bank, usdc, usdt, spell, pos_id=0)
+                          UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle)
+    execute_uniswap_werc20(admin, alice, bank, usdc, usdt, spell, pos_id=0)
 
     pos_id = 1
 
@@ -100,7 +101,7 @@ def test_liquidate(admin, alice, bob, bank, chain, werc20, ufactory, urouter, si
     oracle.setOracles(
         [lp],
         [
-            [uniswap_lp_oracle, 10000, 9900, 10500],
+            [10000, 9900, 10500],
         ],
         {'from': admin},
     )
@@ -122,8 +123,8 @@ def test_liquidate(admin, alice, bob, bank, chain, werc20, ufactory, urouter, si
     oracle.setOracles(
         [usdt, usdc],
         [
-            [simple_oracle, 10700, 10000, 10300],
-            [simple_oracle, 10200, 10000, 10100],
+            [10700, 10000, 10300],
+            [10200, 10000, 10100],
         ],
         {'from': admin},
     )

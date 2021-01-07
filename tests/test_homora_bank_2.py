@@ -2,72 +2,7 @@ import pytest
 from brownie import interface, chain
 import brownie
 from utils import *
-
-
-def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain, UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle):
-    spell = UniswapV2SpellV1.deploy(bank, werc20, urouter, {'from': admin})
-    usdc.mint(admin, 10000000 * 10**6, {'from': admin})
-    usdt.mint(admin, 10000000 * 10**6, {'from': admin})
-    usdc.approve(urouter, 2**256-1, {'from': admin})
-    usdt.approve(urouter, 2**256-1, {'from': admin})
-    urouter.addLiquidity(
-        usdc,
-        usdt,
-        1000000 * 10**6,
-        1000000 * 10**6,
-        0,
-        0,
-        admin,
-        chain.time() + 60,
-        {'from': admin},
-    )
-
-    lp = ufactory.getPair(usdc, usdt)
-    print('admin lp bal', interface.IERC20(lp).balanceOf(admin))
-    uniswap_lp_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
-
-    print('usdt Px', simple_oracle.getETHPx(usdt))
-    print('usdc Px', simple_oracle.getETHPx(usdc))
-
-    print('lp Px', uniswap_lp_oracle.getETHPx(lp))
-    oracle.setOracles(
-        [usdc, usdt, lp],
-        [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [uniswap_lp_oracle, 10000, 10000, 10000],
-        ],
-        {'from': admin},
-    )
-    usdc.mint(alice, 10000000 * 10**6, {'from': admin})
-    usdt.mint(alice, 10000000 * 10**6, {'from': admin})
-    usdc.approve(bank, 2**256-1, {'from': alice})
-    usdt.approve(bank, 2**256-1, {'from': alice})
-
-    return spell
-
-
-def execute_uniswap(admin, alice, bank, token0, token1, spell, pos_id=0):
-    spell.getPair(token0, token1, {'from': admin})
-    tx = bank.execute(
-        pos_id,
-        spell,
-        spell.addLiquidity.encode_input(
-            token0,  # token 0
-            token1,  # token 1
-            [
-                40000 * 10**6,  # 40000 USDC
-                50000 * 10**6,  # 50000 USDT
-                0,
-                1000 * 10**6,  # 1000 USDC
-                200 * 10**6,  # 200 USDT
-                0,  # borrow LP tokens
-                0,  # min USDC
-                0,  # min USDT
-            ],
-        ),
-        {'from': alice}
-    )
+from helper_uniswap import *
 
 
 def test_reinitialize(admin, bank, oracle):
@@ -76,12 +11,12 @@ def test_reinitialize(admin, bank, oracle):
 
 
 def test_accrue(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain,
-                UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle):
+                UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle):
 
     spell = setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain,
-                          UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle)
+                          UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle)
 
-    execute_uniswap(admin, alice, bank, usdc, usdt, spell, pos_id=0)
+    execute_uniswap_werc20(admin, alice, bank, usdc, usdt, spell, pos_id=0)
 
     _, _, cusdt, _, prevPendingReserve, prevUSDTTotalDebt, prevUSDTTotalShare = bank.banks(usdt)
     print('totalDebt', prevUSDTTotalDebt)
@@ -112,12 +47,12 @@ def test_accrue(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain
 
 
 def test_accrue_all(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain,
-                    UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle):
+                    UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle):
 
     spell = setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain,
-                          UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, oracle)
+                          UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle)
 
-    execute_uniswap(admin, alice, bank, usdc, usdt, spell, pos_id=0)
+    execute_uniswap_werc20(admin, alice, bank, usdc, usdt, spell, pos_id=0)
 
     _, _, cusdt, _, prevUSDTPendingReserve, prevUSDTTotalDebt, prevUSDTTotalShare = bank.banks(usdt)
     print('totalDebt', prevUSDTTotalDebt)

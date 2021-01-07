@@ -1,10 +1,9 @@
 import pytest
 from brownie import interface
+import brownie
 
 
-def test_uniswap_add_two_tokens(
-    admin, alice, chain, bank, werc20, ufactory, urouter, simple_oracle, oracle, usdc, usdt, UniswapV2SpellV1, UniswapV2Oracle, core_oracle
-):
+def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, chain, UniswapV2Oracle, UniswapV2SpellV1, simple_oracle, core_oracle, oracle):
     spell = UniswapV2SpellV1.deploy(bank, werc20, urouter, {'from': admin})
     usdc.mint(admin, 10000000 * 10**6, {'from': admin})
     usdt.mint(admin, 10000000 * 10**6, {'from': admin})
@@ -29,7 +28,9 @@ def test_uniswap_add_two_tokens(
     print('usdt Px', simple_oracle.getETHPx(usdt))
     print('usdc Px', simple_oracle.getETHPx(usdc))
 
-    core_oracle.setRoute([usdc, usdt, lp], [simple_oracle, simple_oracle, uniswap_lp_oracle])
+    core_oracle.setRoute([usdc, usdt, lp], [simple_oracle, simple_oracle,
+                                            uniswap_lp_oracle], {'from': admin})
+
     print('lp Px', uniswap_lp_oracle.getETHPx(lp))
 
     oracle.setOracles(
@@ -45,13 +46,18 @@ def test_uniswap_add_two_tokens(
     usdt.mint(alice, 10000000 * 10**6, {'from': admin})
     usdc.approve(bank, 2**256-1, {'from': alice})
     usdt.approve(bank, 2**256-1, {'from': alice})
-    spell.getPair(usdc, usdt, {'from': admin})
+
+    return spell
+
+
+def execute_uniswap_werc20(admin, alice, bank, token0, token1, spell, pos_id=0):
+    spell.getPair(token0, token1, {'from': admin})
     tx = bank.execute(
-        0,
+        pos_id,
         spell,
         spell.addLiquidityWERC20.encode_input(
-            usdt,  # token 0
-            usdc,  # token 1
+            token0,  # token 0
+            token1,  # token 1
             [
                 40000 * 10**6,  # 40000 USDT
                 50000 * 10**6,  # 50000 USDC
@@ -65,17 +71,3 @@ def test_uniswap_add_two_tokens(
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('tx gas used', tx.gas_used)
-    print('bank collateral size', bank.getPositionInfo(position_id))
-    print('bank collateral value', bank.getCollateralETHValue(position_id))
-    print('bank borrow value', bank.getBorrowETHValue(position_id))
-
-    print('bank usdt', bank.getBankInfo(usdt))
-    print('bank usdc', bank.getBankInfo(usdc))
-
-    print('usdt Px', simple_oracle.getETHPx(usdt))
-    print('usdc Px', simple_oracle.getETHPx(usdc))
-
-    print('lp Px', uniswap_lp_oracle.getETHPx(lp))
