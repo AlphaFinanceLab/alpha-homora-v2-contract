@@ -2,6 +2,7 @@ from brownie import accounts, interface, Contract
 from brownie import (
     HomoraBank, ProxyOracle, CoreOracle, UniswapV2Oracle, SimpleOracle, SushiswapSpellV1, WERC20, WMasterChef
 )
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -52,20 +53,12 @@ def main():
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wchef], True, {'from': admin})
     core_oracle.setRoute(
-        [
-            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x06da0fd433C1A5d7a4faa01111c044910A184553',  # USDT-WETH
-        ],
+        [usdt, weth, lp],
         [simple_oracle, simple_oracle, uniswap_oracle],
         {'from': admin},
     )
     oracle.setOracles(
-        [
-            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x06da0fd433C1A5d7a4faa01111c044910A184553',  # USDT-WETH
-        ],
+        [usdt, weth, lp],
         [
             [10000, 10000, 10000],
             [10000, 10000, 10000],
@@ -79,17 +72,9 @@ def main():
     setup_bank_hack(homora)
     homora.addBank(usdt, crusdt, {'from': admin})
 
-    # setup initial funds 10^5 USDT + 10^4 WETH to alice
-    setup_transfer(usdt, accounts.at(
-        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), alice, 10**5 * 10**6)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
-
-    # setup initial funds 10^6 USDT + 10^5 WETH to homora bank
-    setup_transfer(usdt, accounts.at(
-        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), homora, 10**6 * 10**6)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
+    # setup initial funds to alice
+    mint_tokens(usdt, alice)
+    mint_tokens(weth, alice)
 
     # Steal some LP from the staking pool
     lp.transfer(alice, 4 * 10**13, {'from': accounts.at(
@@ -151,9 +136,6 @@ def main():
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('position_id', position_id)
 
     curABal = usdt.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
@@ -229,10 +211,10 @@ def main():
     usdt_repay = 2**256-1  # max
     weth_repay = 0
 
-    real_usdt_repay = homora.borrowBalanceStored(position_id, usdt)
+    real_usdt_repay = homora.borrowBalanceStored(1, usdt)
 
     tx = homora.execute(
-        position_id,
+        1,
         sushiswap_spell,
         sushiswap_spell.removeLiquidityWERC20.encode_input(
             usdt,  # token 0

@@ -2,6 +2,7 @@ from brownie import accounts, interface, Contract, chain
 from brownie import (
     WStakingRewards
 )
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -36,11 +37,9 @@ def main():
     usdc.approve(wstaking, 2**256-1, {'from': alice})
     bpt.approve(wstaking, 2**256-1, {'from': alice})
 
-    # setup initial funds 10^6 USDT + 10^6 USDC + 10^6 WETH to alice
-    setup_transfer(perp, accounts.at('0xc49f76a596d6200e4f08f8931d15b69dd1f8033e',
-                                     force=True), alice, 10**18)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
-                                     force=True), alice, 10**6 * 10**6)
+    # setup initial funds to alice
+    mint_tokens(perp, alice)
+    mint_tokens(usdc, alice)
     setup_transfer(bpt, accounts.at('0x5e4b407eb1253527628bab875525aaec0099ffc5',
                                     force=True), alice, 10**2 * 10**18)
 

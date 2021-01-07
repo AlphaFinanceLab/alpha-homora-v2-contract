@@ -40,9 +40,16 @@ def main():
 
     werc20 = WERC20.deploy({'from': admin})
 
+    uni_pair = interface.IUniswapV2Pair('0xa478c2975ab1ea89e8196811f51a7b7ade33eb11')
+    resA, resB, _ = uni_pair.getReserves()
+    if uni_pair.token0() == weth:
+        weth_dai_price = resB * 10**18 // resA
+    else:
+        weth_dai_price = resA * 10**18 // resB
+    print('weth dai price', weth_dai_price)
+
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([weth, dai], [
-                           5192296858534827628530496329220096, 8887571220661441971398610676149])
+    simple_oracle.setETHPx([weth, dai], [2**112, 2**112 * 10 ** 18 // weth_dai_price])
 
     balancer_oracle = BalancerPairOracle.deploy(simple_oracle, {'from': admin})
 
@@ -50,11 +57,7 @@ def main():
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     oracle.setOracles(
-        [
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # DAI
-            '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490',  # lp
-        ],
+        [weth, dai, lp],
         [
             [10000, 10000, 10000],
             [10000, 10000, 10000],
@@ -63,11 +66,7 @@ def main():
         {'from': admin},
     )
     core_oracle.setRoute(
-        [
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # DAI
-            '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490',  # lp
-        ],
+        [weth, dai, lp],
         [simple_oracle, simple_oracle, balancer_oracle],
         {'from': admin},
     )

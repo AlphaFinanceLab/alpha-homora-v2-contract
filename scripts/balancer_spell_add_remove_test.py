@@ -2,6 +2,7 @@ from brownie import accounts, interface, Contract
 from brownie import (
     HomoraBank, ProxyOracle, CoreOracle, BalancerPairOracle, SimpleOracle, BalancerSpellV1, WERC20
 )
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -50,20 +51,12 @@ def main():
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     core_oracle.setRoute(
-        [
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # WETH
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # DAI
-            '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a',  # lp
-        ],
+        [weth, dai, lp],
         [simple_oracle, simple_oracle, balancer_oracle],
         {'from': admin},
     )
     oracle.setOracles(
-        [
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # WETH
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # DAI
-            '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a',  # lp
-        ],
+        [weth, dai, lp],
         [
             [10000, 10000, 10000],
             [10000, 10000, 10000],
@@ -77,17 +70,9 @@ def main():
     setup_bank_hack(homora)
     homora.addBank(dai, crdai, {'from': admin})
 
-    # setup initial funds 10^5 DAI + 10^4 WETH to alice
-    setup_transfer(dai, accounts.at(
-        '0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f', force=True), alice, 10**6 * 10**18)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
-
-    # setup initial funds 10^6 DAI + 10^4 WETH to homora bank
-    setup_transfer(dai, accounts.at(
-        '0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f', force=True), homora, 10**6 * 10**6)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
+    # setup initial funds to alice
+    mint_tokens(dai, alice)
+    mint_tokens(weth, alice)
 
     # check alice's funds
     print(f'Alice weth balance {weth.balanceOf(alice)}')
@@ -155,9 +140,6 @@ def main():
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('position_id', position_id)
 
     curABal = dai.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
@@ -228,11 +210,11 @@ def main():
     dai_repay = 2**256-1  # max
     weth_repay = 0
 
-    real_dai_repay = homora.borrowBalanceStored(position_id, dai)
-    _, _, _, real_lp_take_amt = homora.getPositionInfo(position_id)
+    real_dai_repay = homora.borrowBalanceStored(1, dai)
+    _, _, _, real_lp_take_amt = homora.getPositionInfo(1)
 
     tx = homora.execute(
-        position_id,
+        1,
         balancer_spell,
         balancer_spell.removeLiquidityWERC20.encode_input(
             lp,  # LP token

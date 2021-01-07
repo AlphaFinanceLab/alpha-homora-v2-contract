@@ -2,6 +2,7 @@ from brownie import accounts, interface, Contract
 from brownie import (
     HomoraBank, ProxyOracle, CoreOracle, UniswapV2Oracle, UniswapV2SpellV1, SimpleOracle, WERC20, WMasterChef
 )
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -56,20 +57,12 @@ def main():
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20], True, {'from': admin})
     core_oracle.setRoute(
-        [
-            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
-            '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',  # USDC
-            '0x3041cbd36888becc7bbcbc0045e3b1f144466f5f',  # USDT-USDC
-        ],
+        [usdt, usdc, lp],
         [simple_oracle, simple_oracle, uniswap_oracle],
         {'from': admin},
     )
     oracle.setOracles(
-        [
-            '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
-            '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',  # USDC
-            '0x3041cbd36888becc7bbcbc0045e3b1f144466f5f',  # USDT-USDC
-        ],
+        [usdt, usdc, lp],
         [
             [10000, 10000, 10000],
             [10000, 10000, 10000],
@@ -87,17 +80,9 @@ def main():
     homora.addBank(usdt, crusdt, {'from': admin})
     homora.addBank(usdc, crusdc, {'from': admin})
 
-    # setup initial funds 10^5 USDT + 10^5 USDC to alice
-    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
-                                     force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
-                                     force=True), alice, 10**6 * 10**6)
-
-    # setup initial funds 10^6 USDT + 10^6 USDC to homora bank
-    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
-                                     force=True), homora, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0',
-                                     force=True), homora, 10**6 * 10**6)
+    # setup initial funds to alice
+    mint_tokens(usdt, alice)
+    mint_tokens(usdc, alice)
 
     # check alice's funds
     print(f'Alice usdt balance {usdt.balanceOf(alice)}')
@@ -115,7 +100,7 @@ def main():
     lp.approve(homora, 2**256-1, {'from': alice})
 
     uniswap_spell = UniswapV2SpellV1.deploy(
-        homora, werc20, router, wchef, {'from': admin})
+        homora, werc20, router,  {'from': admin})
     # first time call to reduce gas
     uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
@@ -153,9 +138,6 @@ def main():
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('position_id', position_id)
 
     curABal = usdt.balanceOf(alice)
     curBBal = usdc.balanceOf(alice)
@@ -209,7 +191,7 @@ def main():
     prevLPBal_bank = lp.balanceOf(homora)
     prevLPBal_werc20 = lp.balanceOf(werc20)
 
-    _, _, _, collSize = homora.getPositionInfo(position_id)
+    _, _, _, collSize = homora.getPositionInfo(1)
 
     lp_take_amt = 2**256-1  # max
     lp_want = 1 * 10**5
@@ -217,7 +199,7 @@ def main():
     usdc_repay = 2**256-1  # max
 
     tx = homora.execute(
-        position_id,
+        1,
         uniswap_spell,
         uniswap_spell.removeLiquidityWERC20.encode_input(
             usdt,  # token 0

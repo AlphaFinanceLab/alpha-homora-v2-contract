@@ -55,24 +55,16 @@ def main():
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wstaking], True, {'from': admin})
     core_oracle.setRoute(
-        [
-            '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A',  # DFD
-            '0x5BC25f649fc4e26069dDF4cF4010F9f706c23831',  # DUSD
-            '0xd8e9690eff99e21a2de25e0b148ffaf47f47c972',  # lp
-        ],
+        [dfd, dusd, lp],
         [simple_oracle, simple_oracle, balancer_oracle],
         {'from': admin},
     )
     oracle.setOracles(
+        [dfd, dusd, lp],
         [
-            '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A',  # DFD
-            '0x5BC25f649fc4e26069dDF4cF4010F9f706c23831',  # DUSD
-            '0xd8e9690eff99e21a2de25e0b148ffaf47f47c972',  # lp
-        ],
-        [
-            [simple_oracle, 10000, 10000, 10000],
-            [simple_oracle, 10000, 10000, 10000],
-            [balancer_oracle, 10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
         ],
         {'from': admin},
     )
@@ -167,9 +159,6 @@ def main():
         {'from': alice}
     )
 
-    position_id = tx.return_value
-    print('position_id', position_id)
-
     curABal = dfd.balanceOf(alice)
     curBBal = dusd.balanceOf(alice)
     curLPBal = lp.balanceOf(alice)
@@ -252,14 +241,14 @@ def main():
     dfd_repay = 0
     dusd_repay = 0
 
-    real_dfd_repay = homora.borrowBalanceStored(position_id, dfd)
-    _, _, _, real_lp_take_amt = homora.getPositionInfo(position_id)
+    real_dfd_repay = homora.borrowBalanceStored(1, dfd)
+    _, _, _, real_lp_take_amt = homora.getPositionInfo(1)
 
     expected_withdraw_dfd = collSize * prevARes // interface.IBalancerPool(lp).totalSupply()
     print('expected withdraw DFD', expected_withdraw_dfd)
 
     tx = homora.execute(
-        position_id,
+        1,
         balancer_spell,
         balancer_spell.removeLiquidityWStakingRewards.encode_input(
             lp,  # LP token

@@ -2,6 +2,7 @@ from brownie import accounts, interface, Contract
 from brownie import (
     WMasterChef
 )
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -23,10 +24,10 @@ def main():
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
     sushi = interface.IERC20Ex('0x6b3595068778dd592e39a122f4f5a5cf09c90fe2')
 
-    lpusdc = interface.IERC20Ex(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0')  # pid 1
     lpusdt = interface.IERC20Ex(
         '0x06da0fd433c1a5d7a4faa01111c044910a184553')  # pid 0
+    lpusdc = interface.IERC20Ex(
+        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0')  # pid 1
 
     chef = accounts.at(
         '0xc2edad668740f1aa35e4d8f227fb8e17dca888cd', force=True)
@@ -41,15 +42,13 @@ def main():
     lpusdt.approve(chef, 2**256-1, {'from': alice})
     lpusdc.approve(chef, 2**256-1, {'from': alice})
 
-    # setup initial funds 10^6 USDT + 10^6 USDC + 10^4 WETH to alice
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
-                                     force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
-                                     force=True), alice, 10**6 * 10**6)
-    setup_transfer(weth, accounts.at('0xceff51756c56ceffca006cd410b03ffc46dd3a58',
-                                     force=True), alice, 10**6 * 10**6)
+    # setup initial funds to alice
+    mint_tokens(usdt, alice)
+    mint_tokens(usdc, alice)
+    mint_tokens(weth, alice)
+
     setup_transfer(lpusdt, accounts.at(
-        '0x6b4e746fa3c8fd5ec1861833c883360c11c4c5b3', force=True), alice, 10**10)
+        '0x90b903b3693303a9bb381d17718478ac5a246bcf', force=True), alice, 10**10)
     setup_transfer(lpusdc, accounts.at(
         '0x43d3e86ca8a9a46c19473d7ec83cc328b881648c', force=True), alice, 10**10)
 
