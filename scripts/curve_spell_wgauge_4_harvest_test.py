@@ -131,8 +131,6 @@ def main():
     mint_tokens(yusdt, alice)
     mint_tokens(ybusd, alice)
 
-    mint_tokens(susd, crsusd)
-
     # check alice's funds
     print(f'Alice dai balance {dai.balanceOf(alice)}')
     print(f'Alice usdc balance {usdc.balanceOf(alice)}')
@@ -208,8 +206,8 @@ def main():
     lp_amt = 0
     borrow_dai_amt = 10 * 10**18
     borrow_usdc_amt = 10**6
-    borrow_usdt_amt = 10**6
-    borrow_susd_amt = 10**18
+    borrow_usdt_amt = 0
+    borrow_susd_amt = 0
     borrow_lp_amt = 0
     minLPMint = 0
 
@@ -290,6 +288,13 @@ def main():
     assert usdtDebt == borrow_usdt_amt
     assert susdDebt == borrow_susd_amt
 
+    # #####################################################################################
+
+    print('=========================================================================')
+    print('Case 2. harvest first time')
+
+    prevCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance before harvest', prevCRVBalance)
     _, _, collId, collSize = homora.getPositionInfo(1)
     print('collSize', collSize)
 
@@ -298,222 +303,64 @@ def main():
     print('bob lp balance', interface.IERC20Ex(lp).balanceOf(bob))
     pid, gid = 12, 0
     gauge, _ = wgauge.gauges(pid, gid)
-    print('gauge', gauge)
     tx = interface.ILiquidityGauge(gauge).deposit(collSize, {'from': bob})
 
     chain.sleep(20000)
 
-    prevAliceCrvBalance = crv.balanceOf(alice)
-    print('Alice crv balance', prevAliceCrvBalance)
+    tx = homora.execute(
+        1,
+        curve_spell,
+        curve_spell.harvest.encode_input(),
+        {'from': alice}
+    )
+
+    print('tx gas used', tx.gas_used)
+
+    curCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance after harvest', curCRVBalance)
+    receivedCrv = curCRVBalance - prevCRVBalance
+
+    # check with staking directly
+    minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
+    print('minter', minter)
+    tx = minter.mint(gauge, {'from': bob})
+    print('tx status', tx.status)
+    tx = interface.ILiquidityGauge(gauge).withdraw(collSize, {'from': bob})
+    receivedCrvFromGauge = crv.balanceOf(bob) - prevCrv
+    print('receivedCrvFromGauge', receivedCrvFromGauge)
+    assert almostEqual(receivedCrv, receivedCrvFromGauge)
 
     # #####################################################################################
 
     print('=========================================================================')
-    print('Case 2. add liquidity (failed tx desired)')
+    print('Case 3. harvest second time')
 
-    ydai_amt = 200 * 10**6
-    yusdc_amt = 500 * 10**6
-    yusdt_amt = 400 * 10**6
-    ybusd_amt = 100 * 10**6
-    lp_amt = 0
-    borrow_ydai_amt = 0
-    borrow_yusdc_amt = 0
-    borrow_yusdt_amt = 0
-    borrow_ybusd_amt = 0
-    borrow_lp_amt = 0
-    minLPMint = 0
+    prevCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance before harvest', prevCRVBalance)
+    _, _, collId, collSize = homora.getPositionInfo(1)
+    print('collSize', collSize)
 
-    pid = 12
-    gid = 0
+    # staking directly
+    prevCrv = crv.balanceOf(bob)
+    print('bob lp balance', interface.IERC20Ex(lp).balanceOf(bob))
+    pid, gid = 12, 0
+    gauge, _ = wgauge.gauges(pid, gid)
+    tx = interface.ILiquidityGauge(gauge).deposit(collSize, {'from': bob})
 
-    try:
-        tx = homora.execute(
-            1,
-            curve_spell,
-            curve_spell.addLiquidity4.encode_input(
-                lp_busd,  # LP_busd
-                [ydai_amt, yusdc_amt, yusdt_amt, ybusd_amt],  # supply tokens
-                lp_amt,  # supply LP
-                [borrow_ydai_amt, borrow_yusdc_amt, borrow_yusdt_amt, borrow_ybusd_amt],  # borrow tokens
-                borrow_lp_amt,  # borrow LP
-                minLPMint,  # min LP mint
-                pid,
-                gid
-            ),
-            {'from': alice}
-        )
-        assert False, 'tx should fail'
-    except VirtualMachineError:
-        pass
-
-    # #####################################################################################
-
-    print('=========================================================================')
-    print('Case 3. add liquidity (failed tx desired)')
-
-    ydai_amt = 0  # 2 * 10**6
-    yusdc_amt = 0  # 5 * 10**6
-    yusdt_amt = 0  # 4 * 10**6
-    ybusd_amt = 1 * 10**6
-    lp_amt = 0
-    borrow_ydai_amt = 0
-    borrow_yusdc_amt = 0
-    borrow_yusdt_amt = 0
-    borrow_ybusd_amt = 0
-    borrow_lp_amt = 0
-    minLPMint = 0
-
-    pid = 1
-    gid = 0
-
-    try:
-        tx = homora.execute(
-            1,
-            curve_spell,
-            curve_spell.addLiquidity4.encode_input(
-                lp_busd,  # LP_busd
-                [ydai_amt, yusdc_amt, yusdt_amt, ybusd_amt],  # supply tokens
-                lp_amt,  # supply LP
-                [borrow_ydai_amt, borrow_yusdc_amt, borrow_yusdt_amt, borrow_ybusd_amt],  # borrow tokens
-                borrow_lp_amt,  # borrow LP
-                minLPMint,  # min LP mint
-                pid,
-                gid
-            ),
-            {'from': alice}
-        )
-        assert False, 'tx should fail'
-    except VirtualMachineError:
-        pass
-
-    # #####################################################################################
-
-    print('=========================================================================')
-    print('Case 4. remove liquidity (failed tx desired)')
-
-    lp_take_amt = 2**256-1  # max
-    lp_want = 1 * 10**17
-    ydai_repay = 2**256-1  # max
-    yusdc_repay = 2**256-1  # max
-    yusdt_repay = 2**256-1  # max
-    ybusd_repay = 2**256-1  # max
-    lp_repay = 0
-
-    try:
-        tx = homora.execute(
-            1,
-            curve_spell,
-            curve_spell.removeLiquidity4.encode_input(
-                lp_busd,  # LP_busd token
-                lp_take_amt,  # LP amount to take out
-                lp_want,  # LP amount to withdraw to wallet
-                [ydai_repay, yusdc_repay, yusdt_repay, ybusd_repay],  # repay amounts
-                lp_repay,  # repay LP amount
-                [0, 0, 0, 0]  # min amounts
-            ),
-            {'from': alice}
-        )
-        assert False, 'tx should revert'
-    except VirtualMachineError:
-        pass
-
-    # #####################################################################################
-
-    print('=========================================================================')
-    print('Case 5. remove liqudiity')
-
-    # remove liquidity from the same position
-    prevABal = dai.balanceOf(alice)
-    prevBBal = usdc.balanceOf(alice)
-    prevCBal = usdt.balanceOf(alice)
-    prevDBal = susd.balanceOf(alice)
-    prevLPBal = lp.balanceOf(alice)
-    prevLPBal_bank = lp.balanceOf(homora)
-    prevLPBal_gauge = lp.balanceOf(gauge)
-
-    _, _, _, collSize = homora.getPositionInfo(1)
-
-    lp_take_amt = 2**256-1  # max
-    lp_want = 0
-    dai_repay = 2**256-1  # max
-    usdc_repay = 2**256-1  # max
-    usdt_repay = 2**256-1  # max
-    susd_repay = 2**256-1  # max
-    lp_repay = 0
+    chain.sleep(20000)
 
     tx = homora.execute(
         1,
         curve_spell,
-        curve_spell.removeLiquidity4.encode_input(
-            lp,  # LP token
-            lp_take_amt,  # LP amount to take out
-            lp_want,  # LP amount to withdraw to wallet
-            [dai_repay, usdc_repay, usdt_repay, susd_repay],  # repay amounts
-            lp_repay,  # repay LP amount
-            [0, 0, 0, 0]  # min amounts
-        ),
+        curve_spell.harvest.encode_input(),
         {'from': alice}
     )
 
-    curABal = dai.balanceOf(alice)
-    curBBal = usdc.balanceOf(alice)
-    curCBal = usdt.balanceOf(alice)
-    curLPBal = lp.balanceOf(alice)
-    curLPBal_bank = lp.balanceOf(homora)
-    curLPBal_gauge = lp.balanceOf(gauge)
+    print('tx gas used', tx.gas_used)
 
-    print('spell lp balance', lp.balanceOf(curve_spell))
-    print('spell dai balance', dai.balanceOf(curve_spell))
-    print('spell usdc balance', usdc.balanceOf(curve_spell))
-    print('spell usdt balance', usdt.balanceOf(curve_spell))
-    print('Alice delta A balance', curABal - prevABal)
-    print('Alice delta B balance', curBBal - prevBBal)
-    print('Alice delta C balance', curCBal - prevCBal)
-    print('Alice delta LP balance', curLPBal - prevLPBal)
-    print('remove liquidity gas', tx.gas_used)
-    print('bank delta lp balance', curLPBal_bank - prevLPBal_bank)
-    print('bank total lp balance', curLPBal_bank)
-
-    _, _, _, daiDebt, daiDebtShare = homora.getBankInfo(dai)
-    _, _, _, usdcDebt, usdcDebtShare = homora.getBankInfo(usdc)
-    _, _, _, usdtDebt, usdtDebtShare = homora.getBankInfo(usdt)
-    print('bank dai totalDebt', daiDebt)
-    print('bank dai totalDebt', daiDebt)
-
-    print('bank usdc totalShare', usdcDebtShare)
-    print('bank usdc totalShare', usdcDebtShare)
-
-    print('bank usdt totalDebt', usdtDebt)
-    print('bank usdt totalShare', usdtDebtShare)
-
-    print('LP want', lp_want)
-
-    print('bank delta LP amount', curLPBal_bank - prevLPBal_bank)
-    print('LP take amount', lp_take_amt)
-
-    print('prev gauge LP balance', prevLPBal_gauge)
-    print('cur gauge LP balance', curLPBal_gauge)
-
-    print('coll size', collSize)
-
-    # alice
-    assert almostEqual(curLPBal - prevLPBal, lp_want), 'incorrect LP amt'
-
-    # spell
-    assert dai.balanceOf(curve_spell) == 0, 'non-zero spell DAI balance'
-    assert usdc.balanceOf(curve_spell) == 0, 'non-zero spell USDC balance'
-    assert usdt.balanceOf(curve_spell) == 0, 'non-zero spell USDT balance'
-    assert lp.balanceOf(curve_spell) == 0, 'non-zero spell LP balance'
-
-    # debt
-    assert usdcDebt == 0, 'usdcDebt should be 0'
-    assert daiDebt == 0, 'daiDebt should be 0'
-    assert usdtDebt == 0, 'usdtDebt should be 0'
-
-    curAliceCrvBalance = crv.balanceOf(alice)
-    print('Alice crv balance', curAliceCrvBalance)
-    receivedCrv = curAliceCrvBalance - prevAliceCrvBalance
-    print('received crv', receivedCrv)
+    curCRVBalance = crv.balanceOf(alice)
+    print('Alice CRV balance after harvest', curCRVBalance)
+    receivedCrv = curCRVBalance - prevCRVBalance
 
     # check with staking directly
     minter = interface.ILiquidityGaugeMinter(interface.ILiquidityGauge(gauge).minter())
