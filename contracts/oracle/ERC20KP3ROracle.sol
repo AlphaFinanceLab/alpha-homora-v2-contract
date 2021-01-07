@@ -11,7 +11,7 @@ contract ERC20KP3ROracle is IBaseOracle, BaseKP3ROracle {
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
   /// @param token The ERC-20 token to check the value.
   function getETHPx(address token) external view override returns (uint) {
-    if (token == weth) {
+    if (token == weth || token == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
       return 2**112;
     }
     address pair = IUniswapV2Factory(factory).getPair(token, weth);
