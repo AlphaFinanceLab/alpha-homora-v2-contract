@@ -1,6 +1,7 @@
 from brownie import accounts, interface, Contract, chain
 from brownie import (HomoraBank, ProxyOracle, CoreOracle, UniswapV2Oracle, SimpleOracle,
                      UniswapV2SpellV1, WERC20, WStakingRewards, MockCErc20)
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -53,20 +54,12 @@ def main():
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wstaking], True, {'from': admin})
     core_oracle.setRoute(
-        [
-            '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
-        ],
+        [dpi, weth, lp],
         [simple_oracle, simple_oracle, uniswap_oracle],
         {'from': admin},
     )
     oracle.setOracles(
-        [
-            '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
-        ],
+        [dpi, weth, lp],
         [
             [10000, 10000, 10000],
             [10000, 10000, 10000],
@@ -80,17 +73,9 @@ def main():
     setup_bank_hack(homora)
     homora.addBank(dpi, crdpi, {'from': admin})
 
-    # setup initial funds 10^3 DPI + 10^4 WETH to alice
-    setup_transfer(dpi, accounts.at(
-        '0x96e3d09a600b15341cc266820106a1d6b4aa58c2', force=True), alice, 10**3 * 10**18)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
-
-    # setup initial funds 10^3 DPI + 10^5 WETH to homora bank
-    setup_transfer(dpi, accounts.at(
-        '0x96e3d09a600b15341cc266820106a1d6b4aa58c2', force=True), homora, 10**3 * 10**18)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
+    # setup initial funds to alice
+    mint_tokens(dpi, alice)
+    mint_tokens(weth, alice)
 
     # check alice's funds
     print(f'Alice dpi balance {dpi.balanceOf(alice)}')
@@ -155,9 +140,6 @@ def main():
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('position_id', position_id)
 
     curABal = dpi.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
@@ -227,7 +209,7 @@ def main():
     chain.sleep(20000)
 
     tx = homora.execute(
-        position_id,
+        1,
         uniswap_spell,
         uniswap_spell.harvestWStakingRewards.encode_input(wstaking),
         {'from': alice}
@@ -259,7 +241,7 @@ def main():
     chain.sleep(20000)
 
     tx = homora.execute(
-        position_id,
+        1,
         uniswap_spell,
         uniswap_spell.harvestWStakingRewards.encode_input(wstaking),
         {'from': alice}

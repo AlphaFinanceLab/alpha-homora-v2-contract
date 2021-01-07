@@ -20,14 +20,19 @@ def main():
 
     eth_usdt = interface.IERC20Ex('0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852')
     eth_usdc = interface.IERC20Ex('0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc')
-    usdt_usdc = interface.IERC20Ex(
-        '0x3041cbd36888becc7bbcbc0045e3b1f144466f5f')
+    usdt_usdc = interface.IERC20Ex('0x3041cbd36888becc7bbcbc0045e3b1f144466f5f')
+
+    uni_pair = interface.IUniswapV2Pair('0xa478c2975ab1ea89e8196811f51a7b7ade33eb11')
+    resA, resB, _ = uni_pair.getReserves()
+    if uni_pair.token0() == weth:
+        weth_price = resB * 10**18 // resA
+    else:
+        weth_price = resA * 10**18 // resB
+    print('weth price', weth_price)
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dai, usdt, usdc, weth], [9060553589188986552095106856227,
-                                                     9002288773315920458132820329673073223442669,
-                                                     9011535487953795006625883219171279625142296,
-                                                     2**112])
+    simple_oracle.setETHPx([dai, usdt, usdc, weth],
+                           [2**112 * 10**18 // weth_price, 2**112 * 10**30 // weth_price, 2**112 * 10**30 // weth_price, 2**112])
 
     uniswap_oracle = UniswapV2Oracle.deploy(simple_oracle, {'from': admin})
 

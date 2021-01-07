@@ -89,4 +89,15 @@ interface IBank {
     uint collId,
     uint amount
   ) external;
+
+  /// @dev Liquidate a position.
+  function liquidate(
+    uint positionId,
+    address debtToken,
+    uint amountCall
+  ) external;
+
+  function getBorrowETHValue(uint positionId) external view returns (uint);
+
+  function accrue(address token) external;
 }

@@ -3,6 +3,7 @@ from brownie import (HomoraBank, ProxyOracle, CoreOracle, UniswapV2Oracle, Simpl
                      UniswapV2SpellV1, WERC20, WStakingRewards, MockCErc20)
 import brownie
 from brownie.exceptions import VirtualMachineError
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -57,25 +58,13 @@ def main():
     core_oracle = CoreOracle.deploy({'from': admin})
     oracle = ProxyOracle.deploy(core_oracle, {'from': admin})
     oracle.setWhitelistERC1155([werc20, wstaking], True, {'from': admin})
-    oracle.setRoute(
-        [
-            '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
-            '0xdac17f958d2ee523a2206206994597c13d831ec7',  # USDT
-            '0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852',  # USDT-WETH
-        ],
+    core_oracle.setRoute(
+        [dpi, weth, lp, usdt, lp_usdt],
         [simple_oracle, simple_oracle, uniswap_oracle, simple_oracle, uniswap_oracle],
         {'from': admin},
     )
     oracle.setOracles(
-        [
-            '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
-            '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # DPI-WETH
-            '0xdac17f958d2ee523a2206206994597c13d831ec7',  # USDT
-            '0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852',  # USDT-WETH
-        ],
+        [dpi, weth, lp, usdt, lp_usdt],
         [
             [10000, 10000, 10000],
             [10000, 10000, 10000],
@@ -92,21 +81,10 @@ def main():
     homora.addBank(dpi, crdpi, {'from': admin})
     homora.addBank(usdt, crusdt, {'from': admin})
 
-    # setup initial funds 10^3 DPI + 10^4 WETH to alice
-    setup_transfer(dpi, accounts.at(
-        '0x96e3d09a600b15341cc266820106a1d6b4aa58c2', force=True), alice, 10**3 * 10**18)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), alice, 10**4 * 10**18)
-    setup_transfer(usdt, accounts.at(
-        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), alice, 10**5 * 10**6)
-
-    # setup initial funds 10^3 DPI + 10^5 WETH to homora bank
-    setup_transfer(dpi, accounts.at(
-        '0x96e3d09a600b15341cc266820106a1d6b4aa58c2', force=True), homora, 10**3 * 10**18)
-    setup_transfer(weth, accounts.at(
-        '0x397ff1542f962076d0bfe58ea045ffa2d347aca0', force=True), homora, 10**4 * 10**18)
-    setup_transfer(usdt, accounts.at(
-        '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503', force=True), homora, 10**5 * 10**6)
+    # setup initial funds to alice
+    mint_tokens(dpi, alice)
+    mint_tokens(weth, alice)
+    mint_tokens(usdt, alice)
 
     # check alice's funds
     print(f'Alice dpi balance {dpi.balanceOf(alice)}')
@@ -178,9 +156,6 @@ def main():
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('position_id', position_id)
 
     curABal = dpi.balanceOf(alice)
     curBBal = weth.balanceOf(alice)
@@ -345,9 +320,6 @@ def main():
         ),
         {'from': alice}
     )
-
-    position_id = tx.return_value
-    print('position_id', position_id)
 
     curABal = dpi.balanceOf(alice)
     curBBal = weth.balanceOf(alice)

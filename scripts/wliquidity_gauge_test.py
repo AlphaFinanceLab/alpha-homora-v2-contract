@@ -2,6 +2,7 @@ from brownie import accounts, interface, Contract, chain
 from brownie import (
     WLiquidityGauge
 )
+from .utils import *
 
 
 def almostEqual(a, b):
@@ -23,7 +24,7 @@ def main():
     dai = interface.IERC20Ex('0x6B175474E89094C44Da98b954EedeAC495271d0F')
     usdc = interface.IERC20Ex('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
     usdt = interface.IERC20Ex('0xdAC17F958D2ee523a2206206994597C13D831ec7')
-    btc = interface.IERC20Ex('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599')
+    wbtc = interface.IERC20Ex('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599')
     renbtc = interface.IERC20Ex('0xeb4c2781e4eba804ce9a9803c67d0893436bb27d')
     crv = interface.IERC20Ex('0xD533a949740bb3306d119CC777fa900bA034cd52')
 
@@ -44,7 +45,7 @@ def main():
     usdc.approve(wgauge, 2**256-1, {'from': alice})
     usdt.approve(wgauge, 2**256-1, {'from': alice})
     renbtc.approve(wgauge, 2**256-1, {'from': alice})
-    btc.approve(wgauge, 2**256-1, {'from': alice})
+    wbtc.approve(wgauge, 2**256-1, {'from': alice})
     lp_3pool.approve(wgauge, 2**256-1, {'from': alice})
     lp_3pool.approve(gauge, 2**256-1, {'from': alice})
     lp_btc.approve(wgauge, 2**256-1, {'from': alice})
@@ -54,44 +55,35 @@ def main():
     usdc.approve(wgauge, 2**256-1, {'from': bob})
     usdt.approve(wgauge, 2**256-1, {'from': bob})
     renbtc.approve(wgauge, 2**256-1, {'from': bob})
-    btc.approve(wgauge, 2**256-1, {'from': bob})
+    wbtc.approve(wgauge, 2**256-1, {'from': bob})
     lp_3pool.approve(wgauge, 2**256-1, {'from': bob})
     lp_3pool.approve(gauge, 2**256-1, {'from': bob})
     lp_btc.approve(wgauge, 2**256-1, {'from': bob})
     lp_btc.approve(gauge, 2**256-1, {'from': bob})
 
     # setup initial funds to alice
-    setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
-                                    force=True), alice, 10**6 * 10**18)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
-                                     force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
-                                     force=True), alice, 10**6 * 10**6)
-    setup_transfer(renbtc, accounts.at('0x53463cd0b074e5fdafc55dce7b1c82adf1a43b2e',
-                                       force=True), alice, 10**2 * 10**8)
-    setup_transfer(btc, accounts.at('0x2bf792ffe8803585f74e06907900c2dc2c29adcb',
-                                    force=True), alice, 10**2 * 10**8)
+    mint_tokens(dai, alice)
+    mint_tokens(usdc, alice)
+    mint_tokens(usdt, alice)
+    mint_tokens(renbtc, alice)
+    mint_tokens(wbtc, alice)
 
-    setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
-                                    force=True), bob, 10**6 * 10**18)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
-                                     force=True), bob, 10**6 * 10**6)
-    setup_transfer(usdt, accounts.at('0xbe0eb53f46cd790cd13851d5eff43d12404d33e8',
-                                     force=True), bob, 10**6 * 10**6)
-    setup_transfer(renbtc, accounts.at('0x53463cd0b074e5fdafc55dce7b1c82adf1a43b2e',
-                                       force=True), bob, 10**2 * 10**8)
-    setup_transfer(btc, accounts.at('0x2bf792ffe8803585f74e06907900c2dc2c29adcb',
-                                    force=True), bob, 10**2 * 10**8)
+    mint_tokens(dai, bob)
+    mint_tokens(usdc, bob)
+    mint_tokens(usdt, bob)
+    mint_tokens(renbtc, bob)
+    mint_tokens(wbtc, bob)
+
     # steal some LP from the staking pool
     setup_transfer(lp_3pool, accounts.at(
         '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), alice, 10**6 * 10**18)
     setup_transfer(lp_btc, accounts.at(
-        '0x9aa8f427a17d6b0d91b6262989edc7d45d6aedf8', force=True), alice, 100 * 10**18)
+        '0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True), alice, 1 * 10**18)
 
     setup_transfer(lp_3pool, accounts.at(
         '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), bob, 10**6 * 10**18)
     setup_transfer(lp_btc, accounts.at(
-        '0x9aa8f427a17d6b0d91b6262989edc7d45d6aedf8', force=True), bob, 100 * 10**18)
+        '0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True), bob, 1 * 10**18)
 
     # register gauges
     wgauge.registerGauge(0, 0, {'from': admin})
