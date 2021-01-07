@@ -11,13 +11,14 @@ SUSD = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
 HUSD = '0xdf574c24545e5ffecb9a659c229253d4111d87e1'
 BUSD = '0x4fabb145d64652a948d72533023f6e7a623c7c53'
 DPI = '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b'
-YDAI = '0x16de59092dae5ccf4a1e6439d611fd0653f0bd01'
-YUSDT = '0xa1787206d5b1be0f432c4c4f96dc4d1257a1dd14'
-YUSDC = '0x597ad1e0c13bfe8025993d9e79c69e1c0233522e'
-YBUSD = '0x04bc0ab673d88ae9dbc9da2380cb6b79c4bca9ae'
+YDAI = '0xC2cB1040220768554cf699b0d863A3cd4324ce32'
+YUSDT = '0xE6354ed5bC4b393a5Aad09f21c46E101e692d447'
+YUSDC = '0x26EA744E5B887E5205727f55dFBE8685e3b21951'
+YBUSD = '0x04bC0Ab673d88aE9dbC9DA2380cB6B79C4BCa9aE'
 WBTC = '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'
 RENBTC = '0xeb4c2781e4eba804ce9a9803c67d0893436bb27d'
 PERP = '0xbC396689893D065F41bc2C6EcbeE5e0085233447'
+DFD = '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A'
 
 CRV_LP_SUSD = '0xC25a3A3b969415c80451098fa907EC722572917F'
 CRV_LP_3POOL = '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490'
@@ -69,7 +70,7 @@ def mint_tokens(token, to, amount=None):
     elif token == YUSDT:
         mint_tokens(interface.IERC20Ex(USDT), to, amount)
         interface.IERC20Ex(USDT).approve(token, 2**256-1, {'from': to})
-        token.invest(amount, {'from': to})
+        token.deposit(amount, {'from': to})
     elif token == YBUSD:
         mint_tokens(interface.IERC20Ex(BUSD), to, amount)
         interface.IERC20Ex(BUSD).approve(token, 2**256-1, {'from': to})
@@ -91,3 +92,6 @@ def mint_tokens(token, to, amount=None):
         owner = token.owner()
         token.addMinter(owner, {'from': owner})
         token.mint(to, amount, {'from': owner})
+    elif token == DFD:
+        gov = token.governance()
+        token.mint(to, amount, {'from': gov})
