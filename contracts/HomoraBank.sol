@@ -128,7 +128,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   /// @dev Trigger interest accrual for the given bank.
   /// @param token The underlying token to trigger the interest accrual.
-  function accrue(address token) public {
+  function accrue(address token) public override {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
     uint totalDebt = bank.totalDebt;
@@ -282,7 +282,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   /// @dev Return the total borrow value of the given position in ETH.
   /// @param positionId The position ID to query for the borrow value.
-  function getBorrowETHValue(uint positionId) public view returns (uint) {
+  function getBorrowETHValue(uint positionId) public view override returns (uint) {
     uint value = 0;
     Position storage pos = positions[positionId];
     uint bitMap = pos.debtMap;
@@ -368,7 +368,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint positionId,
     address debtToken,
     uint amountCall
-  ) external lock poke(debtToken) {
+  ) external override lock poke(debtToken) {
     uint collateralValue = getCollateralETHValue(positionId);
     uint borrowValue = getBorrowETHValue(positionId);
     require(collateralValue < borrowValue, 'position still healthy');
