@@ -81,6 +81,7 @@ def mint_tokens(token, to, amount=None):
         token.transfer(to, amount, {'from': supply_controller})
     elif token == YDAI:
         mint_tokens(interface.IERC20Ex(DAI), to, amount)
+        interface.IERC20Ex(DAI).approve(token, 0, {'from': to})
         interface.IERC20Ex(DAI).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == YUSDT:
@@ -90,10 +91,12 @@ def mint_tokens(token, to, amount=None):
         token.deposit(amount, {'from': to})
     elif token == YBUSD:
         mint_tokens(interface.IERC20Ex(BUSD), to, amount)
+        interface.IERC20Ex(BUSD).approve(token, 0, {'from': to})
         interface.IERC20Ex(BUSD).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == YUSDC:
         mint_tokens(interface.IERC20Ex(USDC), to, amount)
+        interface.IERC20Ex(USDC).approve(token, 0, {'from': to})
         interface.IERC20Ex(USDC).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == DPI:
@@ -134,7 +137,9 @@ def mint_tokens(token, to, amount=None):
         mint_tokens(token0, to, amount0)
         mint_tokens(token1, to, amount1)
         # approve router
+        token0.approve(router, 0, {'from': to})
         token0.approve(router, 2**256-1, {'from': to})
+        token1.approve(router, 0, {'from': to})
         token1.approve(router, 2**256-1, {'from': to})
         # add liquidity
         interface.IUniswapV2Router02(router).addLiquidity(
@@ -150,7 +155,9 @@ def mint_tokens(token, to, amount=None):
         mint_tokens(token0, to, amount0)
         mint_tokens(token1, to, amount1)
         # approve router
+        token0.approve(router, 0, {'from': to})
         token0.approve(router, 2**256-1, {'from': to})
+        token1.approve(router, 0, {'from': to})
         token1.approve(router, 2**256-1, {'from': to})
         # add liquidity
         interface.IUniswapV2Router02(router).addLiquidity(
@@ -164,6 +171,7 @@ def mint_tokens(token, to, amount=None):
             _token = interface.IERC20Ex(_token)
             amt = 10**12 * 10**_token.decimals()
             mint_tokens(_token, to, amt)
+            _token.approve(token, 0, {'from': to})
             _token.approve(token, 2**256-1, {'from': to})
             max_amts.append(amt)
             amt_desired = min(amt_desired, amt * token.totalSupply() // token.getBalance(_token))
@@ -178,14 +186,16 @@ def mint_tokens(token, to, amount=None):
             if _token == '0x0000000000000000000000000000000000000000':
                 continue
             _token = interface.IERC20Ex(_token)
-            amt = 10**12 * 10**_token.decimals()
+            amt = 10**6 * 10**_token.decimals()
             prevBal = _token.balanceOf(to)
             mint_tokens(_token, to, amt)
             curBal = _token.balanceOf(to)
             amts.append(curBal - prevBal)
+            interface.IERC20Ex(_token).approve(pool, 0, {'from': to})
             interface.IERC20Ex(_token).approve(pool, 2**256-1, {'from': to})
         desc = f'uint[{len(amts)}],uint'
-
+        print('adding liquidity to curve')
+        print(amts)
         interface.ICurvePool(pool).add_liquidity[desc](amts, 0, {'from': to})
     else:
         raise Exception('unsupported token')
