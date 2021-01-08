@@ -53,4 +53,22 @@ interface IERC20Ex is IERC20 {
   function governance() external view returns (address);
 
   function core() external view returns (address);
+
+  function factory() external view returns (address);
+
+  function token0() external view returns (address);
+
+  function token1() external view returns (address);
+
+  function symbol() external view returns (string memory);
+
+  function getFinalTokens() external view returns (address[] memory);
+
+  function joinPool(uint, uint[] memory) external;
+
+  function getBalance(address) external view returns (uint);
+
+  function createTokens(uint) external returns (bool);
+
+  function resolverAddressesRequired() external view returns (bytes32[] memory addresses);
 }

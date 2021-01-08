@@ -78,10 +78,7 @@ def main():
     print(f'Alice dai balance {dai.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 1*10**17, {'from': accounts.at(
-        '0xafc2f2d803479a2af3a72022d54cc0901a0ec0d6', force=True)})
-    lp.transfer(homora, 2*10**17, {'from': accounts.at(
-        '0xafc2f2d803479a2af3a72022d54cc0901a0ec0d6', force=True)})
+    mint_tokens(lp, alice)
 
     # set approval
     dai.approve(homora, 2**256-1, {'from': alice})

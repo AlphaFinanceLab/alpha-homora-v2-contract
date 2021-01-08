@@ -77,10 +77,7 @@ def main():
     mint_tokens(weth, alice)
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 4 * 10**13, {'from': accounts.at(
-        '0x1f9ff03e89e64138355fef8dcb45d7789a3d407a', force=True)})
-    lp.transfer(homora, 4 * 10**13, {'from': accounts.at(
-        '0x1f9ff03e89e64138355fef8dcb45d7789a3d407a', force=True)})
+    mint_tokens(lp, alice)
 
     # check alice's funds
     print(f'Alice usdt balance {usdt.balanceOf(alice)}')

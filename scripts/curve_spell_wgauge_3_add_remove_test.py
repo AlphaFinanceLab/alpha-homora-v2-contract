@@ -133,12 +133,9 @@ def main():
     print(f'Alice ausdt balance {ausdt.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 10**5 * 10**18,
-                {'from': accounts.at('0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True)})
-    lp.transfer(bob, 10**5 * 10**18,
-                {'from': accounts.at('0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True)})
-    lp_aave.transfer(alice, 10**3 * 10**18,
-                     {'from': accounts.at('0x425d16b0e08a28a3ff9e4404ae99d78c0a076c5a', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
+    mint_tokens(lp_aave, alice)
 
     # set approval
     dai.approve(homora, 2**256-1, {'from': alice})

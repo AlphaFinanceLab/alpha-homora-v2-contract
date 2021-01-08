@@ -97,12 +97,8 @@ def main():
     print(f'Alice dfd balance {dfd.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 1*10**17, {'from': accounts.at(
-        '0x63e7be19e7f910ac58823fdfc649be280274dd88', force=True)})
-    lp.transfer(homora, 2*10**17, {'from': accounts.at(
-        '0x63e7be19e7f910ac58823fdfc649be280274dd88', force=True)})
-    lp.transfer(bob, 30*10**19, {'from': accounts.at(
-        '0x63e7be19e7f910ac58823fdfc649be280274dd88', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
 
     # set approval
     dfd.approve(homora, 2**256-1, {'from': alice})

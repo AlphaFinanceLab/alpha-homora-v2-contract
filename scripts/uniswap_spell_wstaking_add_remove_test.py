@@ -86,22 +86,18 @@ def main():
     mint_tokens(weth, alice)
     mint_tokens(usdt, alice)
 
+    mint_tokens(dpi, crdpi)
+
     # check alice's funds
     print(f'Alice dpi balance {dpi.balanceOf(alice)}')
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 4*10**16, {'from': accounts.at(
-        '0xdc7aa225964267c7e0efb35f4931426209e90312', force=True)})
-    lp.transfer(homora, 4*10**16, {'from': accounts.at(
-        '0xdc7aa225964267c7e0efb35f4931426209e90312', force=True)})
-    lp.transfer(bob, 10*10**18, {'from': accounts.at(
-        '0xdc7aa225964267c7e0efb35f4931426209e90312', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
 
-    lp_usdt.transfer(alice, 4*10**13, {'from': accounts.at(
-        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
-    lp_usdt.transfer(bob, 4*10**13, {'from': accounts.at(
-        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
+    mint_tokens(lp_usdt, alice)
+    mint_tokens(lp_usdt, bob)
 
     # set approval
     dpi.approve(homora, 2**256-1, {'from': alice})
@@ -135,8 +131,10 @@ def main():
     dpi_amt = 10 * 10**18
     weth_amt = 10**18
     lp_amt = 0
-    borrow_dpi_amt = 0
+    borrow_dpi_amt = 10**18
     borrow_weth_amt = 0
+
+    real_dpi_borrow_amt = borrow_dpi_amt
 
     tx = homora.execute(
         0,
@@ -300,7 +298,7 @@ def main():
 
     lp_take_amt = collSize
     lp_want = 0
-    dpi_repay = 0
+    dpi_repay = 2**256-1
     weth_repay = 0
 
     tx = homora.execute(
@@ -369,7 +367,7 @@ def main():
     assert lp.balanceOf(uniswap_spell) == 0, 'non-zero spell LP balance'
 
     # check balance and pool reserves
-    assert almostEqual(curABal - prevABal + dpi_repay, -
+    assert almostEqual(curABal - prevABal + real_dpi_borrow_amt, -
                        (curARes - prevARes)), 'inconsistent DPI from withdraw'
     assert almostEqual(curBBal - prevBBal, 0), 'inconsistent WETH from withdraw'
     assert almostEqual(curETHBal - prevETHBal + weth_repay, -

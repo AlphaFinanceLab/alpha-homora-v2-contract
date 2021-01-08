@@ -142,12 +142,10 @@ def main():
     print(f'Alice ybusd balance {ybusd.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 10**3 * 10**18,
-                {'from': accounts.at('0x39415255619783a2e71fcf7d8f708a951d92e1b6', force=True)})
-    lp.transfer(bob, 10**5 * 10**18,
-                {'from': accounts.at('0x39415255619783a2e71fcf7d8f708a951d92e1b6', force=True)})
-    lp_busd.transfer(alice, 10**2 * 10**18,
-                     {'from': accounts.at('0xca7b06107bbb10add34b7b93fef1eb7186055262', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
+    mint_tokens(lp_busd, alice)
+
     # set approval
     dai.approve(homora, 2**256-1, {'from': alice})
     dai.approve(crdai, 2**256-1, {'from': alice})
@@ -333,7 +331,7 @@ def main():
     gid = 0
 
     tx = homora.execute(
-        0,
+        1,
         curve_spell,
         curve_spell.addLiquidity4.encode_input(
             lp,  # LP
@@ -399,12 +397,6 @@ def main():
     assert usdt.balanceOf(curve_spell) == 0, 'non-zero spell USDT balance'
     assert susd.balanceOf(curve_spell) == 0, 'non-zero spell SUSD balance'
     assert lp.balanceOf(curve_spell) == 0, 'non-zero spell LP balance'
-
-    # debt
-    assert daiDebt == borrow_dai_amt
-    assert usdcDebt == borrow_usdc_amt
-    assert usdtDebt == borrow_usdt_amt
-    assert susdDebt == borrow_susd_amt
 
     curAliceCrvBalance = crv.balanceOf(alice)
     print('Alice crv balance', curAliceCrvBalance)

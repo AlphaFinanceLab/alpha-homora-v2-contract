@@ -89,8 +89,7 @@ def main():
     print(f'Alice usdc balance {usdc.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 1*10**8,
-                {'from': accounts.at('0x85af1678527f63eb6492ab158ed5d2a94b8732c0', force=True)})
+    mint_tokens(lp, alice)
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
