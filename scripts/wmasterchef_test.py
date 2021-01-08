@@ -47,10 +47,8 @@ def main():
     mint_tokens(usdc, alice)
     mint_tokens(weth, alice)
 
-    setup_transfer(lpusdt, accounts.at(
-        '0x90b903b3693303a9bb381d17718478ac5a246bcf', force=True), alice, 10**10)
-    setup_transfer(lpusdc, accounts.at(
-        '0x43d3e86ca8a9a46c19473d7ec83cc328b881648c', force=True), alice, 10**10)
+    mint_tokens(lpusdt, alice)
+    mint_tokens(lpusdc, alice)
 
     ######################################################################
     # Check encoding and decoding ids

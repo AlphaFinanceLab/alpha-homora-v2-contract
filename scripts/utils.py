@@ -1,5 +1,6 @@
 from brownie import accounts, interface, Contract, chain
 
+
 USDT = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 DAI = '0x6b175474e89094c44da98b954eedeac495271d0f'
@@ -20,16 +21,30 @@ RENBTC = '0xeb4c2781e4eba804ce9a9803c67d0893436bb27d'
 PERP = '0xbC396689893D065F41bc2C6EcbeE5e0085233447'
 DFD = '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A'
 DUSD = '0x5bc25f649fc4e26069ddf4cf4010f9f706c23831'
+EURS = '0xdb25f211ab05b1c97d595516f45794528a807ad8'
+SEUR = '0xd71ecff9342a5ced620049e616c5035f1db98620'
 
-CRV_LP_SUSD = '0xC25a3A3b969415c80451098fa907EC722572917F'
-CRV_LP_3POOL = '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490'
-CRV_LP_AAVE = '0xFd2a8fA60Abd58Efe3EeE34dd494cD491dC14900'
+
+def is_uni_lp(token):
+    return token.symbol() == 'UNI-V2'
+
+
+def is_sushi_lp(token):
+    return token.symbol() == 'SLP'
+
+
+def is_bal_lp(token):
+    return token.symbol() == 'BPT'
+
+
+def is_crv_lp(token):
+    return token.name()[:8] == 'Curve.fi'
 
 
 def mint_tokens(token, to, amount=None):
     if amount is None:
-        # default is 1m tokens
-        amount = 10**6 * 10**token.decimals()
+        # default is 1M tokens
+        amount = 10**12 * 10**token.decimals()
 
     if token == USDT:
         owner = token.owner()
@@ -70,6 +85,7 @@ def mint_tokens(token, to, amount=None):
         token.deposit(amount, {'from': to})
     elif token == YUSDT:
         mint_tokens(interface.IERC20Ex(USDT), to, amount)
+        interface.IERC20Ex(USDT).approve(token, 0, {'from': to})
         interface.IERC20Ex(USDT).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == YBUSD:
@@ -99,3 +115,77 @@ def mint_tokens(token, to, amount=None):
     elif token == DUSD:
         core = token.core()
         token.mint(to, amount, {'from': core})
+    elif token == EURS:
+        owner = '0x2EbBbc541E8f8F24386FA319c79CedA0579f1Efb'
+        token.createTokens(amount, {'from': owner})
+        token.transfer(to, amount, {'from': owner})
+    elif token == SEUR:
+        target = interface.IERC20Ex('0xc61b352fcc311ae6b0301459a970150005e74b3e')
+        issuer = '0x611Abc0e066A01AFf63910fC8935D164267eC6CF'
+        target.issue(to, amount, {'from': issuer})
+    elif is_uni_lp(token):
+        router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
+        # Uniswap LP token
+        token0 = interface.IERC20Ex(token.token0())
+        token1 = interface.IERC20Ex(token.token1())
+        # mint underlying
+        amount0 = 10**12 * 10**token0.decimals()
+        amount1 = 10**12 * 10**token1.decimals()
+        mint_tokens(token0, to, amount0)
+        mint_tokens(token1, to, amount1)
+        # approve router
+        token0.approve(router, 2**256-1, {'from': to})
+        token1.approve(router, 2**256-1, {'from': to})
+        # add liquidity
+        interface.IUniswapV2Router02(router).addLiquidity(
+            token0, token1, amount0, amount1, 0, 0, to, chain.time() + 1200, {'from': to})
+    elif is_sushi_lp(token):
+        router = interface.IUniswapV2Router02('0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f')
+        # Sushiswap LP token
+        token0 = interface.IERC20Ex(token.token0())
+        token1 = interface.IERC20Ex(token.token1())
+        # mint underlying
+        amount0 = 10**12 * 10**token0.decimals()
+        amount1 = 10**12 * 10**token1.decimals()
+        mint_tokens(token0, to, amount0)
+        mint_tokens(token1, to, amount1)
+        # approve router
+        token0.approve(router, 2**256-1, {'from': to})
+        token1.approve(router, 2**256-1, {'from': to})
+        # add liquidity
+        interface.IUniswapV2Router02(router).addLiquidity(
+            token0, token1, amount0, amount1, 0, 0, to, chain.time() + 1200, {'from': to})
+    elif is_bal_lp(token):
+        # Balancer LP token
+        tokens = token.getFinalTokens()
+        max_amts = []
+        amt_desired = 10**100
+        for _token in tokens:
+            _token = interface.IERC20Ex(_token)
+            amt = 10**12 * 10**_token.decimals()
+            mint_tokens(_token, to, amt)
+            _token.approve(token, 2**256-1, {'from': to})
+            max_amts.append(amt)
+            amt_desired = min(amt_desired, amt * token.totalSupply() // token.getBalance(_token))
+        token.joinPool(amt_desired * 9 // 10, max_amts, {'from': to})
+    elif is_crv_lp(token):
+        # Curve LP token
+        registry = interface.ICurveRegistry('0x7d86446ddb609ed0f5f8684acf30380a356b2b4c')
+        pool = registry.get_pool_from_lp_token(token)
+        tokens = registry.get_coins(pool)
+        amts = []
+        for _token in tokens:
+            if _token == '0x0000000000000000000000000000000000000000':
+                continue
+            _token = interface.IERC20Ex(_token)
+            amt = 10**12 * 10**_token.decimals()
+            prevBal = _token.balanceOf(to)
+            mint_tokens(_token, to, amt)
+            curBal = _token.balanceOf(to)
+            amts.append(curBal - prevBal)
+            interface.IERC20Ex(_token).approve(pool, 2**256-1, {'from': to})
+        desc = f'uint[{len(amts)}],uint'
+
+        interface.ICurvePool(pool).add_liquidity[desc](amts, 0, {'from': to})
+    else:
+        raise Exception('unsupported token')

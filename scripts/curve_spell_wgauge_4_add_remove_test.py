@@ -144,12 +144,10 @@ def main():
     print(f'Alice ybusd balance {ybusd.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 10**3 * 10**18,
-                {'from': accounts.at('0x39415255619783a2e71fcf7d8f708a951d92e1b6', force=True)})
-    lp.transfer(bob, 10**5 * 10**18,
-                {'from': accounts.at('0x39415255619783a2e71fcf7d8f708a951d92e1b6', force=True)})
-    lp_busd.transfer(alice, 10**2 * 10**18,
-                     {'from': accounts.at('0xca7b06107bbb10add34b7b93fef1eb7186055262', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
+    mint_tokens(lp_busd, alice)
+
     # set approval
     dai.approve(homora, 2**256-1, {'from': alice})
     dai.approve(crdai, 2**256-1, {'from': alice})

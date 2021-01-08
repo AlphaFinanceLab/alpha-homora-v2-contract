@@ -112,21 +112,10 @@ def main():
     homora.addBank(usdc, crusdc, {'from': admin})
     homora.addBank(usdt, crusdt, {'from': admin})
 
-    # setup initial funds 10^6 USDT + 10^6 USDC + 10^6 DAI to alice
-    setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
-                                    force=True), alice, 10**6 * 10**18)
-    setup_transfer(usdc, accounts.at('0xa191e578a6736167326d05c119ce0c90849e84b7',
-                                     force=True), alice, 10**6 * 10**6)
-    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
-                                     force=True), alice, 10**6 * 10**6)
-
-    # setup initial funds 10^6 USDT + 10^6 USDC + 10^6 DAI to homora bank
-    setup_transfer(dai, accounts.at('0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f',
-                                    force=True), homora, 10**6 * 10**18)
-    setup_transfer(usdc, accounts.at('0x397ff1542f962076d0bfe58ea045ffa2d347aca0',
-                                     force=True), homora, 10**6 * 10**6)
-    setup_transfer(usdt, accounts.at('0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503',
-                                     force=True), homora, 10**6 * 10**6)
+    # setup initial funds to alice
+    mint_tokens(dai, alice)
+    mint_tokens(usdc, alice)
+    mint_tokens(usdt, alice)
 
     # check alice's funds
     print(f'Alice dai balance {dai.balanceOf(alice)}')
@@ -134,10 +123,8 @@ def main():
     print(f'Alice usdt balance {usdt.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 10**6 * 10**18,
-                {'from': accounts.at('0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True)})
-    lp.transfer(bob, 10**6 * 10**18,
-                {'from': accounts.at('0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
 
     # set approval
     dai.approve(homora, 2**256-1, {'from': alice})

@@ -82,10 +82,7 @@ def main():
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 4*10**16, {'from': accounts.at(
-        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
-    lp.transfer(homora, 4*10**16, {'from': accounts.at(
-        '0x5bd87adb554702e535aa74431dda68eaf9a8f548', force=True)})
+    mint_tokens(lp, alice)
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})

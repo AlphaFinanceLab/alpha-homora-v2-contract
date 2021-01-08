@@ -93,10 +93,8 @@ def main():
     print(f'Alice weth balance {weth.balanceOf(alice)}')
 
     # Steal some LP from the staking pool
-    lp.transfer(alice, 4*10**13, {'from': accounts.at(
-        '0x1f9ff03e89e64138355fef8dcb45d7789a3d407a', force=True)})
-    lp.transfer(bob, 4*10**13, {'from': accounts.at(
-        '0x1f9ff03e89e64138355fef8dcb45d7789a3d407a', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
 
     # set approval
     usdt.approve(homora, 2**256-1, {'from': alice})
@@ -130,8 +128,10 @@ def main():
     usdt_amt = 10 * 10**6
     weth_amt = 10**18
     lp_amt = 0
-    borrow_usdt_amt = 0
+    borrow_usdt_amt = 10 * 10**6
     borrow_weth_amt = 0
+
+    real_borrow_usdt_amt = borrow_usdt_amt
 
     pid = 0
 
@@ -301,7 +301,7 @@ def main():
 
     lp_take_amt = collSize
     lp_want = 0
-    usdt_repay = 0
+    usdt_repay = 2**256-1
     weth_repay = 0
 
     pid = 0
@@ -371,7 +371,7 @@ def main():
     assert lp.balanceOf(sushiswap_spell) == 0, 'non-zero spell LP balance'
 
     # check balance and pool reserves
-    assert almostEqual(curABal - prevABal + usdt_repay, -
+    assert almostEqual(curABal - prevABal + real_borrow_usdt_amt, -
                        (curARes - prevARes)), 'inconsistent USDT from withdraw'
     assert almostEqual(curBBal - prevBBal,
                        0), 'inconsistent WETH from withdraw'

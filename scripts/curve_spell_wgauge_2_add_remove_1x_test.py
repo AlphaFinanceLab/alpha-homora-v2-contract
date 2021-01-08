@@ -4,7 +4,7 @@ from brownie import (
 )
 import brownie
 from brownie.exceptions import VirtualMachineError
-
+from .utils import *
 
 KP3R_ADDRESS = '0x73353801921417F465377c8d898c6f4C0270282C'
 
@@ -104,16 +104,12 @@ def main():
     homora.addBank(seur, crseur, {'from': admin})
 
     # setup initial funds to alice
-    setup_transfer(renbtc, accounts.at('0xf8c42927a60cbd4a536ce24ef8bed00b16a9b44b',
-                                       force=True), alice, 10**2 * 10**8)
-    setup_transfer(wbtc, accounts.at('0x875abe6f1e2aba07bed4a3234d8555a0d7656d12',
-                                     force=True), alice, 10**2 * 10**8)
-    setup_transfer(eurs, accounts.at('0x36bf9c65c6ef2c8c319bd574c374db09cbb622bc',
-                                     force=True), alice, 10**4 * 10**2)
-    setup_transfer(seur, accounts.at('0x53c601621a9bdf0b98adf8b1f7d41ae63bd46c07',
-                                     force=True), alice, 10**3 * 10**18)
-    setup_transfer(wbtc, accounts.at('0x875abe6f1e2aba07bed4a3234d8555a0d7656d12',
-                                     force=True), crwbtc, 10**2 * 10**8)
+    mint_tokens(renbtc, alice)
+    mint_tokens(wbtc, alice)
+    mint_tokens(eurs, alice)
+    mint_tokens(seur, alice)
+
+    mint_tokens(wbtc, crwbtc)
 
     # check alice's funds
     print(f'Alice renbtc balance {renbtc.balanceOf(alice)}')
@@ -122,12 +118,9 @@ def main():
     print(f'Alice seur balance {seur.balanceOf(alice)}')
 
     # steal some LP from the staking pool
-    lp.transfer(alice, 1 * 10**18,
-                {'from': accounts.at('0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True)})
-    lp.transfer(bob, 1 * 10**18,
-                {'from': accounts.at('0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True)})
-    lp_eurs.transfer(alice, 10 * 10**18,
-                     {'from': accounts.at('0x90bb609649e0451e5ad952683d64bd2d1f245840', force=True)})
+    mint_tokens(lp, alice)
+    mint_tokens(lp, bob)
+    mint_tokens(lp_eurs, alice)
 
     # set approval
     renbtc.approve(homora, 2**256-1, {'from': alice})

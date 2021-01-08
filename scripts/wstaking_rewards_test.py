@@ -40,8 +40,7 @@ def main():
     # setup initial funds to alice
     mint_tokens(perp, alice)
     mint_tokens(usdc, alice)
-    setup_transfer(bpt, accounts.at('0x5e4b407eb1253527628bab875525aaec0099ffc5',
-                                    force=True), alice, 10**2 * 10**18)
+    mint_tokens(bpt, alice)
 
     ######################################################################
     # check getUnderlyingToken
