@@ -100,4 +100,6 @@ interface IBank {
   function getBorrowETHValue(uint positionId) external view returns (uint);
 
   function accrue(address token) external;
+
+  function nextPositionId() external view returns (uint);
 }

@@ -70,7 +70,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   address public caster; // The caster address for untrusted execution.
   IOracle public oracle; // The oracle address for determining prices.
   uint public feeBps; // The fee collected as protocol reserve in basis point from interest.
-  uint public nextPositionId; // Next available position ID, starting from 1 (see initialize).
+  uint public override nextPositionId; // Next available position ID, starting from 1 (see initialize).
 
   address[] public allBanks; // The list of all listed banks.
   mapping(address => Bank) public banks; // Mapping from token to bank data.
