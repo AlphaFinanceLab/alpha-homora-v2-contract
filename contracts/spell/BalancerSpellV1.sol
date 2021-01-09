@@ -172,42 +172,32 @@ contract BalancerSpellV1 is BasicSpell {
     // 3.1 Remove liquidity 2 sides
     uint amtADesired = amtARepay.add(amt.amtAMin);
     uint amtBDesired = amtBRepay.add(amt.amtBMin);
-    uint totalLPSupply = IBalancerPool(lp).totalSupply();
 
-    uint poolAmountOut;
-
-    {
-      uint ARes = IBalancerPool(lp).getBalance(tokenA);
-      uint BRes = IBalancerPool(lp).getBalance(tokenB);
-      uint poolAmountFromA = amtADesired.mul(1e18).div(ARes).mul(totalLPSupply).div(1e18); // compute in reverse order of how Balancer's `joinPool` computes tokenAmountIn
-      uint poolAmountFromB = amtBDesired.mul(1e18).div(BRes).mul(totalLPSupply).div(1e18); // compute in reverse order of how Balancer's `joinPool` computes tokenAmountIn
-      poolAmountOut = poolAmountFromA > poolAmountFromB ? poolAmountFromB : poolAmountFromA;
-    }
+    uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
 
     uint[] memory minAmountsOut = new uint[](2);
-    if (poolAmountOut > 0) {
-      IBalancerPool(lp).exitPool(poolAmountOut, minAmountsOut);
-    }
+    IBalancerPool(lp).exitPool(amtLPToRemove, minAmountsOut);
 
-    // 3.2 Remove liquidity for each asset to cover the desired amount
-    {
-      uint ABal = IERC20(tokenA).balanceOf(address(this));
+    // 3.2 Minimize trading to repay debt
+    uint amtA = IERC20(tokenA).balanceOf(address(this));
+    uint amtB = IERC20(tokenB).balanceOf(address(this));
 
-      if (amtADesired > ABal)
-        IBalancerPool(lp).exitswapExternAmountOut(tokenA, amtADesired - ABal, uint(-1));
-    }
-    {
-      uint BBal = IERC20(tokenB).balanceOf(address(this));
-
-      if (amtBDesired > BBal)
-        IBalancerPool(lp).exitswapExternAmountOut(tokenB, amtBDesired - BBal, uint(-1));
-    }
-
-    // 3.3 Remove remaining liquidity
-    uint poolAmountOut1 =
-      IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw.add(amt.amtLPRepay));
-    if (poolAmountOut1 > 0) {
-      IBalancerPool(lp).exitPool(poolAmountOut1, minAmountsOut);
+    if (amtA < amtARepay && amtB >= amtBRepay) {
+      IBalancerPool(lp).swapExactAmountOut(
+        tokenB,
+        amtB.sub(amtBRepay),
+        tokenA,
+        amtARepay.sub(amtA),
+        uint(-1)
+      );
+    } else if (amtA >= amtARepay && amtB < amtBRepay) {
+      IBalancerPool(lp).swapExactAmountOut(
+        tokenA,
+        amtA.sub(amtARepay),
+        tokenB,
+        amtBRepay.sub(amtB),
+        uint(-1)
+      );
     }
 
     // 4. Repay
@@ -218,7 +208,7 @@ contract BalancerSpellV1 is BasicSpell {
     // 5. Slippage control
     require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
     require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
-    require(IERC20(lp).balanceOf(address(this)) == amt.amtLPWithdraw);
+    require(IERC20(lp).balanceOf(address(this)) >= amt.amtLPWithdraw);
 
     // 6. Refund leftover
     doRefundETH();

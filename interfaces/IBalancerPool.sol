@@ -15,6 +15,14 @@ interface IBalancerPool {
 
   function joinPool(uint poolAmountOut, uint[] calldata maxAmountsIn) external;
 
+  function swapExactAmountOut(
+    address tokenIn,
+    uint maxAmountIn,
+    address tokenOut,
+    uint tokenAmountOut,
+    uint maxPrice
+  ) external returns (uint tokenAmountIn, uint spotPriceAfter);
+
   function joinswapExternAmountIn(
     address tokenIn,
     uint tokenAmountIn,
