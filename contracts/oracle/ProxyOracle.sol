@@ -81,6 +81,8 @@ contract ProxyOracle is IOracle, Governable {
     uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
     Oracle memory oracleIn = oracles[tokenIn];
     Oracle memory oracleOut = oracles[tokenOutUnderlying];
+    require(oracleIn.liqIncentive != 0, 'bad underlying');
+    require(oracleOut.liqIncentive != 0, 'bad underlying');
     uint pxIn = source.getETHPx(tokenIn);
     uint pxOut = source.getETHPx(tokenOutUnderlying);
     uint amountOut = amountIn.mul(pxIn).div(pxOut);
@@ -99,6 +101,7 @@ contract ProxyOracle is IOracle, Governable {
     uint rateUnderlying = IERC20Wrapper(token).getUnderlyingRate(id);
     uint amountUnderlying = amount.mul(rateUnderlying).div(2**112);
     Oracle memory oracle = oracles[tokenUnderlying];
+    require(oracle.liqIncentive != 0, 'bad underlying');
     uint ethValue = source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
     return ethValue.mul(oracle.collateralFactor).div(10000);
   }
@@ -106,6 +109,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @dev Return the value of the given input as ETH for borrow purpose.
   function asETHBorrow(address token, uint amount) external view override returns (uint) {
     Oracle memory oracle = oracles[token];
+    require(oracle.liqIncentive != 0, 'bad underlying');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
   }
