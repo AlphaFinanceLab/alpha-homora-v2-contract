@@ -254,15 +254,7 @@ contract SushiswapSpellV1 is BasicSpell {
 
     // 4. Remove liquidity
     (uint amtA, uint amtB) =
-      router.removeLiquidity(
-        tokenA,
-        tokenB,
-        amtLPToRemove,
-        amt.amtAMin,
-        amt.amtBMin,
-        address(this),
-        now
-      );
+      router.removeLiquidity(tokenA, tokenB, amtLPToRemove, 0, 0, address(this), now);
 
     // 5. MinimizeTrading to repay debt
     if (amtA < amtARepay && amtB >= amtBRepay) {
@@ -283,6 +275,7 @@ contract SushiswapSpellV1 is BasicSpell {
     // 7. Slippage control
     require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
     require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
+    require(IERC20(lp).balanceOf(address(this)) >= amt.amtLPWithdraw);
 
     // 8. Refund leftover
     doRefundETH();
