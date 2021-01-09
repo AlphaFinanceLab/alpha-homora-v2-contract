@@ -256,15 +256,30 @@ contract SushiswapSpellV1 is BasicSpell {
     (uint amtA, uint amtB) =
       router.removeLiquidity(tokenA, tokenB, amtLPToRemove, 0, 0, address(this), now);
 
-    // 5. MinimizeTrading to repay debt
-    if (amtA < amtARepay && amtB >= amtBRepay) {
+    // 5. MinimizeTrading
+    uint amtADesired = amtARepay.add(amt.amtAMin);
+    uint amtBDesired = amtBRepay.add(amt.amtBMin);
+
+    if (amtA < amtADesired && amtB >= amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
-      router.swapTokensForExactTokens(amtARepay.sub(amtA), uint(-1), path, address(this), now);
-    } else if (amtA >= amtARepay && amtB < amtBRepay) {
+      router.swapTokensForExactTokens(
+        amtADesired.sub(amtA),
+        amtB.sub(amtBDesired),
+        path,
+        address(this),
+        now
+      );
+    } else if (amtA >= amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
-      router.swapTokensForExactTokens(amtBRepay.sub(amtB), uint(-1), path, address(this), now);
+      router.swapTokensForExactTokens(
+        amtBDesired.sub(amtB),
+        amtA.sub(amtADesired),
+        path,
+        address(this),
+        now
+      );
     }
 
     // 6. Repay

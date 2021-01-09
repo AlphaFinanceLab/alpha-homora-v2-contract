@@ -170,32 +170,32 @@ contract BalancerSpellV1 is BasicSpell {
     }
 
     // 3.1 Remove liquidity 2 sides
-    uint amtADesired = amtARepay.add(amt.amtAMin);
-    uint amtBDesired = amtBRepay.add(amt.amtBMin);
-
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
 
     uint[] memory minAmountsOut = new uint[](2);
     IBalancerPool(lp).exitPool(amtLPToRemove, minAmountsOut);
 
-    // 3.2 Minimize trading to repay debt
+    // 3.2 Minimize trading
+    uint amtADesired = amtARepay.add(amt.amtAMin);
+    uint amtBDesired = amtBRepay.add(amt.amtBMin);
+
     uint amtA = IERC20(tokenA).balanceOf(address(this));
     uint amtB = IERC20(tokenB).balanceOf(address(this));
 
-    if (amtA < amtARepay && amtB >= amtBRepay) {
+    if (amtA < amtADesired && amtB >= amtBDesired) {
       IBalancerPool(lp).swapExactAmountOut(
         tokenB,
-        amtB.sub(amtBRepay),
+        amtB.sub(amtBDesired),
         tokenA,
-        amtARepay.sub(amtA),
+        amtADesired.sub(amtA),
         uint(-1)
       );
-    } else if (amtA >= amtARepay && amtB < amtBRepay) {
+    } else if (amtA >= amtADesired && amtB < amtBDesired) {
       IBalancerPool(lp).swapExactAmountOut(
         tokenA,
-        amtA.sub(amtARepay),
+        amtA.sub(amtADesired),
         tokenB,
-        amtBRepay.sub(amtB),
+        amtBDesired.sub(amtB),
         uint(-1)
       );
     }
