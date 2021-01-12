@@ -71,4 +71,8 @@ interface IERC20Ex is IERC20 {
   function createTokens(uint) external returns (bool);
 
   function resolverAddressesRequired() external view returns (bytes32[] memory addresses);
+
+  function exchangeRateStored() external view returns (uint);
+
+  function accrueInterest() external returns (uint);
 }
