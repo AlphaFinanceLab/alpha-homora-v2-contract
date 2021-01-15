@@ -14,4 +14,8 @@ abstract contract IKeep3rV1Oracle {
   mapping(address => Observation[]) public observations;
 
   function observationLength(address pair) external view virtual returns (uint);
+
+  function workForFree() external virtual;
+
+  function updatePair(address) external virtual;
 }
