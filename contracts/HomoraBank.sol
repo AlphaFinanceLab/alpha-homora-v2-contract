@@ -319,22 +319,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     emit AddBank(token, cToken);
   }
 
-  /// @dev Upgrade cToken contract address to a new address. Must be used with care!
-  /// @param token The underlying token for the bank.
-  /// @param cToken The address of the cToken smart contract.
-  function setCToken(address token, address cToken) external onlyGov {
-    Bank storage bank = banks[token];
-    require(!cTokenInBank[cToken], 'cToken already exists');
-    require(bank.isListed, 'bank not exists');
-    cTokenInBank[bank.cToken] = false;
-    cTokenInBank[cToken] = true;
-    IERC20(bank.cToken).safeApprove(cToken, 0);
-    IERC20(token).safeApprove(cToken, 0);
-    IERC20(token).safeApprove(cToken, uint(-1));
-    bank.cToken = cToken;
-    emit SetCToken(token, cToken);
-  }
-
   /// @dev Set the oracle smart contract address.
   /// @param _oracle The new oracle smart contract address.
   function setOracle(IOracle _oracle) external onlyGov {
