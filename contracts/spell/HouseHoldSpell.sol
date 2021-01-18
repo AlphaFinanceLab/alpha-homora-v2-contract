@@ -26,6 +26,7 @@ contract HouseHoldSpell is BasicSpell {
   function repayETH(uint amount) external payable {
     doTransmitETH();
     doRepay(weth, amount);
+    doRefundETH();
   }
 
   function repay(address token, uint amount) external {
