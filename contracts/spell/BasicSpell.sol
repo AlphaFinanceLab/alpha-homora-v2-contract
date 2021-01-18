@@ -110,9 +110,6 @@ contract BasicSpell is ERC1155NaiveReceiver {
   /// @param amount The amount to take back.
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
-      if (amount == uint(-1)) {
-        (, , , amount) = bank.getPositionInfo(bank.POSITION_ID());
-      }
       bank.takeCollateral(address(werc20), uint(token), amount);
       werc20.burn(token, amount);
     }
