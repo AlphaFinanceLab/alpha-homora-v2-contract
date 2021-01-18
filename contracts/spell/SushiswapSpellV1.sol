@@ -15,8 +15,8 @@ contract SushiswapSpellV1 is BasicSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
-  IUniswapV2Factory public factory;
-  IUniswapV2Router02 public router;
+  IUniswapV2Factory public immutable factory;
+  IUniswapV2Router02 public immutable router;
 
   mapping(address => mapping(address => address)) public pairs;
 
