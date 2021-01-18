@@ -156,7 +156,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   /// @dev Trigger reserve resolve by borrowing the pending amount for reserve.
   /// @param token The underlying token to trigger reserve resolve.
-  function resolveReserve(address token) public lock {
+  function resolveReserve(address token) public lock poke(token) {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
     uint pendingReserve = bank.pendingReserve;
