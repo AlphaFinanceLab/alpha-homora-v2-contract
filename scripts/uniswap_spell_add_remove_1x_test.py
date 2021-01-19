@@ -181,8 +181,8 @@ def main():
     # check balance and pool reserves
     assert curABal - prevABal - borrow_usdt_amt == - \
         (curARes - prevARes), 'not all USDT tokens go to LP pool'
-    assert curBBal - prevBBal - borrow_weth_amt == - \
-        (curBRes - prevBRes), 'not all WETH tokens go to LP pool'
+    assert almostEqual(curBBal - prevBBal - borrow_weth_amt, -
+                       (curBRes - prevBRes)), 'not all WETH tokens go to LP pool'
 
     #####################################################################################
     print('=========================================================================')

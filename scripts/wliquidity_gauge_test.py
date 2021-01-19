@@ -75,15 +75,11 @@ def main():
     mint_tokens(wbtc, bob)
 
     # steal some LP from the staking pool
-    setup_transfer(lp_3pool, accounts.at(
-        '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), alice, 10**6 * 10**18)
-    setup_transfer(lp_btc, accounts.at(
-        '0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True), alice, 1 * 10**18)
+    mint_tokens(lp_3pool, alice)
+    mint_tokens(lp_btc, alice)
 
-    setup_transfer(lp_3pool, accounts.at(
-        '0x8038c01a0390a8c547446a0b2c18fc9aefecc10c', force=True), bob, 10**6 * 10**18)
-    setup_transfer(lp_btc, accounts.at(
-        '0x6a99e8961055b505d8d62c447220bb341ad769ee', force=True), bob, 1 * 10**18)
+    mint_tokens(lp_3pool, bob)
+    mint_tokens(lp_btc, bob)
 
     # register gauges
     wgauge.registerGauge(0, 0, {'from': admin})
