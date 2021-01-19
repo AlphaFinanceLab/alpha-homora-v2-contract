@@ -71,7 +71,7 @@ contract CurveSpellV1 is BasicSpell {
     uint minLPMint,
     uint pid,
     uint gid
-  ) external payable {
+  ) external {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 2, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -128,7 +128,7 @@ contract CurveSpellV1 is BasicSpell {
     uint minLPMint,
     uint pid,
     uint gid
-  ) external payable {
+  ) external {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 3, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -185,7 +185,7 @@ contract CurveSpellV1 is BasicSpell {
     uint minLPMint,
     uint pid,
     uint gid
-  ) external payable {
+  ) external {
     address pool = getPool(lp);
     require(ulTokens[lp].length == 4, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -239,7 +239,7 @@ contract CurveSpellV1 is BasicSpell {
     uint[2] calldata amtsRepay,
     uint amtLPRepay,
     uint[2] calldata amtsMin
-  ) external payable {
+  ) external {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -300,7 +300,7 @@ contract CurveSpellV1 is BasicSpell {
     uint[3] calldata amtsRepay,
     uint amtLPRepay,
     uint[3] calldata amtsMin
-  ) external payable {
+  ) external {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -361,7 +361,7 @@ contract CurveSpellV1 is BasicSpell {
     uint[4] calldata amtsRepay,
     uint amtLPRepay,
     uint[4] calldata amtsMin
-  ) external payable {
+  ) external {
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
