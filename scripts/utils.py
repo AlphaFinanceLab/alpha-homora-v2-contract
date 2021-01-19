@@ -70,7 +70,11 @@ def mint_tokens(token, to, amount=None):
         token.deposit({'from': to, 'value': amount})
     elif token == SUSD:
         target = interface.IERC20Ex(token.target())
-        issuer = '0x611Abc0e066A01AFf63910fC8935D164267eC6CF'
+        contract_issuer = target.resolverAddressesRequired()[2]
+        resolver = interface.IERC20Ex(target.resolver())
+        resolver_target = interface.IERC20Ex(resolver.target())
+        issuer = resolver_target.repository(contract_issuer)
+
         target.issue(to, amount, {'from': issuer})
     elif token == HUSD:
         issuer = '0xc2fbf9b9084e92f9649ca4cec9043daac9092539'
@@ -123,8 +127,12 @@ def mint_tokens(token, to, amount=None):
         token.createTokens(amount, {'from': owner})
         token.transfer(to, amount, {'from': owner})
     elif token == SEUR:
-        target = interface.IERC20Ex('0xc61b352fcc311ae6b0301459a970150005e74b3e')
-        issuer = '0x611Abc0e066A01AFf63910fC8935D164267eC6CF'
+        target = interface.IERC20Ex(token.target())
+        contract_issuer = target.resolverAddressesRequired()[2]
+        resolver = interface.IERC20Ex(target.resolver())
+        resolver_target = interface.IERC20Ex(resolver.target())
+        issuer = resolver_target.repository(contract_issuer)
+
         target.issue(to, amount, {'from': issuer})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')

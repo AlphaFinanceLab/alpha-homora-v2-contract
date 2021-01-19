@@ -75,4 +75,8 @@ interface IERC20Ex is IERC20 {
   function exchangeRateStored() external view returns (uint);
 
   function accrueInterest() external returns (uint);
+
+  function resolver() external view returns (address);
+
+  function repository(bytes32) external view returns (address);
 }
