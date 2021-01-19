@@ -24,7 +24,7 @@ contract ProxyOracle is IOracle, Governable {
     uint16 liqIncentive; // The liquidation incentive, multiplied by 1e4.
   }
 
-  IBaseOracle immutable source;
+  IBaseOracle public immutable source;
   mapping(address => Oracle) public oracles; // Mapping from token address to oracle info.
   mapping(address => bool) public whitelistERC1155;
 
