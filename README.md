@@ -1,6 +1,6 @@
 # Alpha Homora v2 🧙‍♂️
 
-## TL;DR. Here's what V2 will support:
+TL;DR. Here's what V2 will support:
 
 - Multi assets lending and borrowing (with huge leverage for stablecoin farming!)
 - More farming pools beyond just Uniswap (think Balancer, Curve, etc)
