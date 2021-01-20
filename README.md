@@ -68,7 +68,7 @@ Alpha Homora v2 is an upgrade from Alpha Homora v1, a leveraged yield-farming pr
    - Refund leftover assets to the user.
 
 > For **Uniswap** pools with staking rewards, use `addLiquidityWStakingRewards` function.
-> For **Sushiswap** pools with staking in master chef, use `addLiqudityWMasterChef` function.
+> For **Sushiswap** pools with staking in masterchef, use `addLiqudityWMasterChef` function.
 > For **Balancer** pools with staking rewards, use `addLiquidityWStakingRewards` function.
 > For all **Curve** pools, use `addLiquidity[N]` (where `N` is the number of underlying tokens). The spell will auto put in Curve's liquidity gauge.
 
@@ -77,4 +77,4 @@ Alpha Homora v2 is an upgrade from Alpha Homora v1, a leveraged yield-farming pr
 Prices are determined in ETH.
 
 - For regular assets, asset prices can be derived from Uniswap pool (with WETH), or Keep3r.
-- For LP tokens, asset prices will determine the optimal reserve proportion of the underlying assets, which are then used to compute the value of LP tokens. See `UniswapV2LPKP3ROracle.sol` for example implementation.
+- For LP tokens, asset prices will determine the optimal reserve proportion of the underlying assets, which are then used to compute the value of LP tokens. See `UniswapV2Oracle.sol` for example implementation.
