@@ -94,7 +94,8 @@ contract ProxyOracle is IOracle, Governable {
   function asETHCollateral(
     address token,
     uint id,
-    uint amount
+    uint amount,
+    address owner
   ) external view override returns (uint) {
     require(whitelistERC1155[token], 'bad token');
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
@@ -107,7 +108,11 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
-  function asETHBorrow(address token, uint amount) external view override returns (uint) {
+  function asETHBorrow(
+    address token,
+    uint amount,
+    address owner
+  ) external view override returns (uint) {
     Oracle memory oracle = oracles[token];
     require(oracle.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);

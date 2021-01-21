@@ -22,14 +22,21 @@ interface IOracle {
   /// @param token The ERC-1155 token to check the value.
   /// @param id The id of the token to check the value.
   /// @param amount The amount of tokens to check the value.
+  /// @param owner The owner of the token to check for collateral credit.
   function asETHCollateral(
     address token,
     uint id,
-    uint amount
+    uint amount,
+    address owner
   ) external view returns (uint);
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
   /// @param token The ERC-20 token to check the value.
   /// @param amount The amount of tokens to check the value.
-  function asETHBorrow(address token, uint amount) external view returns (uint);
+  /// @param owner The owner of the token to check for borrow credit.
+  function asETHBorrow(
+    address token,
+    uint amount,
+    address owner
+  ) external view returns (uint);
 }

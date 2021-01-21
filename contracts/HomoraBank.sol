@@ -276,7 +276,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
       return 0;
     } else {
       require(pos.collToken != address(0), 'bad collateral token');
-      return oracle.asETHCollateral(pos.collToken, pos.collId, size);
+      return oracle.asETHCollateral(pos.collToken, pos.collId, size, pos.owner);
     }
   }
 
@@ -285,6 +285,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function getBorrowETHValue(uint positionId) public view override returns (uint) {
     uint value = 0;
     Position storage pos = positions[positionId];
+    address owner = pos.owner;
     uint bitMap = pos.debtMap;
     uint idx = 0;
     while (bitMap > 0) {
@@ -293,7 +294,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
         uint share = pos.debtShareOf[token];
         Bank storage bank = banks[token];
         uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
-        value = value.add(oracle.asETHBorrow(token, debt));
+        value = value.add(oracle.asETHBorrow(token, debt, owner));
       }
       idx++;
       bitMap >>= 1;
