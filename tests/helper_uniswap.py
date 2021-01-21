@@ -17,7 +17,7 @@ def setup_uniswap(admin, alice, bank, werc20, urouter, ufactory, usdc, usdt, cha
         0,
         0,
         admin,
-        chain.time() + 60,
+        2**256-1,
         {'from': admin},
     )
 
