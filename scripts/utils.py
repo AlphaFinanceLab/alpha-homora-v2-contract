@@ -12,6 +12,7 @@ SUSD = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
 HUSD = '0xdf574c24545e5ffecb9a659c229253d4111d87e1'
 BUSD = '0x4fabb145d64652a948d72533023f6e7a623c7c53'
 DPI = '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b'
+YFI = '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e'
 YDAI = '0xC2cB1040220768554cf699b0d863A3cd4324ce32'
 YUSDT = '0xE6354ed5bC4b393a5Aad09f21c46E101e692d447'
 YUSDC = '0x26EA744E5B887E5205727f55dFBE8685e3b21951'
@@ -134,6 +135,10 @@ def mint_tokens(token, to, amount=None):
         issuer = resolver_target.repository(contract_issuer)
 
         target.issue(to, amount, {'from': issuer})
+    elif token == YFI:
+        governor = token.governance()
+        token.addMinter(to, {'from': governor})
+        token.mint(to, amount, {'from': to})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
         # Uniswap LP token
