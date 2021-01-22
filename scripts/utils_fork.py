@@ -51,7 +51,10 @@ def is_crv_lp(token):
     return token.name()[:8] == 'Curve.fi'
 
 
-def mint_tokens(token, to, amount=None, interface=None):
+def mint_tokens(token, to, interface=None, amount=None):
+    if interface is None:
+        interface = globals()['interface']
+
     if amount is None:
         # default is 1M tokens
         amount = 10**12 * 10**token.decimals()
