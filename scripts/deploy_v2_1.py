@@ -711,30 +711,30 @@ def main():
     deployer = accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
     # deployer = accounts.load('gh')
 
-    werc20 = WERC20.at('0xe28d9df7718b0b5ba69e01073fe82254a9ed2f98')
-    wmas = WMasterChef.at('0x373ae78a14577682591e088f2e78ef1417612c68')
-    wliq = WLiquidityGauge.at('0xfdb4f97953150e47c8606758c13e70b5a789a7ec')
-    wsindex = WStakingRewards.at('0x713df2ddda9c7d7bda98a9f8fcd82c06c50fbd90')
-    wsperp = WStakingRewards.at('0xc4635854480fff80f742645da0310e9e59795c63')
+    werc20 = WERC20.at('0xe28D9dF7718b0b5Ba69E01073fE82254a9eD2F98')
+    wmas = WMasterChef.at('0x373ae78a14577682591E088F2E78EF1417612c68')
+    wliq = WLiquidityGauge.at('0xfdB4f97953150e47C8606758C13e70b5a789a7ec')
+    wsindex = WStakingRewards.at('0x713df2DDDA9C7d7bDa98A9f8fCd82c06c50fbd90')
+    wsperp = WStakingRewards.at('0xC4635854480ffF80F742645da0310e9e59795c63')
 
-    kp3r_oracle = ERC20KP3ROracle.at('0x8e2a3777ab22e1c5f6d1ff2bcc6c4aa6ab1dea14')
-    core_oracle = CoreOracle.at('0x1e5bddd0cdf8839d6b27b34927869ef0ad7bf692')
+    kp3r_oracle = ERC20KP3ROracle.at('0x8E2A3777AB22e1c5f6d1fF2BcC6C4aA6aB1DeA14')
+    core_oracle = CoreOracle.at('0x1E5BDdd0cDF8839d6b27b34927869eF0AD7bf692')
     uni_oracle = UniswapV2Oracle.deploy(core_oracle, {'from': deployer})
-    bal_oracle = BalancerPairOracle.at('0x8f93b0aa2643bf74ab38d6a5910fa82d2da02134')
-    crv_oracle = CurveOracle.at('0x04de0e42b3b0483248deafe86c4f5428613b76ff')
+    bal_oracle = BalancerPairOracle.at('0x8F93B0AA2643bf74ab38d6a5910fA82D2da02134')
+    crv_oracle = CurveOracle.at('0x04DE0E42B3b0483248deafE86C4F5428613b76Ff')
     proxy_oracle = ProxyOracle.deploy(core_oracle, {'from': deployer})
     # re-route to new uniswap oracle
     core_oracle.setRoute([
         '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e',  # YFI
-        '0xa478c2975ab1ea89e8196811f51a7b7ade33eb11',  # UNI DAI-WETH
-        '0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852',  # UNI WETH-USDT
-        '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc',  # UNI USDC-WETH
-        '0xbb2b8038a1640196fbe3e38816f3e67cba72d940',  # UNI WBTC-WETH
-        '0x2fdbadf3c4d5a8666bc06645b8358ab803996e28',  # UNI WETH-YFI
-        '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # UNI DPI-WETH
-        '0x06da0fd433c1a5d7a4faa01111c044910a184553',  # SUSHI WETH-USDT
-        '0x088ee5007c98a9677165d78dd2109ae4a3d04d0c',  # SUSHI WETH-YFI
-        '0x34b13f8cd184f55d0bd4dd1fe6c07d46f245c7ed',  # SUSHI DPI-WETH
+        '0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11',  # UNI DAI-WETH
+        '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # UNI WETH-USDT
+        '0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc',  # UNI USDC-WETH
+        '0xBb2b8038a1640196FbE3e38816F3e67Cba72D940',  # UNI WBTC-WETH
+        '0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28',  # UNI WETH-YFI
+        '0x4d5ef58aAc27d99935E5b6B4A6778ff292059991',  # UNI DPI-WETH
+        '0x06da0fd433C1A5d7a4faa01111c044910A184553',  # SUSHI WETH-USDT
+        '0x088ee5007C98a9677165D78dD2109AE4a3D04d0C',  # SUSHI WETH-YFI
+        '0x34b13F8CD184F55d0Bd4Dd1fe6C07D46f245c7eD',  # SUSHI DPI-WETH
     ], [
         kp3r_oracle,
         uni_oracle,
@@ -750,25 +750,25 @@ def main():
 
     # re-set oracles
     proxy_oracle.setOracles([
-        '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',  # WETH
-        '0x6b175474e89094c44da98b954eedeac495271d0f',  # DAI
-        '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',  # USDC
-        '0xdac17f958d2ee523a2206206994597c13d831ec7',  # USDT
-        '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',  # WBTC
-        '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',  # DPI
+        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',  # WETH
+        '0x6B175474E89094C44Da98b954EedeAC495271d0F',  # DAI
+        '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',  # USDC
+        '0xdAC17F958D2ee523a2206206994597C13D831ec7',  # USDT
+        '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',  # WBTC
+        '0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b',  # DPI
         '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e',  # YFI
-        '0xa478c2975ab1ea89e8196811f51a7b7ade33eb11',  # UNI DAI-WETH
-        '0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852',  # UNI WETH-USDT
-        '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc',  # UNI USDC-WETH
-        '0xbb2b8038a1640196fbe3e38816f3e67cba72d940',  # UNI WBTC-WETH
-        '0x2fdbadf3c4d5a8666bc06645b8358ab803996e28',  # UNI WETH-YFI
-        '0x4d5ef58aac27d99935e5b6b4a6778ff292059991',  # UNI DPI-WETH
+        '0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11',  # UNI DAI-WETH
+        '0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852',  # UNI WETH-USDT
+        '0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc',  # UNI USDC-WETH
+        '0xBb2b8038a1640196FbE3e38816F3e67Cba72D940',  # UNI WBTC-WETH
+        '0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28',  # UNI WETH-YFI
+        '0x4d5ef58aAc27d99935E5b6B4A6778ff292059991',  # UNI DPI-WETH
         '0x06da0fd433C1A5d7a4faa01111c044910A184553',  # SUSHI WETH-USDT
-        '0x088ee5007c98a9677165d78dd2109ae4a3d04d0c',  # SUSHI WETH-YFI
-        '0x34b13f8cd184f55d0bd4dd1fe6c07d46f245c7ed',  # SUSHI DPI-WETH
-        '0x8b6e6e7b5b3801fed2cafd4b22b8a16c2f2db21a',  # BAL WETH-DAI 80-20
-        '0xf54025af2dc86809be1153c1f20d77adb7e8ecf4',  # BAL PERP-USDC 80-20
-        '0x6c3f90f043a72fa612cbac8115ee7e52bde6e490',  # CRV 3-POOL
+        '0x088ee5007C98a9677165D78dD2109AE4a3D04d0C',  # SUSHI WETH-YFI
+        '0x34b13F8CD184F55d0Bd4Dd1fe6C07D46f245c7eD',  # SUSHI DPI-WETH
+        '0x8b6e6E7B5b3801FEd2CaFD4b22b8A16c2F2Db21a',  # BAL WETH-DAI 80-20
+        '0xF54025aF2dc86809Be1153c1F20D77ADB7e8ecF4',  # BAL PERP-USDC 80-20
+        '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',  # CRV 3-POOL
     ], [
         [14350, 6970, 10250],  # WETH
         [10840, 9230, 10250],  # DAI
@@ -809,12 +809,12 @@ def main():
         {'from': deployer},
     )
     sushiswap_spell = SushiswapSpellV1.deploy(
-        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wmas,
+        bank, werc20, '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F', wmas,
         {'from': deployer},
     )
-    balancer_spell = BalancerSpellV1.at('0x15b79c184a6a8e19a4ca1f637081270343e4d15d')
+    balancer_spell = BalancerSpellV1.at('0x15B79c184A6a8E19a4CA1F637081270343E4D15D')
     curve_spell = CurveSpellV1.deploy(
-        bank, werc20, '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', wliq,
+        bank, werc20, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', wliq,
         {'from': deployer},
     )
 
