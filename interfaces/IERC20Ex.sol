@@ -79,4 +79,6 @@ interface IERC20Ex is IERC20 {
   function resolver() external view returns (address);
 
   function repository(bytes32) external view returns (address);
+
+  function underlying() external view returns (address);
 }

@@ -136,6 +136,13 @@ def main():
     bank.addBank(usdc, cyusdc, {'from': deployer})
 
     ###########################################################
+    # test cyToken
+
+    # for token in [cyusdt, cyusdc, cyyfi]:
+    #     assert interface.IERC20Ex(token).symbol() == 'cy' + \
+    #         interface.IERC20Ex(interface.IERC20Ex(token).underlying()).symbol()
+
+    ###########################################################
     # test safeboxes
 
     # dai = interface.IERC20Ex('0x6B175474E89094C44Da98b954EedeAC495271d0F')
