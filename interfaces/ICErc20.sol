@@ -1,6 +1,8 @@
 pragma solidity 0.6.12;
 
 interface ICErc20 {
+  function decimals() external returns (uint8);
+
   function underlying() external returns (address);
 
   function mint(uint mintAmount) external returns (uint);
