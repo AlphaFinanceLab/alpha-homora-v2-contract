@@ -31,7 +31,7 @@ contract SafeBox is Governable, ERC20, ReentrancyGuard {
     cToken = _cToken;
     uToken = _uToken;
     relayer = msg.sender;
-    _uToken.approve(address(_cToken), uint(-1));
+    _uToken.safeApprove(address(_cToken), uint(-1));
   }
 
   function setRelayer(address _relayer) external onlyGov {
