@@ -26,7 +26,12 @@ def main():
 
     # approve dai
     dai.approve(safebox, 2**256-1, {'from': alice})
-    dai.approve(safebox, 2**256-1, {'from': bob})
+    dai.approve(cydai, 2**256-1, {'from': bob})
+
+    #################################################################
+    # check decimals
+
+    assert safebox.decimals() == cydai.decimals(), 'incorrect decimals'
 
     #################################################################
     # deposit
@@ -36,32 +41,29 @@ def main():
     prevDAIAlice = dai.balanceOf(alice)
     prevDAIBob = dai.balanceOf(bob)
     prevIBDAIAlice = safebox.balanceOf(alice)
-    prevIBDAIBob = safebox.balanceOf(bob)
+    prevcyDAIBob = cydai.balanceOf(bob)
 
     alice_amt = 10**18
     bob_amt = 10**18
     safebox.deposit(alice_amt, {'from': alice})
     chain.mine(20)
-    safebox.deposit(bob_amt, {'from': bob})
+    cydai.mint(bob_amt, {'from': bob})
 
     curDAIAlice = dai.balanceOf(alice)
     curDAIBob = dai.balanceOf(bob)
     curIBDAIAlice = safebox.balanceOf(alice)
-    curIBDAIBob = safebox.balanceOf(bob)
+    curcyDAIBob = cydai.balanceOf(bob)
 
     print('∆ dai alice', curDAIAlice - prevDAIAlice)
     print('∆ dai bob', curDAIBob - prevDAIBob)
     print('∆ ibDAI bal alice', curIBDAIAlice - prevIBDAIAlice)
-    print('∆ ibDAI bal bob', curIBDAIBob - prevIBDAIBob)
+    print('∆ cyDAI bal bob', curcyDAIBob - prevcyDAIBob)
     print('calculated ibDAI alice', alice_amt * 10**18 // cydai.exchangeRateStored())
-    print('calculated ibDAI bob', bob_amt * 10**18 // cydai.exchangeRateStored())
 
     assert curDAIAlice - prevDAIAlice == -alice_amt, 'incorrect alice amount'
     assert curDAIBob - prevDAIBob == -bob_amt, 'incorrect bob amount'
     assert almostEqual(curIBDAIAlice - prevIBDAIAlice,
-                       alice_amt * 10**18 // cydai.exchangeRateStored())
-    assert almostEqual(curIBDAIBob - prevIBDAIBob,
-                       bob_amt * 10**18 // cydai.exchangeRateStored())
+                       curcyDAIBob - prevcyDAIBob)
 
     chain.mine(200)
 
@@ -72,32 +74,32 @@ def main():
 
     alice_withdraw_1 = safebox.balanceOf(alice) // 3
     alice_withdraw_2 = safebox.balanceOf(alice) - alice_withdraw_1
-    bob_withdraw = safebox.balanceOf(bob)
+    bob_withdraw = cydai.balanceOf(bob) // 3
 
     prevDAIAlice = dai.balanceOf(alice)
     prevDAIBob = dai.balanceOf(bob)
     prevIBDAIAlice = safebox.balanceOf(alice)
-    prevIBDAIBob = safebox.balanceOf(bob)
+    prevcyDAIBob = cydai.balanceOf(bob)
 
     safebox.withdraw(alice_withdraw_1, {'from': alice})
     chain.mine(20)
-    safebox.withdraw(bob_withdraw, {'from': bob})
+    cydai.redeem(bob_withdraw, {'from': bob})
 
     curDAIAlice = dai.balanceOf(alice)
     curDAIBob = dai.balanceOf(bob)
     curIBDAIAlice = safebox.balanceOf(alice)
-    curIBDAIBob = safebox.balanceOf(bob)
+    curcyDAIBob = cydai.balanceOf(bob)
 
     print('∆ dai alice', curDAIAlice - prevDAIAlice)
     print('∆ dai bob', curDAIBob - prevDAIBob)
     print('∆ ibDAI bal alice', curIBDAIAlice - prevIBDAIAlice)
-    print('∆ ibDAI bal bob', curIBDAIBob - prevIBDAIBob)
+    print('∆ cyDAI bal bob', curcyDAIBob - prevcyDAIBob)
 
     assert almostEqual(curDAIAlice - prevDAIAlice, alice_amt //
                        3), 'incorrect alice withdraw dai amount'
-    assert almostEqual(curDAIBob - prevDAIBob, bob_amt), 'incorrect bob withdraw dai amount'
-    assert curIBDAIAlice - prevIBDAIAlice == -alice_withdraw_1, 'incorrect alice ∆ibDAI'
-    assert curIBDAIBob - prevIBDAIBob == -bob_withdraw, 'incorrect bob ∆ibDAI'
+    assert almostEqual(curDAIBob - prevDAIBob, bob_amt // 3), 'incorrect bob withdraw dai amount'
+    assert almostEqual(curIBDAIAlice - prevIBDAIAlice, curcyDAIBob -
+                       prevcyDAIBob), 'incorrect withdraw amount'
 
     chain.mine(20)
 
@@ -112,8 +114,7 @@ def main():
     print('∆ dai alice', curDAIAlice - prevDAIAlice)
     print('∆ dai bob', curDAIBob - prevDAIBob)
     print('∆ ibDAI bal alice', curIBDAIAlice - prevIBDAIAlice)
-    print('∆ ibDAI bal bob', curIBDAIBob - prevIBDAIBob)
+    print('∆ ibDAI bal bob', curcyDAIBob - prevcyDAIBob)
 
     assert almostEqual(curDAIAlice - prevDAIAlice, alice_amt * 2 //
                        3), 'incorrect alice second withdraw dai amount'
-    assert curIBDAIAlice - prevIBDAIAlice == -alice_withdraw_2, 'incorrect alice second ∆ibDAI '

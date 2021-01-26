@@ -24,40 +24,44 @@ def main():
     mint_tokens(weth, alice)
     mint_tokens(weth, bob)
 
+    weth.approve(cyweth, 2**256-1, {'from': bob})
+
+    #################################################################
+    # check decimals
+
+    assert safebox.decimals() == cyweth.decimals(), 'incorrect decimals'
+
     #################################################################
     # deposit
     print('====================================')
     print('Case 1. deposit')
 
     prevETHAlice = alice.balance()
-    prevETHBob = bob.balance()
+    prevWETHBob = weth.balanceOf(bob)
     prevIBETHAlice = safebox.balanceOf(alice)
-    prevIBETHBob = safebox.balanceOf(bob)
+    prevcyWETHBob = cyweth.balanceOf(bob)
 
     alice_amt = 10**18
     bob_amt = 10**18
     safebox.deposit({'from': alice, 'value': alice_amt})
     chain.mine(20)
-    safebox.deposit({'from': bob, 'value': bob_amt})
+    cyweth.mint(bob_amt, {'from': bob})
 
     curETHAlice = alice.balance()
-    curETHBob = bob.balance()
+    curWETHBob = weth.balanceOf(bob)
     curIBETHAlice = safebox.balanceOf(alice)
-    curIBETHBob = safebox.balanceOf(bob)
+    curcyWETHBob = cyweth.balanceOf(bob)
 
     print('∆ eth alice', curETHAlice - prevETHAlice)
-    print('∆ eth bob', curETHBob - prevETHBob)
+    print('∆ weth bob', curWETHBob - prevWETHBob)
     print('∆ ibETH bal alice', curIBETHAlice - prevIBETHAlice)
-    print('∆ ibETH bal bob', curIBETHBob - prevIBETHBob)
+    print('∆ cyWETH bal bob', curcyWETHBob - prevcyWETHBob)
     print('calculated ibETH alice', alice_amt * 10**18 // cyweth.exchangeRateStored())
     print('calculated ibETH bob', bob_amt * 10**18 // cyweth.exchangeRateStored())
 
     assert curETHAlice - prevETHAlice == -alice_amt, 'incorrect alice amount'
-    assert curETHBob - prevETHBob == -bob_amt, 'incorrect bob amount'
-    assert almostEqual(curIBETHAlice - prevIBETHAlice,
-                       alice_amt * 10**18 // cyweth.exchangeRateStored())
-    assert almostEqual(curIBETHBob - prevIBETHBob,
-                       bob_amt * 10**18 // cyweth.exchangeRateStored())
+    assert curWETHBob - prevWETHBob == -bob_amt, 'incorrect bob amount'
+    assert almostEqual(curIBETHAlice - prevIBETHAlice, curcyWETHBob - prevcyWETHBob)
 
     chain.mine(200)
 
@@ -68,32 +72,32 @@ def main():
 
     alice_withdraw_1 = safebox.balanceOf(alice) // 3
     alice_withdraw_2 = safebox.balanceOf(alice) - alice_withdraw_1
-    bob_withdraw = safebox.balanceOf(bob)
+    bob_withdraw = cyweth.balanceOf(bob) // 3
 
     prevETHAlice = alice.balance()
-    prevETHBob = bob.balance()
+    prevWETHBob = weth.balanceOf(bob)
     prevIBETHAlice = safebox.balanceOf(alice)
-    prevIBETHBob = safebox.balanceOf(bob)
+    prevcyWETHBob = cyweth.balanceOf(bob)
 
     safebox.withdraw(alice_withdraw_1, {'from': alice})
     chain.mine(20)
-    safebox.withdraw(bob_withdraw, {'from': bob})
+    cyweth.redeem(bob_withdraw, {'from': bob})
 
     curETHAlice = alice.balance()
-    curETHBob = bob.balance()
+    curWETHBob = weth.balanceOf(bob)
     curIBETHAlice = safebox.balanceOf(alice)
-    curIBETHBob = safebox.balanceOf(bob)
+    curcyWETHBob = cyweth.balanceOf(bob)
 
     print('∆ eth alice', curETHAlice - prevETHAlice)
-    print('∆ eth bob', curETHBob - prevETHBob)
+    print('∆ weth bob', curWETHBob - prevWETHBob)
     print('∆ ibETH bal alice', curIBETHAlice - prevIBETHAlice)
-    print('∆ ibETH bal bob', curIBETHBob - prevIBETHBob)
+    print('∆ cyWETH bal bob', curcyWETHBob - prevcyWETHBob)
 
     assert almostEqual(curETHAlice - prevETHAlice, alice_amt //
                        3), 'incorrect alice withdraw eth amount'
-    assert almostEqual(curETHBob - prevETHBob, bob_amt), 'incorrect bob withdraw eth amount'
-    assert curIBETHAlice - prevIBETHAlice == -alice_withdraw_1, 'incorrect alice ∆ibETH'
-    assert curIBETHBob - prevIBETHBob == -bob_withdraw, 'incorrect bob ∆ibETH'
+    assert almostEqual(curWETHBob - prevWETHBob, bob_amt // 3), 'incorrect bob withdraw eth amount'
+    assert almostEqual(curIBETHAlice - prevIBETHAlice, curcyWETHBob -
+                       prevcyWETHBob), 'incorrect withdraw amount'
 
     chain.mine(20)
 
@@ -106,10 +110,7 @@ def main():
     curIBETHAlice = safebox.balanceOf(alice)
 
     print('∆ eth alice', curETHAlice - prevETHAlice)
-    print('∆ eth bob', curETHBob - prevETHBob)
     print('∆ ibETH bal alice', curIBETHAlice - prevIBETHAlice)
-    print('∆ ibETH bal bob', curIBETHBob - prevIBETHBob)
 
     assert almostEqual(curETHAlice - prevETHAlice, alice_amt * 2 //
-                       3), 'incorrect alice second withdraw eth amount'
-    assert curIBETHAlice - prevIBETHAlice == -alice_withdraw_2, 'incorrect alice second ∆ibETH '
+                       3), 'incorrect second withdraw'
