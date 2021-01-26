@@ -26,6 +26,7 @@ contract SafeBox is Governable, ERC20, ReentrancyGuard {
     string memory _name,
     string memory _symbol
   ) public ERC20(_name, _symbol) {
+    _setupDecimals(_cToken.decimals());
     IERC20 _uToken = IERC20(_cToken.underlying());
     __Governable__init();
     cToken = _cToken;
