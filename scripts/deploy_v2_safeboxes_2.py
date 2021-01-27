@@ -121,40 +121,49 @@ def main():
         '0x76Eb2FE28b36B3ee97F3Adae0C69606eeDB2A37c', 'Interest Bearing USD Coin v2', 'ibUSDCv2', {'from': deployer})
     safebox_yfi = SafeBox.deploy(
         '0xFa3472f7319477c9bFEcdD66E4B948569E7621b9', 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer})
+    safebox_dpi = SafeBox.deploy(
+        '0x7736Ffb07104c0C400Bb0CC9A7C228452A732992', 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer})
+
+    # add bank dpi
+    dpi = interface.IERC20Ex('0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
+
+    cydpi = '0x7736Ffb07104c0C400Bb0CC9A7C228452A732992'
+
+    bank = HomoraBank.at('0x5f5Cd91070960D13ee549C9CC47e7a4Cd00457bb')
+    bank.addBank(dpi, cydpi, {'from': deployer})
 
     ###########################################################
     # setup for testing
 
+    # dai = interface.IERC20Ex('0x6B175474E89094C44Da98b954EedeAC495271d0F')
     # usdt = interface.IERC20Ex('0xdAC17F958D2ee523a2206206994597C13D831ec7')
     # usdc = interface.IERC20Ex('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')
     # yfi = interface.IERC20Ex('0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e')
+    # dpi = interface.IERC20Ex('0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
 
     # cyusdt = '0x48759F220ED983dB51fA7A8C0D2AAb8f3ce4166a'
     # cyusdc = '0x76Eb2FE28b36B3ee97F3Adae0C69606eeDB2A37c'
     # cyyfi = '0xFa3472f7319477c9bFEcdD66E4B948569E7621b9'
+    # cydpi = '0x7736Ffb07104c0C400Bb0CC9A7C228452A732992'
 
     # bank = HomoraBank.at('0x5f5Cd91070960D13ee549C9CC47e7a4Cd00457bb')
 
     ###########################################################
     # test cyToken
 
-    # for token in [cyusdt, cyusdc, cyyfi]:
+    # for token in [cyusdt, cyusdc, cyyfi, cydpi]:
     #     assert interface.IERC20Ex(token).symbol() == 'cy' + \
     #         interface.IERC20Ex(interface.IERC20Ex(token).underlying()).symbol()
 
     ###########################################################
     # test safeboxes
 
-    # dai = interface.IERC20Ex('0x6B175474E89094C44Da98b954EedeAC495271d0F')
-    # usdt = interface.IERC20Ex('0xdAC17F958D2ee523a2206206994597C13D831ec7')
-    # usdc = interface.IERC20Ex('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')
-    # yfi = interface.IERC20Ex('0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e')
-
     # test_safebox_eth(safebox_eth)
     # test_safebox(dai, safebox_dai)
     # test_safebox(usdt, safebox_usdt)
     # test_safebox(usdc, safebox_usdc)
     # test_safebox(yfi, safebox_yfi)
+    # test_safebox(dpi, safebox_dpi)
 
     ###########################################################
     # test banks with uniswap spell
@@ -162,3 +171,10 @@ def main():
 
     # test_bank(usdt, bank)
     # test_bank(usdc, bank)
+
+    # alice = accounts[1]
+    # mint_tokens(dpi, alice)
+    # dpi.approve(cydpi, 2**256-1, {'from': alice})
+    # interface.IERC20Ex(cydpi).mint(1000000*10**dpi.decimals(), {'from': alice})
+
+    # test_bank(dpi, bank)
