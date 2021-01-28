@@ -10,7 +10,7 @@ interface IbETHRouterV2IbETHv2 is IERC20 {
   function withdraw(uint amount) external;
 }
 
-interface IBETHRouterV2UniswapPair is IERC20 {
+interface IbETHRouterV2UniswapPair is IERC20 {
   function token0() external view returns (address);
 
   function getReserves()
@@ -71,7 +71,7 @@ contract IbETHRouterV2 {
 
   IERC20 public immutable alpha;
   IbETHRouterV2IbETHv2 public immutable ibETHv2;
-  IBETHRouterV2UniswapPair public immutable lpToken;
+  IbETHRouterV2UniswapPair public immutable lpToken;
   IbETHRouterV2UniswapRouter public immutable router;
 
   constructor(
@@ -79,8 +79,8 @@ contract IbETHRouterV2 {
     IbETHRouterV2IbETHv2 _ibETHv2,
     IbETHRouterV2UniswapRouter _router
   ) public {
-    IBETHRouterV2UniswapPair _lpToken =
-      IBETHRouterV2UniswapPair(
+    IbETHRouterV2UniswapPair _lpToken =
+      IbETHRouterV2UniswapPair(
         IbETHRouterV2UniswapFactory(_router.factory()).getPair(address(_alpha), address(_ibETHv2))
       );
     alpha = _alpha;
