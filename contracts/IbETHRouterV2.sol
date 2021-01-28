@@ -266,7 +266,7 @@ contract IbETHRouterV2 {
     ibETHv2.withdraw(ibETHv2.balanceOf(address(this)));
     uint ethBalance = address(this).balance;
     require(ethBalance >= minETH, '!minETH');
-    (bool success, ) = to.call{value: address(this).balance}(new bytes(0));
+    (bool success, ) = to.call{value: ethBalance}(new bytes(0));
     require(success, '!eth');
   }
 
