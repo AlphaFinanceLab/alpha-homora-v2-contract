@@ -18,6 +18,10 @@ contract MockCErc20 is ICErc20 {
     token = _token;
   }
 
+  function decimals() external override returns (uint8) {
+    return 8;
+  }
+
   function underlying() external override returns (address) {
     return address(token);
   }
