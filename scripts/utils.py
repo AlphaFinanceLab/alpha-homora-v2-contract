@@ -12,6 +12,9 @@ SUSD = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
 HUSD = '0xdf574c24545e5ffecb9a659c229253d4111d87e1'
 BUSD = '0x4fabb145d64652a948d72533023f6e7a623c7c53'
 DPI = '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b'
+SNX = '0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F'
+UNI = '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'
+SUSHI = '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2'
 YFI = '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e'
 YDAI = '0xC2cB1040220768554cf699b0d863A3cd4324ce32'
 YUSDT = '0xE6354ed5bC4b393a5Aad09f21c46E101e692d447'
@@ -139,6 +142,27 @@ def mint_tokens(token, to, amount=None):
         governor = token.governance()
         token.addMinter(to, {'from': governor})
         token.mint(to, amount, {'from': to})
+    elif token == SNX:
+        # buy from Sushiswap
+        router = interface.IUniswapV2Router02('0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f')
+
+        mint_tokens(interface.IERC20Ex(WETH), to)
+        interface.IERC20Ex(WETH).approve(router, 2**256-1, {'from': to})
+        path = [WETH, SNX]
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            10**18, 0, path, to, 2**256-1, {'from': to})
+    elif token == UNI:
+        router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
+
+        mint_tokens(interface.IERC20Ex(WETH), to)
+        interface.IERC20Ex(WETH).approve(router, 2**256-1, {'from': to})
+        path = [WETH, UNI]
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            10**18, 0, path, to, 2**256-1, {'from': to})
+
+    elif token == SUSHI:
+        owner = token.owner()
+        token.mint(to, amount, {'from': owner})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
         # Uniswap LP token
