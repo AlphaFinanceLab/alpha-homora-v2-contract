@@ -87,4 +87,6 @@ interface IERC20Ex is IERC20 {
   function redeem(uint) external returns (uint);
 
   function minter() external view returns (address);
+
+  function borrow(uint) external returns (uint);
 }
