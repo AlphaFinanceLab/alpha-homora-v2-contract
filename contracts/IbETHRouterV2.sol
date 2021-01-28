@@ -224,11 +224,13 @@ contract IbETHRouterV2 {
         alphaReserve
       );
     }
-    address[] memory path = new address[](2);
-    (path[0], path[1]) = isReversed
-      ? (address(alpha), address(ibETHv2))
-      : (address(ibETHv2), address(alpha));
-    router.swapExactTokensForTokens(swapAmt, 0, path, address(this), deadline);
+    if (swapAmt > 0) {
+      address[] memory path = new address[](2);
+      (path[0], path[1]) = isReversed
+        ? (address(alpha), address(ibETHv2))
+        : (address(ibETHv2), address(alpha));
+      router.swapExactTokensForTokens(swapAmt, 0, path, address(this), deadline);
+    }
     (, , uint liquidity) =
       router.addLiquidity(
         address(alpha),
