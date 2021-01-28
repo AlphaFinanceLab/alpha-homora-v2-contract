@@ -27,6 +27,7 @@ DFD = '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A'
 DUSD = '0x5bc25f649fc4e26069ddf4cf4010f9f706c23831'
 EURS = '0xdb25f211ab05b1c97d595516f45794528a807ad8'
 SEUR = '0xd71ecff9342a5ced620049e616c5035f1db98620'
+ALPHA = '0xa1faa113cbe53436df28ff0aee54275c13b40975'
 
 
 def is_uni_lp(token):
@@ -163,6 +164,10 @@ def mint_tokens(token, to, amount=None):
     elif token == SUSHI:
         owner = token.owner()
         token.mint(to, amount, {'from': owner})
+    elif token == ALPHA:
+        owner = token.owner()
+        token.mint(amount, {'from': owner})
+        token.transfer(to, amount, {'from': owner})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
         # Uniswap LP token
