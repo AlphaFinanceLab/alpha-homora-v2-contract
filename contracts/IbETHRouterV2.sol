@@ -153,9 +153,11 @@ contract IbETHRouterV2 {
     address[] memory path = new address[](2);
     path[0] = address(alpha);
     path[1] = address(ibETHv2);
-    router.swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), deadline);
+    router.swapExactTokensForTokens(amountIn, 0, path, address(this), deadline);
     ibETHv2.withdraw(ibETHv2.balanceOf(address(this)));
-    (bool success, ) = to.call{value: address(this).balance}(new bytes(0));
+    uint ethBalance = address(this).balance;
+    require(ethBalance >= amountOutMin, '!amountOutMin');
+    (bool success, ) = to.call{value: ethBalance}(new bytes(0));
     require(success, '!eth');
   }
 
