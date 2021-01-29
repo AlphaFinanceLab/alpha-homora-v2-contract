@@ -4,6 +4,7 @@ try:
 except:
     pass
 
+
 USDT = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 DAI = '0x6b175474e89094c44da98b954eedeac495271d0f'
@@ -15,6 +16,10 @@ SUSD = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
 HUSD = '0xdf574c24545e5ffecb9a659c229253d4111d87e1'
 BUSD = '0x4fabb145d64652a948d72533023f6e7a623c7c53'
 DPI = '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b'
+SNX = '0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F'
+UNI = '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'
+SUSHI = '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2'
+YFI = '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e'
 YDAI = '0xC2cB1040220768554cf699b0d863A3cd4324ce32'
 YUSDT = '0xE6354ed5bC4b393a5Aad09f21c46E101e692d447'
 YUSDC = '0x26EA744E5B887E5205727f55dFBE8685e3b21951'
@@ -26,13 +31,7 @@ DFD = '0x20c36f062a31865bED8a5B1e512D9a1A20AA333A'
 DUSD = '0x5bc25f649fc4e26069ddf4cf4010f9f706c23831'
 EURS = '0xdb25f211ab05b1c97d595516f45794528a807ad8'
 SEUR = '0xd71ecff9342a5ced620049e616c5035f1db98620'
-
-UNI_WETH_DAI = '0xa478c2975ab1ea89e8196811f51a7b7ade33eb11'
-UNI_WETH_WBTC = '0xbb2b8038a1640196fbe3e38816f3e67cba72d940'
-UNI_WETH_USDT = '0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852'
-UNI_WETH_USDC = '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc'
-UNI_WETH_DPI = '0x4d5ef58aac27d99935e5b6b4a6778ff292059991'
-UNI_WETH_PERP = '0xf66369997ae562bc9eec2ab9541581252f9ca383'
+ALPHA = '0xa1faa113cbe53436df28ff0aee54275c13b40975'
 
 
 def is_uni_lp(token):
@@ -83,7 +82,11 @@ def mint_tokens(token, to, interface=None, amount=None):
         token.deposit({'from': to, 'value': amount})
     elif token == SUSD:
         target = interface.IERC20Ex(token.target())
-        issuer = '0x611Abc0e066A01AFf63910fC8935D164267eC6CF'
+        contract_issuer = target.resolverAddressesRequired()[2]
+        resolver = interface.IERC20Ex(target.resolver())
+        resolver_target = interface.IERC20Ex(resolver.target())
+        issuer = resolver_target.repository(contract_issuer)
+
         target.issue(to, amount, {'from': issuer})
     elif token == HUSD:
         issuer = '0xc2fbf9b9084e92f9649ca4cec9043daac9092539'
@@ -136,9 +139,42 @@ def mint_tokens(token, to, interface=None, amount=None):
         token.createTokens(amount, {'from': owner})
         token.transfer(to, amount, {'from': owner})
     elif token == SEUR:
-        target = interface.IERC20Ex('0xc61b352fcc311ae6b0301459a970150005e74b3e')
-        issuer = '0x611Abc0e066A01AFf63910fC8935D164267eC6CF'
+        target = interface.IERC20Ex(token.target())
+        contract_issuer = target.resolverAddressesRequired()[2]
+        resolver = interface.IERC20Ex(target.resolver())
+        resolver_target = interface.IERC20Ex(resolver.target())
+        issuer = resolver_target.repository(contract_issuer)
+
         target.issue(to, amount, {'from': issuer})
+    elif token == YFI:
+        governor = token.governance()
+        token.addMinter(to, {'from': governor})
+        token.mint(to, amount, {'from': to})
+    elif token == SNX:
+        # buy from Sushiswap
+        router = interface.IUniswapV2Router02('0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f')
+
+        mint_tokens(interface.IERC20Ex(WETH), to)
+        interface.IERC20Ex(WETH).approve(router, 2**256-1, {'from': to})
+        path = [WETH, SNX]
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            10**18, 0, path, to, 2**256-1, {'from': to})
+    elif token == UNI:
+        router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
+
+        mint_tokens(interface.IERC20Ex(WETH), to)
+        interface.IERC20Ex(WETH).approve(router, 2**256-1, {'from': to})
+        path = [WETH, UNI]
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            10**18, 0, path, to, 2**256-1, {'from': to})
+
+    elif token == SUSHI:
+        owner = token.owner()
+        token.mint(to, amount, {'from': owner})
+    elif token == ALPHA:
+        owner = token.owner()
+        token.mint(amount, {'from': owner})
+        token.transfer(to, amount, {'from': owner})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
         # Uniswap LP token
@@ -212,31 +248,3 @@ def mint_tokens(token, to, interface=None, amount=None):
         interface.ICurvePool(pool).add_liquidity[desc](amts, 0, {'from': to})
     else:
         raise Exception('unsupported token')
-
-
-def update_kp3r_all(interface):
-    if interface is None:
-        print('===')
-        interface = globals()['interface']
-
-    keeper_oracle = interface.IKeep3rV1Oracle('0x73353801921417F465377c8d898c6f4C0270282C')
-    keeper_oracle.workForFree({'from': '0xfe56a0dbdad44dd14e4d560632cc842c8a13642b'})
-    print('work done 1')
-    chain.sleep(1810)
-    keeper_oracle.workForFree({'from': '0xfe56a0dbdad44dd14e4d560632cc842c8a13642b'})
-    print('work done 2')
-
-
-def update_kp3r_pairs(interface, pairs):
-    if interface is None:
-        print('===')
-        interface = globals()['interface']
-
-    keeper_oracle = interface.IKeep3rV1Oracle('0x73353801921417F465377c8d898c6f4C0270282C')
-    print('doing 1st tx')
-    for pair in pairs:
-        keeper_oracle.updatePair(pair, {'from': '0xfe56a0dbdad44dd14e4d560632cc842c8a13642b'})
-    chain.sleep(1810)
-    print('doing 2nd tx')
-    for pair in pairs:
-        keeper_oracle.updatePair(pair, {'from': '0xfe56a0dbdad44dd14e4d560632cc842c8a13642b'})
