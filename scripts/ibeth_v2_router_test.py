@@ -34,8 +34,8 @@ def main():
     #######################################################################
     # setup liquidity first time
 
-    init_alpha_amt = 10000000 * 10**alpha.decimals()
-    init_ibethv2_amt = 1000 * 10**ibethv2.decimals()
+    init_alpha_amt = 1000 * 10**alpha.decimals()
+    init_ibethv2_amt = 1 * 10**ibethv2.decimals()
 
     ibethv2.transfer(pair, init_ibethv2_amt, {'from': admin})
     alpha.transfer(pair, init_alpha_amt, {'from': admin})
@@ -46,9 +46,15 @@ def main():
     ibethv2.deposit({'from': admin, 'value': '1 ether'})
     curIbethv2Bal = ibethv2.balanceOf(admin)
     ibethv2_eth_rate = 10**18 / (curIbethv2Bal - prevIbethv2Bal)
+    print('conversion rate', ibethv2_eth_rate)
+    print('init ibethv2 amt', init_ibethv2_amt * ibethv2_eth_rate)
+    print('deposited', 10**18, 'ether')
+    print('received', curIbethv2Bal - prevIbethv2Bal, 'ibethv2')
 
     ########################################################################
     # check state vars
+    print('=======================================')
+    print('Case. check state vars')
 
     assert ibethv2_router.alpha() == alpha
     assert ibethv2_router.ibETHv2() == ibethv2
@@ -57,8 +63,10 @@ def main():
 
     #######################################################################
     # test swap exact ETH to ALPHA
+    print('===========================================')
+    print('Case. test swap exact eth to alpha')
 
-    eth_amt = 10**15
+    eth_amt = 10**12
 
     prevETHBal = alice.balance()
     prevAlphaBal = alpha.balanceOf(alice)
@@ -78,6 +86,8 @@ def main():
 
     #######################################################################
     # test swap exact ALPHA to ETH
+    print('=========================================')
+    print('Case. swap exact alpha to eth')
 
     alpha_amt = 10**18
 
@@ -100,9 +110,11 @@ def main():
 
     #######################################################################
     # test add liquidity eth alpha optimal
+    print('=========================================')
+    print('Case. test add liquidity eth alpha optimal')
 
-    alpha_amt = 1000 * 10**18
-    eth_amt = 10**18
+    alpha_amt = 100000 * 10**18
+    eth_amt = 1000 * 10**18
 
     prevETHBal = alice.balance()
     prevAlphaBal = alpha.balanceOf(alice)
@@ -119,6 +131,7 @@ def main():
     curLPBal = pair.balanceOf(alice)
 
     new_r0, new_r1, _ = pair.getReserves()
+
     expected_lp = (sqrt((new_r0 * new_r1) / (r0 * r1)) - 1) * prevLPSupply
 
     print('prev total lp supply', prevLPSupply)
@@ -127,15 +140,20 @@ def main():
     print('∆ lp', curLPBal - prevLPBal)
     print('calc lp', expected_lp)
 
+    assert almostEqual(new_r0, r0 + alpha_amt), 'incorrect r0 new amt'
+    assert almostEqual(new_r1, r1 + eth_amt / ibethv2_eth_rate), 'incorrect r1 new amt'
+
     assert curETHBal - prevETHBal == -eth_amt, 'incorrect ETH add'
     assert curAlphaBal - prevAlphaBal == -alpha_amt, 'incorrect Alpha add'
     assert almostEqual(curLPBal - prevLPBal, expected_lp), 'incorrect LP received'
 
     # ###########################################################################
     # # test add liquidity ibethv2 alpha optimal
+    print('=========================================')
+    print('Case. test add liquidity ibethv2 alpha optimal')
 
-    alpha_amt = 10**18
-    ibethv2_amt = 10**5
+    alpha_amt = 1000000 * 10**18
+    ibethv2_amt = 1000 * 10**5
 
     prevETHBal = alice.balance()
     prevIbethv2Bal = ibethv2.balanceOf(alice)
@@ -161,6 +179,9 @@ def main():
     print('cur reserves', new_r0, new_r1)
     print('∆ lp', curLPBal - prevLPBal)
     print('calc lp', expected_lp)
+
+    assert almostEqual(new_r0, r0 + alpha_amt), 'incorrect r0 new amt'
+    assert almostEqual(new_r1, r1 + ibethv2_amt), 'incorrect r1 new amt'
 
     assert curIbethv2Bal - prevIbethv2Bal == -ibethv2_amt, 'incorrect ibethv2 add'
     assert curAlphaBal - prevAlphaBal == -alpha_amt, 'incorrect Alpha add'
@@ -203,7 +224,7 @@ def main():
     print('===============================================')
     print('Case. test remove liquidity alpha only')
 
-    lp_amt = pair.balanceOf(alice) // 3
+    lp_amt = pair.balanceOf(alice) // 10**3
 
     prevETHBal = alice.balance()
     prevIbethv2Bal = ibethv2.balanceOf(alice)
