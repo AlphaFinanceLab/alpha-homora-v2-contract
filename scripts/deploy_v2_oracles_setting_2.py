@@ -793,52 +793,30 @@ def main():
 
     # re-set oracles
     oracle_params = [
-        # base tokens
-        [Tokens.weth, [12616, 7927, 10250]],
-        [Tokens.dai, [10525, 9502, 10250]],
-        [Tokens.usdc, [10525, 9502, 10250]],
-        [Tokens.usdt, [10525, 9502, 10250]],
-        [Tokens.dpi, [14886, 6718, 10250]],
-        [Tokens.yfi, [13681, 7309, 10250]],
-        [Tokens.perp, [14886, 6718, 10250]],
-        [Tokens.snx, [13681, 7309, 10250]],
-        [Tokens.susd, [11660, 8576, 10250]],
-        [Tokens.uni, [14886, 6718, 10250]],
-        [Tokens.sushi, [14886, 6718, 10250]],
         # lp tokens
-        [Tokens.uni_dpi_weth, [14886, 6718, 10250]],
-        [Tokens.uni_yfi_weth, [13681, 7309, 10250]],
-        [Tokens.uni_snx_weth, [13681, 7309, 10250]],
-        [Tokens.uni_susd_weth, [12616, 7927, 10250]],
-        [Tokens.uni_uni_weth, [14886, 6718, 10250]],
-        [Tokens.sushi_dpi_weth, [14886, 6718, 10250]],
-        [Tokens.sushi_yfi_weth, [13681, 7309, 10250]],
-        [Tokens.sushi_snx_weth, [13681, 7309, 10250]],
-        [Tokens.sushi_susd_weth, [12616, 7927, 10250]],
-        [Tokens.sushi_sushi_weth, [14886, 6718, 10250]],
         [Tokens.bal_perp_usdc, [14886, 6718, 10250]],
-        [Tokens.crv_dai_usdc_usdt, [10525, 9502, 10250]],
-        [Tokens.crv_dai_usdc_usdt_susd, [11660, 8576, 10250]],
     ]
 
     token_list_2, param_list = zip(*oracle_params)
 
     proxy_oracle.setOracles(token_list_2, param_list, {'from': deployer})
 
+    proxy_oracle.unsetOracles([Tokens.bal_dai_weth], {'from': deployer})
+
     print('DONE')
 
     ###########################################################
     # test spells (UNCOMMENT TO TEST)
 
-    # for token in [Tokens.weth, Tokens.dai, Tokens.usdc, Tokens.usdt, Tokens.dpi, Tokens.yfi, Tokens.snx, Tokens.susd]:
-    #     token = interface.IERC20Ex(token)
-    #     deposit_safebox(token)
+    for token in [Tokens.weth, Tokens.dai, Tokens.usdc, Tokens.usdt, Tokens.dpi, Tokens.yfi, Tokens.snx, Tokens.susd]:
+        token = interface.IERC20Ex(token)
+        deposit_safebox(token)
 
-    # bank = HomoraBank.at('0x5f5Cd91070960D13ee549C9CC47e7a4Cd00457bb')
-    # uniswap_spell = UniswapV2SpellV1.at('0xc671B7251a789de0835a2fa33c83c8D4afB39092')
-    # sushiswap_spell = SushiswapSpellV1.at('0x21Fa95485f4571A3a0d0c396561cF4D8D13D445d')
-    # balancer_spell = BalancerSpellV1.at('0x15B79c184A6a8E19a4CA1F637081270343E4D15D')
-    # curve_spell = CurveSpellV1.at('0x42C750024E02816eE32EB2eB4DA79ff5BF343D30')
+    bank = HomoraBank.at('0x5f5Cd91070960D13ee549C9CC47e7a4Cd00457bb')
+    uniswap_spell = UniswapV2SpellV1.at('0xc671B7251a789de0835a2fa33c83c8D4afB39092')
+    sushiswap_spell = SushiswapSpellV1.at('0x21Fa95485f4571A3a0d0c396561cF4D8D13D445d')
+    balancer_spell = BalancerSpellV1.at('0x15B79c184A6a8E19a4CA1F637081270343E4D15D')
+    curve_spell = CurveSpellV1.at('0x42C750024E02816eE32EB2eB4DA79ff5BF343D30')
 
     # test_uniswap_spell(uniswap_spell, bank, core_oracle, Tokens.weth, Tokens.dpi)
     # test_uniswap_spell(uniswap_spell, bank, core_oracle, Tokens.weth, Tokens.yfi)
