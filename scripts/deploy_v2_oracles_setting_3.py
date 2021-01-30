@@ -794,7 +794,7 @@ def main():
     # re-set oracles
     oracle_params = [
         # lp tokens
-        [Tokens.bal_dai_weth, [50000, 0, 10250]],
+        [Tokens.bal_dai_weth, [12616, 7927, 10250]],
     ]
 
     token_list_2, param_list = zip(*oracle_params)
