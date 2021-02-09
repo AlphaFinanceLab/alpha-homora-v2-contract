@@ -78,7 +78,9 @@ def mint_tokens(token, to, interface=None, amount=None):
         pool = '0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9'
         token.mint(to, amount, 10**18, {'from': pool})
     elif token == WETH:
-        token.deposit({'from': to, 'value': amount})
+        amount = 10**23
+        token.deposit({'from': accounts[9], 'value': amount})
+        token.transfer(to, amount, {'from': accounts[9]})
     elif token == SUSD:
         target = interface.IERC20Ex(token.target())
         contract_issuer = target.resolverAddressesRequired()[2]
