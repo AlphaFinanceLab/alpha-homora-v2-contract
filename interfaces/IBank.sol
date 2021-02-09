@@ -116,4 +116,5 @@ interface IBank {
 
   function support(address token) external view returns (bool);
 
+  function getPositionDebtShareOf(uint, address) external view returns (uint);
 }

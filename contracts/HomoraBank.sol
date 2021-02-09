@@ -198,7 +198,6 @@ contract HomoraBank is Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
-
   /// @dev Check whether the oracle supports the token
   /// @param token ERC-20 token to check for support
   function support(address token) public view override returns (bool) {
@@ -327,7 +326,12 @@ contract HomoraBank is Governable, ERC1155NaiveReceiver, IBank {
   /// @dev Return the debt share of the given bank token for the given position id.
   /// @param positionId position id to get debt of
   /// @param token ERC20 debt token to query
-  function getPositionDebtShareOf(uint positionId, address token) external view returns (uint) {
+  function getPositionDebtShareOf(uint positionId, address token)
+    external
+    view
+    override
+    returns (uint)
+  {
     return positions[positionId].debtShareOf[token];
   }
 
