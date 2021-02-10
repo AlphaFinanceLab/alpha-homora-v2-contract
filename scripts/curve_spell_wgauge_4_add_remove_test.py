@@ -523,4 +523,49 @@ def main():
     print('receivedCrvFromGauge', receivedCrvFromGauge)
     assert almostEqual(receivedCrv, receivedCrvFromGauge)
 
+    # #####################################################################################
+
+    print('=========================================================================')
+    print('Case 6. add & remove all LP')
+
+    lp_amt = 10 * 10**6
+
+    prevLPBal = lp.balanceOf(alice)
+
+    pid, gid = 12, 0
+
+    tx = homora.execute(
+        0,
+        curve_spell,
+        curve_spell.addLiquidity4.encode_input(
+            lp,  # LP
+            [0, 0, 0, 0],  # supply tokens
+            lp_amt,  # supply LP
+            [0, 0, 0, 0],  # borrow tokens
+            0,  # borrow LP
+            0,  # min LP mint
+            pid,
+            gid
+        ),
+        {'from': alice}
+    )
+
+    tx = homora.execute(
+        2,
+        curve_spell,
+        curve_spell.removeLiquidity4.encode_input(
+            lp,  # LP token
+            2**256-1,  # LP amount to take out
+            lp_amt,  # LP amount to withdraw to wallet
+            [0, 0, 0, 0],  # repay amounts
+            0,  # repay LP amount
+            [0, 0, 0, 0]  # min amounts
+        ),
+        {'from': alice}
+    )
+
+    curLPBal = lp.balanceOf(alice)
+
+    assert prevLPBal == curLPBal, 'incorrect LP Balance'
+
     return tx

@@ -383,3 +383,51 @@ def main():
     receivedIndexFromStaking = index.balanceOf(bob) - prevIndex
     print('receivedIndexFromStaking', receivedIndexFromStaking)
     assert almostEqual(receivedIndex, receivedIndexFromStaking)
+
+    #####################################################################################
+    print('=========================================================================')
+    print('Case 5. add & remove all LP')
+
+    lp_amt = 10 * 10**18
+    prevLPBal = lp.balanceOf(alice)
+
+    tx = homora.execute(
+        0,
+        uniswap_spell,
+        uniswap_spell.addLiquidityWStakingRewards.encode_input(
+            dpi,  # token 0
+            weth,  # token 1
+            [0,  # supply USDT
+             0,   # supply WETH
+             lp_amt,  # supply LP
+             0,  # borrow USDT
+             0,  # borrow WETH
+             0,  # borrow LP tokens
+             0,  # min USDT
+             0],  # min WETH
+            wstaking
+        ),
+        {'from': alice}
+    )
+
+    tx = homora.execute(
+        2,
+        uniswap_spell,
+        uniswap_spell.removeLiquidityWStakingRewards.encode_input(
+            dpi,  # token 0
+            weth,  # token 1
+            [2**256-1,  # take out LP tokens
+             lp_amt,   # withdraw LP tokens to wallet
+             0,  # repay USDT
+             0,   # repay WETH
+             0,   # repay LP
+             0,   # min USDT
+             0],  # min WETH
+            wstaking
+        ),
+        {'from': alice}
+    )
+
+    curLPBal = lp.balanceOf(alice)
+
+    assert prevLPBal == curLPBal, 'incorrect LP Balance'

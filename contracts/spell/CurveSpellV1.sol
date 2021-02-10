@@ -103,7 +103,9 @@ contract CurveSpellV1 is BasicSpell {
     for (uint i = 0; i < 2; i++) {
       suppliedAmts[i] = IERC20(tokens[i]).balanceOf(address(this));
     }
-    ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+    if (suppliedAmts[0] > 0 || suppliedAmts[1] > 0) {
+      ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+    }
 
     // 5. Put collateral
     uint amount = IERC20(lp).balanceOf(address(this));
@@ -160,7 +162,9 @@ contract CurveSpellV1 is BasicSpell {
     for (uint i = 0; i < 3; i++) {
       suppliedAmts[i] = IERC20(tokens[i]).balanceOf(address(this));
     }
-    ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+    if (suppliedAmts[0] > 0 || suppliedAmts[1] > 0 || suppliedAmts[2] > 0) {
+      ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+    }
 
     // 5. put collateral
     uint amount = IERC20(lp).balanceOf(address(this));
@@ -217,7 +221,9 @@ contract CurveSpellV1 is BasicSpell {
     for (uint i = 0; i < 4; i++) {
       suppliedAmts[i] = IERC20(tokens[i]).balanceOf(address(this));
     }
-    ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+    if (suppliedAmts[0] > 0 || suppliedAmts[1] > 0 || suppliedAmts[2] > 0 || suppliedAmts[3] > 0) {
+      ICurvePool(pool).add_liquidity(suppliedAmts, minLPMint);
+    }
 
     // 5. Put collateral
     uint amount = IERC20(lp).balanceOf(address(this));
@@ -274,9 +280,10 @@ contract CurveSpellV1 is BasicSpell {
 
     // 4. Compute leftover amount to remove. Remove balancedly.
     amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
-    uint[2] memory mins;
-    ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
-
+    if (amtLPToRemove > 0) {
+      uint[2] memory mins;
+      ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+    }
     // 5. Repay
     for (uint i = 0; i < 2; i++) {
       doRepay(tokens[i], actualAmtsRepay[i]);
@@ -335,8 +342,10 @@ contract CurveSpellV1 is BasicSpell {
 
     // 4. Compute leftover amount to remove. Remove balancedly.
     amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
-    uint[3] memory mins;
-    ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+    if (amtLPToRemove > 0) {
+      uint[3] memory mins;
+      ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+    }
 
     // 5. Repay
     for (uint i = 0; i < 3; i++) {
@@ -396,8 +405,10 @@ contract CurveSpellV1 is BasicSpell {
 
     // 4. Compute leftover amount to remove. Remove balancedly.
     amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amtLPWithdraw);
-    uint[4] memory mins;
-    ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+    if (amtLPToRemove > 0) {
+      uint[4] memory mins;
+      ICurvePool(pool).remove_liquidity(amtLPToRemove, mins);
+    }
 
     // 5. Repay
     for (uint i = 0; i < 4; i++) {
