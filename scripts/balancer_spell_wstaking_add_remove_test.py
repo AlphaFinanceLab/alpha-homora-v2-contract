@@ -422,4 +422,50 @@ def main():
     print('receivedDfdFromStaking', receivedDfdFromStaking)
     assert almostEqual(receivedDfd, receivedDfdFromStaking)
 
+    #####################################################################################
+    print('=========================================================================')
+    print('Case 5. add & remove all LP')
+
+    lp_amt = 10 * 10**18
+
+    prevLPBal = lp.balanceOf(alice)
+
+    tx = homora.execute(
+        0,
+        balancer_spell,
+        balancer_spell.addLiquidityWStakingRewards.encode_input(
+            lp,  # lp token
+            [0,  # supply DAI
+             0,   # supply WETH
+             lp_amt,  # supply LP
+             0,  # borrow DAI
+             0,  # borrow WETH
+             0,  # borrow LP tokens
+             0],  # LP desired
+            wstaking
+        ),
+        {'from': alice}
+    )
+
+    tx = homora.execute(
+        2,
+        balancer_spell,
+        balancer_spell.removeLiquidityWStakingRewards.encode_input(
+            lp,  # LP token
+            [2**256-1,  # take out LP tokens
+             lp_amt,   # withdraw LP tokens to wallet
+             0,  # repay DAI
+             0,   # repay WETH
+             0,   # repay LP
+             0,   # min DAI
+             0],  # min WETH
+            wstaking
+        ),
+        {'from': alice}
+    )
+
+    curLPBal = lp.balanceOf(alice)
+
+    assert prevLPBal == curLPBal, 'incorrect LP Balance'
+
     return tx

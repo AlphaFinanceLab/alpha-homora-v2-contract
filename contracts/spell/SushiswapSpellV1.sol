@@ -141,23 +141,18 @@ contract SushiswapSpellV1 is BasicSpell {
     }
 
     // 4. Swap optimal amount
-    {
+    if (swapAmt > 0) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = isReversed ? (tokenB, tokenA) : (tokenA, tokenB);
       router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
     }
 
     // 5. Add liquidity
-    router.addLiquidity(
-      tokenA,
-      tokenB,
-      IERC20(tokenA).balanceOf(address(this)),
-      IERC20(tokenB).balanceOf(address(this)),
-      amt.amtAMin,
-      amt.amtBMin,
-      address(this),
-      now
-    );
+    uint balA = IERC20(tokenA).balanceOf(address(this));
+    uint balB = IERC20(tokenB).balanceOf(address(this));
+    if (balA > 0 || balB > 0) {
+      router.addLiquidity(tokenA, tokenB, balA, balB, amt.amtAMin, amt.amtBMin, address(this), now);
+    }
   }
 
   function addLiquidityWERC20(
@@ -253,8 +248,19 @@ contract SushiswapSpellV1 is BasicSpell {
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
 
     // 4. Remove liquidity
-    (uint amtA, uint amtB) =
-      router.removeLiquidity(tokenA, tokenB, amtLPToRemove, 0, 0, address(this), now);
+    uint amtA;
+    uint amtB;
+    if (amtLPToRemove > 0) {
+      (amtA, amtB) = router.removeLiquidity(
+        tokenA,
+        tokenB,
+        amtLPToRemove,
+        0,
+        0,
+        address(this),
+        now
+      );
+    }
 
     // 5. MinimizeTrading
     uint amtADesired = amtARepay.add(amt.amtAMin);

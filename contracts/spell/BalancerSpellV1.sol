@@ -172,8 +172,10 @@ contract BalancerSpellV1 is BasicSpell {
     // 3.1 Remove liquidity 2 sides
     uint amtLPToRemove = IERC20(lp).balanceOf(address(this)).sub(amt.amtLPWithdraw);
 
-    uint[] memory minAmountsOut = new uint[](2);
-    IBalancerPool(lp).exitPool(amtLPToRemove, minAmountsOut);
+    if (amtLPToRemove > 0) {
+      uint[] memory minAmountsOut = new uint[](2);
+      IBalancerPool(lp).exitPool(amtLPToRemove, minAmountsOut);
+    }
 
     // 3.2 Minimize trading
     uint amtADesired = amtARepay.add(amt.amtAMin);

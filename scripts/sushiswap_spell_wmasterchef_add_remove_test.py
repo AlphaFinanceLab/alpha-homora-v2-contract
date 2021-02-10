@@ -389,3 +389,50 @@ def main():
     receivedSushiFromStaking = sushi.balanceOf(bob) - prevSushi
     print('receivedSushiFromStaking', receivedSushiFromStaking)
     assert almostEqual(receivedSushi, receivedSushiFromStaking)
+
+    #####################################################################################
+    print('=========================================================================')
+    print('Case 5. add & remove all LP')
+
+    lp_amt = 10 * 10**18
+    prevLPBal = lp.balanceOf(alice)
+    pid = 0
+    tx = homora.execute(
+        0,
+        sushiswap_spell,
+        sushiswap_spell.addLiquidityWMasterChef.encode_input(
+            usdt,  # token 0
+            weth,  # token 1
+            [0,  # supply USDT
+             0,   # supply WETH
+             lp_amt,  # supply LP
+             0,  # borrow USDT
+             0,  # borrow WETH
+             0,  # borrow LP tokens
+             0,  # min USDT
+             0],  # min WETH
+            pid
+        ),
+        {'from': alice}
+    )
+
+    tx = homora.execute(
+        2,
+        sushiswap_spell,
+        sushiswap_spell.removeLiquidityWMasterChef.encode_input(
+            usdt,  # token 0
+            weth,  # token 1
+            [2**256-1,  # take out LP tokens
+             lp_amt,   # withdraw LP tokens to wallet
+             0,  # repay USDT
+             0,   # repay WETH
+             0,   # repay LP
+             0,   # min USDT
+             0],  # min WETH
+        ),
+        {'from': alice}
+    )
+
+    curLPBal = lp.balanceOf(alice)
+
+    assert prevLPBal == curLPBal, 'incorrect LP Balance'

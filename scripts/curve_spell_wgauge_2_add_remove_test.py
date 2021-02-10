@@ -121,7 +121,7 @@ def main():
     mint_tokens(lp, alice)
     mint_tokens(lp, bob)
     mint_tokens(lp_eurs, alice)
-    
+
     # set approval
     renbtc.approve(homora, 2**256-1, {'from': alice})
     renbtc.approve(crrenbtc, 2**256-1, {'from': alice})
@@ -446,5 +446,50 @@ def main():
     receivedCrvFromGauge = crv.balanceOf(bob) - prevCrv
     print('receivedCrvFromGauge', receivedCrvFromGauge)
     assert almostEqual(receivedCrv, receivedCrvFromGauge)
+
+    # #####################################################################################
+
+    print('=========================================================================')
+    print('Case 6. add & remove all LP')
+
+    lp_amt = 10 * 10**6
+
+    prevLPBal = lp.balanceOf(alice)
+
+    pid, gid = 9, 0
+
+    tx = homora.execute(
+        0,
+        curve_spell,
+        curve_spell.addLiquidity2.encode_input(
+            lp,  # LP
+            [0, 0],  # supply tokens
+            lp_amt,  # supply LP
+            [0, 0],  # borrow tokens
+            0,  # borrow LP
+            0,  # min LP mint
+            pid,
+            gid
+        ),
+        {'from': alice}
+    )
+
+    tx = homora.execute(
+        2,
+        curve_spell,
+        curve_spell.removeLiquidity2.encode_input(
+            lp,  # LP token
+            2**256-1,  # LP amount to take out
+            lp_amt,  # LP amount to withdraw to wallet
+            [0, 0],  # repay amounts
+            0,  # repay LP amount
+            [0, 0]  # min amounts
+        ),
+        {'from': alice}
+    )
+
+    curLPBal = lp.balanceOf(alice)
+
+    assert prevLPBal == curLPBal, 'incorrect LP Balance'
 
     return tx
