@@ -77,6 +77,11 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public cTokenInBank; // Mapping from cToken to its existence in bank.
   mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
+  modifier onlyEOA() {
+    require(msg.sender == tx.origin, 'not eoa');
+    _;
+  }
+
   /// @dev Reentrancy lock guard.
   modifier lock() {
     require(_GENERAL_LOCK == _NOT_ENTERED, 'general lock');
@@ -378,7 +383,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint positionId,
     address spell,
     bytes memory data
-  ) external payable lock returns (uint) {
+  ) external payable lock onlyEOA returns (uint) {
     if (positionId == 0) {
       positionId = nextPositionId++;
       positions[positionId].owner = msg.sender;
