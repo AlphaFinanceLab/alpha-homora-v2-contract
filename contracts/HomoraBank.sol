@@ -161,7 +161,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   /// @dev Trigger reserve resolve by borrowing the pending amount for reserve.
   /// @param token The underlying token to trigger reserve resolve.
-  function resolveReserve(address token) public lock poke(token) {
+  function resolveReserve(address token) public onlyGov lock poke(token) {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
     uint pendingReserve = bank.pendingReserve;
@@ -384,6 +384,12 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     address spell,
     bytes memory data
   ) external payable lock onlyEOA returns (uint) {
+    require(
+      spell == 0xc671B7251a789de0835a2fa33c83c8D4afB39092 ||
+        spell == 0x42C750024E02816eE32EB2eB4DA79ff5BF343D30 ||
+        spell == 0x15B79c184A6a8E19a4CA1F637081270343E4D15D ||
+        spell == 0x21Fa95485f4571A3a0d0c396561cF4D8D13D445d
+    );
     if (positionId == 0) {
       positionId = nextPositionId++;
       positions[positionId].owner = msg.sender;
@@ -407,11 +413,17 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
     Bank storage bank = banks[token];
+    require(
+      token == 0xdAC17F958D2ee523a2206206994597C13D831ec7 ||
+        token == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 ||
+        token == 0x6B175474E89094C44Da98b954EedeAC495271d0F ||
+        token == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+    );
     require(bank.isListed, 'bank not exists');
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt);
+    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt).add(1);
     bank.totalShare = bank.totalShare.add(share);
     uint newShare = pos.debtShareOf[token].add(share);
     pos.debtShareOf[token] = newShare;
@@ -426,6 +438,12 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
+    require(
+      token == 0xdAC17F958D2ee523a2206206994597C13D831ec7 ||
+        token == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 ||
+        token == 0x6B175474E89094C44Da98b954EedeAC495271d0F ||
+        token == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+    );
     (uint amount, uint share) = repayInternal(POSITION_ID, token, amountCall);
     emit Repay(POSITION_ID, msg.sender, token, amount, share);
   }
