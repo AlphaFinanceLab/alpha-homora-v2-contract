@@ -51,8 +51,8 @@ contract AggregatorOracle is IBaseOracle, Governable {
     require(validSourceCount > 0, 'no valid source');
     for (uint i = 0; i < validSourceCount - 1; i++) {
       for (uint j = 0; j < validSourceCount - i - 1; j++) {
-        if (prices[i] > prices[j]) {
-          (prices[i], prices[j]) = (prices[j], prices[i]);
+        if (prices[j] > prices[j + 1]) {
+          (prices[j], prices[j + 1]) = (prices[j + 1], prices[j]);
         }
       }
     }
