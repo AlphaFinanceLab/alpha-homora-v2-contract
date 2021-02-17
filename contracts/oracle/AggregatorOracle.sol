@@ -9,32 +9,44 @@ import '../../interfaces/IBaseOracle.sol';
 contract AggregatorOracle is IBaseOracle, Governable {
   using SafeMath for uint;
 
-  uint public constant MAX_PRICE_DEVIATION = 1.05e18;
   mapping(address => uint) public primarySourceCount;
   mapping(address => mapping(uint => IBaseOracle)) public primarySources;
+  mapping(address => uint) public maxPriceDeviations;
 
   constructor() public {
     __Governable__init();
   }
 
-  function setPrimarySources(address token, IBaseOracle[] memory sources) external onlyGov {
-    _setPrimarySources(token, sources);
+  function setPrimarySources(
+    address token,
+    uint maxPriceDeviation,
+    IBaseOracle[] memory sources
+  ) external onlyGov {
+    _setPrimarySources(token, maxPriceDeviation, sources);
   }
 
-  function setMultiPrimarySources(address[] memory tokens, IBaseOracle[][] memory allSources)
-    external
-    onlyGov
-  {
+  function setMultiPrimarySources(
+    address[] memory tokens,
+    uint[] memory maxPriceDeviationList,
+    IBaseOracle[][] memory allSources
+  ) external onlyGov {
     require(tokens.length == allSources.length, 'inconsistent length');
+    require(tokens.length == maxPriceDeviationList.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
-      _setPrimarySources(tokens[idx], allSources[idx]);
+      _setPrimarySources(tokens[idx], maxPriceDeviationList[idx], allSources[idx]);
     }
   }
 
-  function _setPrimarySources(address token, IBaseOracle[] memory sources) internal {
+  function _setPrimarySources(
+    address token,
+    uint maxPriceDeviation,
+    IBaseOracle[] memory sources
+  ) internal {
     primarySourceCount[token] = sources.length;
     for (uint idx = 0; idx < sources.length; idx++) {
+      require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
       primarySources[token][idx] = sources[idx];
+      maxPriceDeviations[token] = maxPriceDeviation;
     }
   }
 
@@ -56,17 +68,19 @@ contract AggregatorOracle is IBaseOracle, Governable {
         }
       }
     }
+    uint maxPriceDeviation = maxPriceDeviations[token];
+    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
     if (validSourceCount == 1) {
       return prices[0];
     } else if (validSourceCount == 2) {
       require(
-        prices[1].mul(1e18) / prices[0] <= MAX_PRICE_DEVIATION,
+        prices[1].mul(1e18) / prices[0] <= maxPriceDeviation,
         'too much deviation (2 valid sources)'
       );
       return prices[0].add(prices[1]) / 2;
     } else if (validSourceCount == 3) {
-      bool midMinOk = prices[1].mul(1e18) / prices[0] <= MAX_PRICE_DEVIATION;
-      bool maxMidOk = prices[2].mul(1e18) / prices[1] <= MAX_PRICE_DEVIATION;
+      bool midMinOk = prices[1].mul(1e18) / prices[0] <= maxPriceDeviation;
+      bool maxMidOk = prices[2].mul(1e18) / prices[1] <= maxPriceDeviation;
       if (midMinOk && maxMidOk) {
         return prices[1];
       } else if (midMinOk) {
