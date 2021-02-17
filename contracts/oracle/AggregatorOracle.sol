@@ -72,7 +72,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
       } else if (midMinOk) {
         return prices[0].add(prices[1]) / 2;
       } else if (maxMidOk) {
-        return prices[1].add(prices[0]) / 2;
+        return prices[1].add(prices[2]) / 2;
       } else {
         revert('too much deviation (3 valid sources)');
       }
