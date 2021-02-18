@@ -9,6 +9,8 @@ import '../../interfaces/IBaseOracle.sol';
 contract AggregatorOracle is IBaseOracle, Governable {
   using SafeMath for uint;
 
+  event SetPrimarySource(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
+
   mapping(address => uint) public primarySourceCount;
   mapping(address => mapping(uint => IBaseOracle)) public primarySources;
   mapping(address => uint) public maxPriceDeviations;
@@ -47,6 +49,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
       require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
       primarySources[token][idx] = sources[idx];
       maxPriceDeviations[token] = maxPriceDeviation;
+      emit SetPrimarySource(token, maxPriceDeviation, sources);
     }
   }
 
