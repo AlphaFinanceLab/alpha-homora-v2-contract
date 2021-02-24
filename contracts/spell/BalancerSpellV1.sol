@@ -4,12 +4,12 @@ pragma experimental ABIEncoderV2;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
-import './BasicSpell.sol';
+import './WhitelistSpell.sol';
 import '../utils/HomoraMath.sol';
 import '../../interfaces/IBalancerPool.sol';
 import '../../interfaces/IWStakingRewards.sol';
 
-contract BalancerSpellV1 is BasicSpell {
+contract BalancerSpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
@@ -19,9 +19,10 @@ contract BalancerSpellV1 is BasicSpell {
     IBank _bank,
     address _werc20,
     address _weth
-  ) public BasicSpell(_bank, _werc20, _weth) {}
+  ) public WhitelistSpell(_bank, _werc20, _weth) {}
 
   function getPair(address lp) public returns (address tokenA, address tokenB) {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address[2] memory ulTokens = pairs[lp];
     tokenA = ulTokens[0];
     tokenB = ulTokens[1];
@@ -46,6 +47,8 @@ contract BalancerSpellV1 is BasicSpell {
   }
 
   function addLiquidityInternal(address lp, Amounts calldata amt) internal {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     (address tokenA, address tokenB) = getPair(lp);
 
     // 1. Get user input amounts
@@ -150,6 +153,8 @@ contract BalancerSpellV1 is BasicSpell {
   }
 
   function removeLiquidityInternal(address lp, RepayAmounts calldata amt) internal {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     (address tokenA, address tokenB) = getPair(lp);
     uint amtARepay = amt.amtARepay;
     uint amtBRepay = amt.amtBRepay;
@@ -251,6 +256,7 @@ contract BalancerSpellV1 is BasicSpell {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, ) = bank.getPositionInfo(positionId);
     address lp = IWStakingRewards(wstaking).getUnderlyingToken(collId);
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Take out collateral
     bank.takeCollateral(wstaking, collId, uint(-1));

@@ -4,14 +4,14 @@ pragma experimental ABIEncoderV2;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
-import './BasicSpell.sol';
+import './WhitelistSpell.sol';
 import '../utils/HomoraMath.sol';
 import '../../interfaces/IUniswapV2Factory.sol';
 import '../../interfaces/IUniswapV2Router02.sol';
 import '../../interfaces/IUniswapV2Pair.sol';
 import '../../interfaces/IWMasterChef.sol';
 
-contract SushiswapSpellV1 is BasicSpell {
+contract SushiswapSpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
@@ -29,7 +29,7 @@ contract SushiswapSpellV1 is BasicSpell {
     address _werc20,
     IUniswapV2Router02 _router,
     address _wmasterchef
-  ) public BasicSpell(_bank, _werc20, _router.WETH()) {
+  ) public WhitelistSpell(_bank, _werc20, _router.WETH()) {
     router = _router;
     factory = IUniswapV2Factory(_router.factory());
     wmasterchef = IWMasterChef(_wmasterchef);
@@ -39,6 +39,7 @@ contract SushiswapSpellV1 is BasicSpell {
 
   function getPair(address tokenA, address tokenB) public returns (address) {
     address lp = pairs[tokenA][tokenB];
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
       require(lp != address(0), 'no lp token');
@@ -112,6 +113,7 @@ contract SushiswapSpellV1 is BasicSpell {
     Amounts calldata amt
   ) internal {
     address lp = getPair(tokenA, tokenB);
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Get user input amounts
     doTransmitETH();
@@ -227,6 +229,7 @@ contract SushiswapSpellV1 is BasicSpell {
     RepayAmounts calldata amt
   ) internal {
     address lp = getPair(tokenA, tokenB);
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     uint positionId = bank.POSITION_ID();
 
     uint amtARepay = amt.amtARepay;
@@ -345,6 +348,7 @@ contract SushiswapSpellV1 is BasicSpell {
     (, , uint collId, ) = bank.getPositionInfo(positionId);
     (uint pid, ) = wmasterchef.decodeId(collId);
     address lp = wmasterchef.getUnderlyingToken(collId);
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wmasterchef), collId, uint(-1));
