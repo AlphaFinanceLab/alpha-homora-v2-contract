@@ -45,12 +45,12 @@ contract AggregatorOracle is IBaseOracle, Governable {
     IBaseOracle[] memory sources
   ) internal {
     primarySourceCount[token] = sources.length;
+    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
+    maxPriceDeviations[token] = maxPriceDeviation;
     for (uint idx = 0; idx < sources.length; idx++) {
-      require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
       primarySources[token][idx] = sources[idx];
-      maxPriceDeviations[token] = maxPriceDeviation;
-      emit SetPrimarySource(token, maxPriceDeviation, sources);
     }
+    emit SetPrimarySource(token, maxPriceDeviation, sources);
   }
 
   function getETHPx(address token) external view override returns (uint) {
