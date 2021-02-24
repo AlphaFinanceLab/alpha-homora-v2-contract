@@ -77,6 +77,18 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public cTokenInBank; // Mapping from cToken to its existence in bank.
   mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
+  bool public onlyEOAStatus; // The boolean status whether to check onlyEOA
+  mapping(address => bool) public whitelistedTokens; // Mapping from token to whitelist status
+  mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
+
+  /// @dev Ensure that the function is called from EOA when onlyEOAStatus is set to true
+  modifier onlyEOAEx() {
+    if (onlyEOAStatus) {
+      require(msg.sender == tx.origin, 'not eoa');
+    }
+    _;
+  }
+
   /// @dev Reentrancy lock guard.
   modifier lock() {
     require(_GENERAL_LOCK == _NOT_ENTERED, 'general lock');
@@ -115,6 +127,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(address(_oracle) != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
+    onlyEOAStatus = true;
     emit SetOracle(address(_oracle));
     emit SetFeeBps(_feeBps);
   }
@@ -124,6 +137,35 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint positionId = POSITION_ID;
     require(positionId != _NO_ID, 'not under execution');
     return positions[positionId].owner;
+  }
+
+  /// @dev Set onlyEOAStatus
+  /// @param ok The status to set onlyEOAStatus to
+  function setOnlyEOAStatus(bool ok) external onlyGov {
+    onlyEOAStatus = ok;
+  }
+
+  /// @dev Set whitelist spell status
+  /// @param spells list of spells to change status
+  /// @param statuses list of statuses to change to
+  function setWhitelistSpells(address[] calldata spells, bool[] calldata statuses)
+    external
+    onlyGov
+  {
+    require(spells.length == statuses.length, 'spells & statuses length mismatched');
+    for (uint idx = 0; idx < spells.length; idx++) {
+      whitelistedSpells[spells[idx]] = statuses[idx];
+    }
+  }
+
+  function setWhitelistTokens(address[] calldata tokens, bool[] calldata statuses)
+    external
+    onlyGov
+  {
+    require(tokens.length == statuses.length, 'tokens & statuses length mismatched');
+    for (uint idx = 0; idx < tokens.length; idx++) {
+      whitelistedTokens[tokens[idx]] = statuses[idx];
+    }
   }
 
   /// @dev Trigger interest accrual for the given bank.
@@ -156,7 +198,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   /// @dev Trigger reserve resolve by borrowing the pending amount for reserve.
   /// @param token The underlying token to trigger reserve resolve.
-  function resolveReserve(address token) public lock poke(token) {
+  function resolveReserve(address token) public lock poke(token) onlyGov {
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
     uint pendingReserve = bank.pendingReserve;
@@ -378,7 +420,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint positionId,
     address spell,
     bytes memory data
-  ) external payable lock returns (uint) {
+  ) external payable lock onlyEOAEx returns (uint) {
+    require(whitelistedSpells[spell], 'spell not whitelisted');
     if (positionId == 0) {
       positionId = nextPositionId++;
       positions[positionId].owner = msg.sender;
@@ -401,12 +444,13 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to borrow from the bank.
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
+    require(whitelistedTokens[token], 'token not whitelisted');
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt);
+    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt).add(1);
     bank.totalShare = bank.totalShare.add(share);
     uint newShare = pos.debtShareOf[token].add(share);
     pos.debtShareOf[token] = newShare;
