@@ -39,7 +39,6 @@ contract SushiswapSpellV1 is WhitelistSpell {
 
   function getPair(address tokenA, address tokenB) public returns (address) {
     address lp = pairs[tokenA][tokenB];
-    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
       require(lp != address(0), 'no lp token');
