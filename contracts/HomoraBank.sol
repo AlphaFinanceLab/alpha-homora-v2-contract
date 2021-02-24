@@ -80,10 +80,11 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   bool public onlyEOAStatus; // The boolean status whether to check onlyEOA
   mapping(address => bool) public whitelistedTokens; // Mapping from token to whitelist status
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
+  mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
 
   /// @dev Ensure that the function is called from EOA when onlyEOAStatus is set to true
   modifier onlyEOAEx() {
-    if (onlyEOAStatus) {
+    if (onlyEOAStatus && !whitelistedUsers[msg.sender]) {
       require(msg.sender == tx.origin, 'not eoa');
     }
     _;
@@ -158,6 +159,9 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
+  /// @dev Set whitelist token status
+  /// @param tokens list of tokens to change status
+  /// @param statuses list of statuses to change to
   function setWhitelistTokens(address[] calldata tokens, bool[] calldata statuses)
     external
     onlyGov
@@ -165,6 +169,13 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(tokens.length == statuses.length, 'tokens & statuses length mismatched');
     for (uint idx = 0; idx < tokens.length; idx++) {
       whitelistedTokens[tokens[idx]] = statuses[idx];
+    }
+  }
+
+  function setWhitelistUsers(address[] calldata users, bool[] calldata statuses) external onlyGov {
+    require(users.length == statuses.length, 'users & statuses length mismatched');
+    for (uint idx = 0; idx < users.length; idx++) {
+      whitelistedUsers[users[idx]] = statuses[idx];
     }
   }
 
