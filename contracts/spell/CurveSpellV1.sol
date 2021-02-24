@@ -4,14 +4,14 @@ pragma experimental ABIEncoderV2;
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
 
-import './BasicSpell.sol';
+import './WhitelistSpell.sol';
 import '../utils/HomoraMath.sol';
 import '../../interfaces/ICurvePool.sol';
 import '../../interfaces/ICurveRegistry.sol';
 import '../../interfaces/IWLiquidityGauge.sol';
 import '../../interfaces/IWERC20.sol';
 
-contract CurveSpellV1 is BasicSpell {
+contract CurveSpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
@@ -26,7 +26,7 @@ contract CurveSpellV1 is BasicSpell {
     address _werc20,
     address _weth,
     address _wgauge
-  ) public BasicSpell(_bank, _werc20, _weth) {
+  ) public WhitelistSpell(_bank, _werc20, _weth) {
     wgauge = IWLiquidityGauge(_wgauge);
     IWLiquidityGauge(_wgauge).setApprovalForAll(address(_bank), true);
     registry = IWLiquidityGauge(_wgauge).registry();
@@ -36,6 +36,7 @@ contract CurveSpellV1 is BasicSpell {
   /// @dev Return pool address given LP token and update pool info if not exist.
   /// @param lp LP token to find the corresponding pool.
   function getPool(address lp) public returns (address) {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address pool = poolOf[lp];
     if (pool == address(0)) {
       require(lp != address(0), 'no lp token');
@@ -53,6 +54,7 @@ contract CurveSpellV1 is BasicSpell {
   }
 
   function ensureApproveN(address lp, uint n) public {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     require(ulTokens[lp].length == n, 'incorrect pool length');
     address pool = poolOf[lp];
     address[] memory tokens = ulTokens[lp];
@@ -72,6 +74,8 @@ contract CurveSpellV1 is BasicSpell {
     uint pid,
     uint gid
   ) external {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     address pool = getPool(lp);
     require(ulTokens[lp].length == 2, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -131,6 +135,8 @@ contract CurveSpellV1 is BasicSpell {
     uint pid,
     uint gid
   ) external {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     address pool = getPool(lp);
     require(ulTokens[lp].length == 3, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -190,6 +196,8 @@ contract CurveSpellV1 is BasicSpell {
     uint pid,
     uint gid
   ) external {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     address pool = getPool(lp);
     require(ulTokens[lp].length == 4, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -246,6 +254,8 @@ contract CurveSpellV1 is BasicSpell {
     uint amtLPRepay,
     uint[2] calldata amtsMin
   ) external {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -308,6 +318,8 @@ contract CurveSpellV1 is BasicSpell {
     uint amtLPRepay,
     uint[3] calldata amtsMin
   ) external {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -371,6 +383,8 @@ contract CurveSpellV1 is BasicSpell {
     uint amtLPRepay,
     uint[4] calldata amtsMin
   ) external {
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -431,6 +445,7 @@ contract CurveSpellV1 is BasicSpell {
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     (uint pid, uint gid, ) = wgauge.decodeId(collId);
     address lp = wgauge.getUnderlyingToken(collId);
+    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wgauge), collId, collSize);
