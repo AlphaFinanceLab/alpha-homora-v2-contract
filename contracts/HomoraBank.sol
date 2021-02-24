@@ -476,6 +476,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
+    require(whitelistedTokens[token], 'token not whitelisted');
     (uint amount, uint share) = repayInternal(POSITION_ID, token, amountCall);
     emit Repay(POSITION_ID, msg.sender, token, amount, share);
   }
