@@ -75,7 +75,6 @@ contract CurveSpellV1 is WhitelistSpell {
     uint gid
   ) external {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     address pool = getPool(lp);
     require(ulTokens[lp].length == 2, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -136,7 +135,6 @@ contract CurveSpellV1 is WhitelistSpell {
     uint gid
   ) external {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     address pool = getPool(lp);
     require(ulTokens[lp].length == 3, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -197,7 +195,6 @@ contract CurveSpellV1 is WhitelistSpell {
     uint gid
   ) external {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     address pool = getPool(lp);
     require(ulTokens[lp].length == 4, 'incorrect pool length');
     require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
@@ -255,7 +252,6 @@ contract CurveSpellV1 is WhitelistSpell {
     uint[2] calldata amtsMin
   ) external {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -319,7 +315,6 @@ contract CurveSpellV1 is WhitelistSpell {
     uint[3] calldata amtsMin
   ) external {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
@@ -384,7 +379,6 @@ contract CurveSpellV1 is WhitelistSpell {
     uint[4] calldata amtsMin
   ) external {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     address pool = getPool(lp);
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);

@@ -48,7 +48,6 @@ contract BalancerSpellV1 is WhitelistSpell {
 
   function addLiquidityInternal(address lp, Amounts calldata amt) internal {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     (address tokenA, address tokenB) = getPair(lp);
 
     // 1. Get user input amounts
@@ -154,7 +153,6 @@ contract BalancerSpellV1 is WhitelistSpell {
 
   function removeLiquidityInternal(address lp, RepayAmounts calldata amt) internal {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-
     (address tokenA, address tokenB) = getPair(lp);
     uint amtARepay = amt.amtARepay;
     uint amtBRepay = amt.amtBRepay;
