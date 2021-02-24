@@ -77,14 +77,14 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public cTokenInBank; // Mapping from cToken to its existence in bank.
   mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
-  bool public onlyEOAStatus; // The boolean status whether to check onlyEOA
+  bool public notEOAStatus; // The boolean status whether to check onlyEOA (false = onlyEOA)
   mapping(address => bool) public whitelistedTokens; // Mapping from token to whitelist status
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
   mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
 
-  /// @dev Ensure that the function is called from EOA when onlyEOAStatus is set to true and caller is not whitelisted
+  /// @dev Ensure that the function is called from EOA when notEOAStatus is set to false and caller is not whitelisted
   modifier onlyEOAEx() {
-    if (onlyEOAStatus && !whitelistedUsers[msg.sender]) {
+    if (!notEOAStatus && !whitelistedUsers[msg.sender]) {
       require(msg.sender == tx.origin, 'not eoa');
     }
     _;
@@ -128,7 +128,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(address(_oracle) != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
-    onlyEOAStatus = true;
     emit SetOracle(address(_oracle));
     emit SetFeeBps(_feeBps);
   }
@@ -140,10 +139,10 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     return positions[positionId].owner;
   }
 
-  /// @dev Set onlyEOAStatus
-  /// @param ok The status to set onlyEOAStatus to
-  function setOnlyEOAStatus(bool ok) external onlyGov {
-    onlyEOAStatus = ok;
+  /// @dev Set notEOAStatus
+  /// @param ok The status to set notEOAStatus to (false = onlyEOA)
+  function setNotEOAStatus(bool ok) external onlyGov {
+    notEOAStatus = ok;
   }
 
   /// @dev Set whitelist spell status
