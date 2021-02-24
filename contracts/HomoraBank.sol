@@ -82,7 +82,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
   mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
 
-  /// @dev Ensure that the function is called from EOA when onlyEOAStatus is set to true
+  /// @dev Ensure that the function is called from EOA when onlyEOAStatus is set to true and caller is not whitelisted
   modifier onlyEOAEx() {
     if (onlyEOAStatus && !whitelistedUsers[msg.sender]) {
       require(msg.sender == tx.origin, 'not eoa');
