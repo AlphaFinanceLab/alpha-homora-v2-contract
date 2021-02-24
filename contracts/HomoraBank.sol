@@ -77,7 +77,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public cTokenInBank; // Mapping from cToken to its existence in bank.
   mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
-  bool public allowContractStatus; // The boolean status whether to check onlyEOA (false = onlyEOA)
+  bool public allowContractStatus; // The boolean status whether to allow call from contract (false = onlyEOA)
   mapping(address => bool) public whitelistedTokens; // Mapping from token to whitelist status
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
   mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
