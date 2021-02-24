@@ -36,7 +36,6 @@ contract CurveSpellV1 is WhitelistSpell {
   /// @dev Return pool address given LP token and update pool info if not exist.
   /// @param lp LP token to find the corresponding pool.
   function getPool(address lp) public returns (address) {
-    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address pool = poolOf[lp];
     if (pool == address(0)) {
       require(lp != address(0), 'no lp token');

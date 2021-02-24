@@ -22,7 +22,6 @@ contract BalancerSpellV1 is WhitelistSpell {
   ) public WhitelistSpell(_bank, _werc20, _weth) {}
 
   function getPair(address lp) public returns (address tokenA, address tokenB) {
-    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address[2] memory ulTokens = pairs[lp];
     tokenA = ulTokens[0];
     tokenB = ulTokens[1];
