@@ -15,10 +15,10 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
-  IUniswapV2Factory public immutable factory;
-  IUniswapV2Router02 public immutable router;
+  IUniswapV2Factory public immutable factory; // Uniswap factory
+  IUniswapV2Router02 public immutable router; // Uniswap router
 
-  mapping(address => mapping(address => address)) public pairs;
+  mapping(address => mapping(address => address)) public pairs; // Mapping from tokenA to (mapping from tokenB to LP token)
 
   constructor(
     IBank _bank,
@@ -29,6 +29,9 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     factory = IUniswapV2Factory(_router.factory());
   }
 
+  /// @dev Return the LP token for the token pairs (can be in any order)
+  /// @param tokenA Token A to get LP token
+  /// @param tokenB Token B to get LP token
   function getPair(address tokenA, address tokenB) public returns (address) {
     address lp = pairs[tokenA][tokenB];
     if (lp == address(0)) {
@@ -88,16 +91,20 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   }
 
   struct Amounts {
-    uint amtAUser;
-    uint amtBUser;
-    uint amtLPUser;
-    uint amtABorrow;
-    uint amtBBorrow;
-    uint amtLPBorrow;
-    uint amtAMin;
-    uint amtBMin;
+    uint amtAUser; // Supplied tokenA amount
+    uint amtBUser; // Supplied tokenB amount
+    uint amtLPUser; // Supplied LP token amount
+    uint amtABorrow; // Borrow tokenA amount
+    uint amtBBorrow; // Borrow tokenB amount
+    uint amtLPBorrow; // Borrow LP token amount
+    uint amtAMin; // Desired tokenA amount (slippage control)
+    uint amtBMin; // Desired tokenB amount (slippage control)
   }
 
+  /// @dev Add liquidity to Uniswap pool
+  /// @param tokenA Token A for the pair
+  /// @param tokenB Token B for the pair
+  /// @param amt Amounts of tokens to supply, borrow, and get.
   function addLiquidityInternal(
     address tokenA,
     address tokenB,
@@ -148,6 +155,10 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     }
   }
 
+  /// @dev Add liquidity to Uniswap pool, with no staking rewards (use WERC20 wrapper)
+  /// @param tokenA Token A for the pair
+  /// @param tokenB Token B for the pair
+  /// @param amt Amounts of tokens to supply, borrow, and get.
   function addLiquidityWERC20(
     address tokenA,
     address tokenB,
@@ -166,6 +177,11 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     doRefund(tokenB);
   }
 
+  /// @dev Add liquidity to Uniswap pool, with staking rewards
+  /// @param tokenA Token A for the pair
+  /// @param tokenB Token B for the pair
+  /// @param amt Amounts of tokens to supply, borrow, and get.
+  /// @param wstaking Wrapped staking rewards address
   function addLiquidityWStakingRewards(
     address tokenA,
     address tokenB,
@@ -206,15 +222,19 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   }
 
   struct RepayAmounts {
-    uint amtLPTake;
-    uint amtLPWithdraw;
-    uint amtARepay;
-    uint amtBRepay;
-    uint amtLPRepay;
-    uint amtAMin;
-    uint amtBMin;
+    uint amtLPTake; // Take out LP token amount (from Homora)
+    uint amtLPWithdraw; // Withdraw LP token amount (back to caller)
+    uint amtARepay; // Repay tokenA amount
+    uint amtBRepay; // Repay tokenB amount
+    uint amtLPRepay; // Repay LP token amount
+    uint amtAMin; // Desired tokenA amount
+    uint amtBMin; // Desired tokenB amount
   }
 
+  /// @dev Remove liqudity from Uniswap pool
+  /// @param tokenA Token A for the pair
+  /// @param tokenB Token B for the pair
+  /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
   function removeLiquidityInternal(
     address tokenA,
     address tokenB,
@@ -300,6 +320,10 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     doRefund(lp);
   }
 
+  /// @dev Remove liqudity from Uniswap pool, with no staking rewards (use WERC20 wrapper)
+  /// @param tokenA Token A for the pair
+  /// @param tokenB Token B for the pair
+  /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
   function removeLiquidityWERC20(
     address tokenA,
     address tokenB,
@@ -314,6 +338,10 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     removeLiquidityInternal(tokenA, tokenB, amt);
   }
 
+  /// @dev Remove liqudity from Uniswap pool, from staking rewards
+  /// @param tokenA Token A for the pair
+  /// @param tokenB Token B for the pair
+  /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
   function removeLiquidityWStakingRewards(
     address tokenA,
     address tokenB,
@@ -337,6 +365,8 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     doRefund(reward);
   }
 
+  /// @dev Harvest staking reward tokens to in-exec position's owner
+  /// @param wstaking Wrapped staking rewards address
   function harvestWStakingRewards(address wstaking) external {
     address reward = IWStakingRewards(wstaking).reward();
     uint positionId = bank.POSITION_ID();

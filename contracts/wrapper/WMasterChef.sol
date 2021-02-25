@@ -14,26 +14,32 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   using HomoraMath for uint;
   using SafeERC20 for IERC20;
 
-  IMasterChef public immutable chef;
-  IERC20 public immutable sushi;
+  IMasterChef public immutable chef; // Sushiswap masterChef
+  IERC20 public immutable sushi; // Sushi token
 
   constructor(IMasterChef _chef) public {
     chef = _chef;
     sushi = IERC20(_chef.sushi());
   }
 
+  /// @dev Encode pid, sushiPerShare to ERC1155 token id
+  /// @param pid Pool id (16-bit)
+  /// @param sushiPerShare Sushi amount per share, multiplied by 1e18 (240-bit)
   function encodeId(uint pid, uint sushiPerShare) public pure returns (uint id) {
     require(pid < (1 << 16), 'bad pid');
     require(sushiPerShare < (1 << 240), 'bad sushi per share');
     return (pid << 240) | sushiPerShare;
   }
 
+  /// @dev Decode ERC1155 token id to pid, sushiPerShare
+  /// @param id Token id
   function decodeId(uint id) public pure returns (uint pid, uint sushiPerShare) {
     pid = id >> 240; // First 16 bits
     sushiPerShare = id & ((1 << 240) - 1); // Last 240 bits
   }
 
   /// @dev Return the underlying ERC-20 for the given ERC-1155 token id.
+  /// @param id Token id
   function getUnderlyingToken(uint id) external view override returns (address) {
     (uint pid, ) = decodeId(id);
     (address lpToken, , , ) = chef.poolInfo(pid);
@@ -46,6 +52,8 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Mint ERC1155 token for the given pool id.
+  /// @param pid Pool id
+  /// @param amount Token amount to wrap
   /// @return The token id that got minted.
   function mint(uint pid, uint amount) external nonReentrant returns (uint) {
     (address lpToken, , , ) = chef.poolInfo(pid);
@@ -62,6 +70,8 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Burn ERC1155 token to redeem LP ERC20 token back plus SUSHI rewards.
+  /// @param id Token id
+  /// @param amount Token amount to burn
   /// @return The pool id that that you received LP token back.
   function burn(uint id, uint amount) external nonReentrant returns (uint) {
     if (amount == uint(-1)) {
@@ -81,6 +91,8 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
   }
 
   /// @dev Burn ERC1155 token to redeem LP ERC20 token back without taking SUSHI rewards.
+  /// @param id Token id
+  /// @param amount Token amount to emergency burn
   /// @return The pool id that that you received LP token back.
   function emergencyBurn(uint id, uint amount) external nonReentrant returns (uint) {
     (uint pid, ) = decodeId(id);

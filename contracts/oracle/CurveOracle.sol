@@ -14,15 +14,15 @@ interface IERC20Decimal {
 contract CurveOracle is UsingBaseOracle, IBaseOracle {
   using SafeMath for uint;
 
-  ICurveRegistry public immutable registry;
+  ICurveRegistry public immutable registry; // Curve registry
 
   struct UnderlyingToken {
     uint8 decimals; // token decimals
     address token; // token address
   }
 
-  mapping(address => UnderlyingToken[]) public ulTokens; // lpToken -> underlying tokens array
-  mapping(address => address) public poolOf; // lpToken -> pool
+  mapping(address => UnderlyingToken[]) public ulTokens; // Mapping from LP token to underlying tokens
+  mapping(address => address) public poolOf; // Mapping from LP token to pool
 
   constructor(IBaseOracle _base, ICurveRegistry _registry) public UsingBaseOracle(_base) {
     registry = _registry;

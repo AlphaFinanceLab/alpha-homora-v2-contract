@@ -23,6 +23,7 @@ contract UniswapV2Oracle is UsingBaseOracle, IBaseOracle {
     uint sqrtK = HomoraMath.sqrt(r0.mul(r1)).fdiv(totalSupply); // in 2**112
     uint px0 = base.getETHPx(token0);
     uint px1 = base.getETHPx(token1);
+    // split into 2 sqrts multiplication to prevent uint overflow
     return sqrtK.mul(2).mul(HomoraMath.sqrt(px0)).div(2**56).mul(HomoraMath.sqrt(px1)).div(2**56);
   }
 }

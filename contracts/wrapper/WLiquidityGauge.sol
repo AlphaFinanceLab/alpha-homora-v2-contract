@@ -21,13 +21,13 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
   using SafeERC20 for IERC20;
 
   struct GaugeInfo {
-    ILiquidityGauge impl;
-    uint accCrvPerShare;
+    ILiquidityGauge impl; // Gauge implementation
+    uint accCrvPerShare; // Accumulated CRV per share
   }
 
-  ICurveRegistry public immutable registry;
-  IERC20 public immutable crv;
-  mapping(uint => mapping(uint => GaugeInfo)) public gauges;
+  ICurveRegistry public immutable registry; // Curve registry
+  IERC20 public immutable crv; // CRV token
+  mapping(uint => mapping(uint => GaugeInfo)) public gauges; // Mapping from pool id to (mapping from gauge id to GaugeInfo)
 
   constructor(ICurveRegistry _registry, IERC20 _crv) public {
     __Governable__init();
@@ -35,6 +35,10 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     crv = _crv;
   }
 
+  /// @dev Encode pid, gid, crvPerShare to a ERC1155 token id
+  /// @param pid Curve pool id (8-bit)
+  /// @param gid Curve gauge id (8-bit)
+  /// @param crvPerShare CRV amount per share, multiplied by 1e18 (240-bit)
   function encodeId(
     uint pid,
     uint gid,
@@ -46,6 +50,8 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     return (pid << 248) | (gid << 240) | crvPerShare;
   }
 
+  /// @dev Decode ERC1155 token id to pid, gid, crvPerShare
+  /// @param id Token id to decode
   function decodeId(uint id)
     public
     pure
@@ -60,6 +66,8 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     crvPerShare = id & ((1 << 240) - 1); // Last 240 bits
   }
 
+  /// @dev Get underlying ERC20 token of ERC1155 given token id
+  /// @param id Token id
   function getUnderlyingToken(uint id) external view override returns (address) {
     (uint pid, uint gid, ) = decodeId(id);
     ILiquidityGauge impl = gauges[pid][gid].impl;
@@ -72,6 +80,9 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     return 2**112;
   }
 
+  /// @dev Register curve gauge to storage given pood id and gauge id
+  /// @param pid Pool id
+  /// @param gid Gauge id
   function registerGauge(uint pid, uint gid) external onlyGov {
     require(address(gauges[pid][gid].impl) == address(0), 'gauge already exists');
     address pool = registry.pool_list(pid);
@@ -85,6 +96,10 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     gauges[pid][gid] = GaugeInfo({impl: ILiquidityGauge(gauge), accCrvPerShare: 0});
   }
 
+  /// @dev Mint ERC1155 token for the given ERC20 token
+  /// @param pid Pool id
+  /// @param gid Gauge id
+  /// @param amount Token amount to wrap
   function mint(
     uint pid,
     uint gid,
@@ -102,6 +117,9 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     return id;
   }
 
+  /// @dev Burn ERC1155 token to redeem ERC20 token back
+  /// @param id Token id to burn
+  /// @param amount Token amont to burn
   function burn(uint id, uint amount) external nonReentrant returns (uint) {
     if (amount == uint(-1)) {
       amount = balanceOf(msg.sender, id);
@@ -122,6 +140,8 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     return pid;
   }
 
+  /// @dev Mint CRV reward for curve gauge
+  /// @param gauge Curve gauge to mint reward
   function mintCrv(GaugeInfo storage gauge) internal {
     ILiquidityGauge impl = gauge.impl;
     uint balanceBefore = crv.balanceOf(address(this));

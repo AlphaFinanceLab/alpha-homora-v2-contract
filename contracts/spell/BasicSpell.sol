@@ -15,7 +15,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   IWERC20 public immutable werc20;
   address public immutable weth;
 
-  mapping(address => mapping(address => bool)) public approved;
+  mapping(address => mapping(address => bool)) public approved; // Mapping from token to (mapping from spender to approve status)
 
   constructor(
     IBank _bank,
@@ -118,6 +118,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
     }
   }
 
+  /// @dev Fallback function. Can only receive ETH from WETH contract.
   receive() external payable {
     require(msg.sender == weth, 'ETH must come from WETH');
   }

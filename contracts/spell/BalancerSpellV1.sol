@@ -13,7 +13,7 @@ contract BalancerSpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
-  mapping(address => address[2]) pairs; // mapping from lp token to underlying token (only pairs)
+  mapping(address => address[2]) pairs; // Mapping from lp token to underlying token (only pairs)
 
   constructor(
     IBank _bank,
@@ -21,6 +21,8 @@ contract BalancerSpellV1 is WhitelistSpell {
     address _weth
   ) public WhitelistSpell(_bank, _werc20, _weth) {}
 
+  /// @dev Return the underlying pairs for the lp token.
+  /// @param lp LP token
   function getPair(address lp) public returns (address tokenA, address tokenB) {
     address[2] memory ulTokens = pairs[lp];
     tokenA = ulTokens[0];
@@ -36,15 +38,18 @@ contract BalancerSpellV1 is WhitelistSpell {
   }
 
   struct Amounts {
-    uint amtAUser;
-    uint amtBUser;
-    uint amtLPUser;
-    uint amtABorrow;
-    uint amtBBorrow;
-    uint amtLPBorrow;
-    uint amtLPDesired;
+    uint amtAUser; // Supplied tokenA amount
+    uint amtBUser; // Supplied tokenB amount
+    uint amtLPUser; // Supplied LP token amount
+    uint amtABorrow; // Borrow tokenA amount
+    uint amtBBorrow; // Borrow tokenB amount
+    uint amtLPBorrow; // Borrow LP token amount
+    uint amtLPDesired; // Desired LP token amount (slippage control)
   }
 
+  /// @dev Add liquidity to Balancer pool
+  /// @param lp LP token for the pool
+  /// @param amt Amounts of tokens to supply, borrow, and get.
   function addLiquidityInternal(address lp, Amounts calldata amt) internal {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     (address tokenA, address tokenB) = getPair(lp);
@@ -88,7 +93,9 @@ contract BalancerSpellV1 is WhitelistSpell {
     require(lpBalance >= amt.amtLPDesired, 'lp desired not met');
   }
 
-  /// @dev Add liquidity to Balancer pool (with 2 underlying tokens)
+  /// @dev Add liquidity to Balancer pool (with 2 underlying tokens), without staking rewards (use WERC20 wrapper)
+  /// @param lp LP token for the pool
+  /// @param amt Amounts of tokens to supply, borrow, and get.
   function addLiquidityWERC20(address lp, Amounts calldata amt) external payable {
     // 1-4. add liquidity
     addLiquidityInternal(lp, amt);
@@ -103,7 +110,10 @@ contract BalancerSpellV1 is WhitelistSpell {
     doRefund(tokenB);
   }
 
-  /// @dev Add liquidity to Balancer pool (with 2 underlying tokens)
+  /// @dev Add liquidity to Balancer pool (with 2 underlying tokens), with staking rewards (use WStakingRewards)
+  /// @param lp LP token for the pool
+  /// @param amt Amounts of tokens to supply, borrow, and desire.
+  /// @param wstaking Wrapped staking rewards contract address
   function addLiquidityWStakingRewards(
     address lp,
     Amounts calldata amt,
@@ -141,15 +151,18 @@ contract BalancerSpellV1 is WhitelistSpell {
   }
 
   struct RepayAmounts {
-    uint amtLPTake;
-    uint amtLPWithdraw;
-    uint amtARepay;
-    uint amtBRepay;
-    uint amtLPRepay;
-    uint amtAMin;
-    uint amtBMin;
+    uint amtLPTake; // Take out LP token amount (from Homora)
+    uint amtLPWithdraw; // Withdraw LP token amount (back to caller)
+    uint amtARepay; // Repay tokenA amount
+    uint amtBRepay; // Repay tokenB amount
+    uint amtLPRepay; // Repay LP token amount
+    uint amtAMin; // Desired tokenA amount (slippage control)
+    uint amtBMin; // Desired tokenB amount (slippage control)
   }
 
+  /// @dev Remove liquidity from Balancer pool (with 2 underlying tokens)
+  /// @param lp LP token for the pool
+  /// @param amt Amounts of tokens to take out, withdraw, repay and get.
   function removeLiquidityInternal(address lp, RepayAmounts calldata amt) internal {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     (address tokenA, address tokenB) = getPair(lp);
@@ -221,6 +234,9 @@ contract BalancerSpellV1 is WhitelistSpell {
     doRefund(lp);
   }
 
+  /// @dev Remove liquidity from Balancer pool (with 2 underlying tokens), without staking rewards (use WERC20 wrapper)
+  /// @param lp LP token for the pool
+  /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
   function removeLiquidityWERC20(address lp, RepayAmounts calldata amt) external {
     // 1. Take out collateral
     doTakeCollateral(lp, amt.amtLPTake);
@@ -229,6 +245,9 @@ contract BalancerSpellV1 is WhitelistSpell {
     removeLiquidityInternal(lp, amt);
   }
 
+  /// @dev Remove liquidity from Balancer pool (with 2 underlying tokens), with staking rewards
+  /// @param lp LP token for the pool
+  /// @param amt Amounts of tokens to take out, withdraw, repay, and get.v
   function removeLiquidityWStakingRewards(
     address lp,
     RepayAmounts calldata amt,
@@ -249,6 +268,8 @@ contract BalancerSpellV1 is WhitelistSpell {
     doRefund(IWStakingRewards(wstaking).reward());
   }
 
+  /// @dev Harvest staking reward tokens to in-exec position's owner
+  /// @param wstaking Wrapped staking rewards
   function harvestWStakingRewards(address wstaking) external {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, ) = bank.getPositionInfo(positionId);
