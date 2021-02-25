@@ -100,6 +100,12 @@ def main():
     # first time call to reduce gas
     balancer_spell.getPair(lp, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([balancer_spell], [True], {'from': admin})
+
+    # whitelist lp in spell
+    balancer_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
     print('=========================================================================')
     print('Case 1.')

@@ -110,6 +110,15 @@ def main():
     # first time call to reduce gas
     sushiswap_spell.getPair(weth, usdt, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([sushiswap_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([usdt], [True], {'from': admin})
+
+    # whitelist lp in spell
+    sushiswap_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
     print('=========================================================================')
     print('Case 1. add liquidity first time')
@@ -126,7 +135,7 @@ def main():
         prevBRes, prevARes, _ = interface.IUniswapV2Pair(lp).getReserves()
 
     usdt_amt = 10 * 10**6
-    weth_amt = 10**18
+    weth_amt = 2 * 10**18
     lp_amt = 0
     borrow_usdt_amt = 10 * 10**6
     borrow_weth_amt = 0

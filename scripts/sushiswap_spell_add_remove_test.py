@@ -95,6 +95,15 @@ def main():
     # first time call to reduce gas
     sushiswap_spell.getPair(weth, usdt, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([sushiswap_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([usdt], [True], {'from': admin})
+
+    # whitelist lp in spell
+    sushiswap_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
     print('=========================================================================')
     print('Case 1.')

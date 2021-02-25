@@ -107,6 +107,15 @@ def main():
     # first time call to reduce gas
     uniswap_spell.getPair(usdt, usdc, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([uniswap_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([usdt, usdc], [True, True], {'from': admin})
+
+    # whitelist lp in spell
+    uniswap_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
     # add liquidity
 

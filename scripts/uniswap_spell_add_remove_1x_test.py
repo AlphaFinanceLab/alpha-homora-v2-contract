@@ -95,6 +95,12 @@ def main():
     # first time call to reduce gas
     uniswap_spell.getPair(weth, usdt, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([uniswap_spell], [True], {'from': admin})
+
+    # whitelist lp in spell
+    uniswap_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
     print('=========================================================================')
     print('Case 1.')
@@ -113,7 +119,7 @@ def main():
     usdt_amt = 400 * 10**6
     weth_amt = 10 ** 18
     lp_amt = 1 * 10**16
-    borrow_usdt_amt = 1000 * 10**6
+    borrow_usdt_amt = 0
     borrow_weth_amt = 0
 
     tx = homora.execute(
