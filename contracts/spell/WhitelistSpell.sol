@@ -14,6 +14,9 @@ contract WhitelistSpell is BasicSpell, Governable {
     __Governable__init();
   }
 
+  /// @dev Set whitelist LP token statuses for spell
+  /// @param lpTokens LP tokens to set whitelist statuses
+  /// @param statuses Whitelist statuses
   function setWhitelistLPTokens(address[] calldata lpTokens, bool[] calldata statuses)
     external
     onlyGov

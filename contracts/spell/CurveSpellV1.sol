@@ -15,11 +15,11 @@ contract CurveSpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
-  ICurveRegistry public immutable registry;
-  IWLiquidityGauge public immutable wgauge;
-  address public immutable crv;
-  mapping(address => address[]) public ulTokens; // lpToken -> underlying token array
-  mapping(address => address) public poolOf; // lpToken -> pool
+  ICurveRegistry public immutable registry; // Curve registry
+  IWLiquidityGauge public immutable wgauge; // Wrapped liquidity gauge
+  address public immutable crv; // CRV token address
+  mapping(address => address[]) public ulTokens; // Mapping from LP token address -> underlying token addresses
+  mapping(address => address) public poolOf; // Mapping from LP token address to -> pool address
 
   constructor(
     IBank _bank,
@@ -52,8 +52,10 @@ contract CurveSpellV1 is WhitelistSpell {
     return pool;
   }
 
+  /// @dev Ensure approval of underlying tokens to the corresponding Curve pool
+  /// @param lp LP token for the pool
+  /// @param n Number of pool's underlying tokens
   function ensureApproveN(address lp, uint n) public {
-    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     require(ulTokens[lp].length == n, 'incorrect pool length');
     address pool = poolOf[lp];
     address[] memory tokens = ulTokens[lp];
@@ -62,7 +64,15 @@ contract CurveSpellV1 is WhitelistSpell {
     }
   }
 
-  /// @dev add liquidity for pools with 2 underlying tokens
+  /// @dev Add liquidity to Curve pool with 2 underlying tokens, with staking to Curve gauge
+  /// @param lp LP token for the pool
+  /// @param amtsUser Supplied underlying token amounts
+  /// @param amtLPUser Supplied LP token amount
+  /// @param amtsBorrow Borrow underlying token amounts
+  /// @param amtLPBorrow Borrow LP token amount
+  /// @param minLPMint Desired LP token amount (slippage control)
+  /// @param pid Curve pool id for the pool
+  /// @param gid Curve gauge id for the pool
   function addLiquidity2(
     address lp,
     uint[2] calldata amtsUser,
@@ -122,7 +132,15 @@ contract CurveSpellV1 is WhitelistSpell {
     doRefund(crv);
   }
 
-  /// @dev add liquidity for pools with 3 underlying tokens
+  /// @dev Add liquidity to Curve pool with 3 underlying tokens, with staking to Curve gauge
+  /// @param lp LP token for the pool
+  /// @param amtsUser Supplied underlying token amounts
+  /// @param amtLPUser Supplied LP token amount
+  /// @param amtsBorrow Borrow underlying token amounts
+  /// @param amtLPBorrow Borrow LP token amount
+  /// @param minLPMint Desired LP token amount (slippage control)
+  /// @param pid CUrve pool id for the pool
+  /// @param gid Curve gauge id for the pool
   function addLiquidity3(
     address lp,
     uint[3] calldata amtsUser,
@@ -182,7 +200,15 @@ contract CurveSpellV1 is WhitelistSpell {
     doRefund(crv);
   }
 
-  /// @dev add liquidity for pools with 4 underlying tokens
+  /// @dev Add liquidity to Curve pool with 4 underlying tokens, with staking to Curve gauge
+  /// @param lp LP token for the pool
+  /// @param amtsUser Supplied underlying token amounts
+  /// @param amtLPUser Supplied LP token amount
+  /// @param amtsBorrow Borrow underlying token amounts
+  /// @param amtLPBorrow Borrow LP token amount
+  /// @param minLPMint Desired LP token amount (slippage control)
+  /// @param pid CUrve pool id for the pool
+  /// @param gid Curve gauge id for the pool
   function addLiquidity4(
     address lp,
     uint[4] calldata amtsUser,
@@ -242,6 +268,13 @@ contract CurveSpellV1 is WhitelistSpell {
     doRefund(crv);
   }
 
+  /// @dev Remove liquidity from Curve pool with 2 underlying tokens
+  /// @param lp LP token for the pool
+  /// @param amtLPTake Take out LP token amount (from Homora)
+  /// @param amtLPWithdraw Withdraw LP token amount (back to caller)
+  /// @param amtsRepay Repay underlying token amounts
+  /// @param amtLPRepay Repay LP token amount
+  /// @param amtsMin Desired underlying token amounts (slippage control)
   function removeLiquidity2(
     address lp,
     uint amtLPTake,
@@ -305,6 +338,13 @@ contract CurveSpellV1 is WhitelistSpell {
     doRefund(crv);
   }
 
+  /// @dev Remove liquidity from Curve pool with 3 underlying tokens
+  /// @param lp LP token for the pool
+  /// @param amtLPTake Take out LP token amount (from Homora)
+  /// @param amtLPWithdraw Withdraw LP token amount (back to caller)
+  /// @param amtsRepay Repay underlying token amounts
+  /// @param amtLPRepay Repay LP token amount
+  /// @param amtsMin Desired underlying token amounts (slippage control)
   function removeLiquidity3(
     address lp,
     uint amtLPTake,
@@ -369,6 +409,13 @@ contract CurveSpellV1 is WhitelistSpell {
     doRefund(crv);
   }
 
+  /// @dev Remove liquidity from Curve pool with 4 underlying tokens
+  /// @param lp LP token for the pool
+  /// @param amtLPTake Take out LP token amount (from Homora)
+  /// @param amtLPWithdraw Withdraw LP token amount (back to caller)
+  /// @param amtsRepay Repay underlying token amounts
+  /// @param amtLPRepay Repay LP token amount
+  /// @param amtsMin Desired underlying token amounts (slippage control)
   function removeLiquidity4(
     address lp,
     uint amtLPTake,
@@ -433,6 +480,7 @@ contract CurveSpellV1 is WhitelistSpell {
     doRefund(crv);
   }
 
+  /// @dev Harvest CRV reward tokens to in-exec position's owner
   function harvest() external {
     uint positionId = bank.POSITION_ID();
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);

@@ -24,9 +24,9 @@ contract ProxyOracle is IOracle, Governable {
     uint16 liqIncentive; // The liquidation incentive, multiplied by 1e4.
   }
 
-  IBaseOracle public immutable source;
+  IBaseOracle public immutable source; // Main oracle source
   mapping(address => Oracle) public oracles; // Mapping from token address to oracle info.
-  mapping(address => bool) public whitelistERC1155;
+  mapping(address => bool) public whitelistERC1155; // Mapping from token address to whitelist status
 
   /// @dev Create the contract and initialize the first governor.
   constructor(IBaseOracle _source) public {
@@ -35,6 +35,8 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Set oracle information for the given list of token addresses.
+  /// @param tokens List of tokens to set info
+  /// @param info List of oracle info
   function setOracles(address[] memory tokens, Oracle[] memory info) external onlyGov {
     require(tokens.length == info.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
@@ -47,6 +49,8 @@ contract ProxyOracle is IOracle, Governable {
     }
   }
 
+  /// @dev Unset oracle information for the given list of token addresses
+  /// @param tokens List of tokens to unset info
   function unsetOracles(address[] memory tokens) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
       oracles[tokens[idx]] = Oracle(0, 0, 0);
@@ -55,6 +59,8 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Set whitelist status for the given list of token addresses.
+  /// @param tokens List of tokens to set whitelist status
+  /// @param ok Whitelist status
   function setWhitelistERC1155(address[] memory tokens, bool ok) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
       whitelistERC1155[tokens[idx]] = ok;
@@ -63,6 +69,8 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return whether the oracle supports evaluating collateral value of the given token.
+  /// @param token Token address to check for support
+  /// @param id Token id to check for support
   function support(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
@@ -70,6 +78,10 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the amount of token out as liquidation reward for liquidating token in.
+  /// @param tokenIn Input ERC20 token
+  /// @param tokenOut Output ERC1155 token
+  /// @param tokenOutId Output ERC1155 token id
+  /// @param amountIn Input ERC20 token amount
   function convertForLiquidation(
     address tokenIn,
     address tokenOut,
@@ -91,6 +103,10 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the value of the given input as ETH for collateral purpose.
+  /// @param token ERC1155 token address to get collateral value
+  /// @param id ERC1155 token id to get collateral value
+  /// @param amount Token amount to get collateral value
+  /// @param owner Token owner address (currently unused by this implementation)
   function asETHCollateral(
     address token,
     uint id,
@@ -108,6 +124,9 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
+  /// @param token ERC1155 token address to get borrow value
+  /// @param amount ERC1155 token amount to get borrow value
+  /// @param owner Token owner address (currently unused by this implementation)
   function asETHBorrow(
     address token,
     uint amount,
