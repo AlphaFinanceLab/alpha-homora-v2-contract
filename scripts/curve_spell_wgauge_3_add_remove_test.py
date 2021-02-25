@@ -66,7 +66,7 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dai, usdt, usdc, adai, ausdc, ausdt], [2**112 // 700,
+    simple_oracle.setETHPx([dai, usdt, usdc, adai, ausdc, ausdt], [2**112 // 700 // 10**12,
                                                                    2**112 // 700,
                                                                    2**112 // 700,
                                                                    2**112 // 700,
@@ -171,6 +171,15 @@ def main():
     curve_spell.ensureApproveN(lp, 3, {'from': admin})
     curve_spell.ensureApproveN(lp_aave, 3, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([curve_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([dai, usdc, usdt], [True, True, True], {'from': admin})
+
+    # whitelist lp in spell
+    curve_spell.setWhitelistLPTokens([lp, lp_aave], [True, True], {'from': admin})
+
     #####################################################################################
 
     print('=========================================================================')
@@ -187,9 +196,9 @@ def main():
     usdc_amt = 500 * 10**6
     usdt_amt = 400 * 10**6
     lp_amt = 1 * 10**18
-    borrow_dai_amt = 0
+    borrow_dai_amt = 10 * 10**18
     borrow_usdc_amt = 20 * 10**6
-    borrow_usdt_amt = 0
+    borrow_usdt_amt = 10 * 10**6
     borrow_lp_amt = 0
     minLPMint = 0
 

@@ -66,7 +66,7 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dai, usdt, usdc, adai, ausdc, ausdt], [2**112 // 700,
+    simple_oracle.setETHPx([dai, usdt, usdc, adai, ausdc, ausdt], [2**112 // 700 // 10**12,
                                                                    2**112 // 700,
                                                                    2**112 // 700,
                                                                    2**112 // 700,
@@ -148,9 +148,17 @@ def main():
     # first time call to reduce gas
     curve_spell.ensureApproveN(lp, 3, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([curve_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([dai, usdt, usdc], [True, True, True], {'from': admin})
+
+    # whitelist lp in spell
+    curve_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
 
-    # TODO: Test borrow 3 assets simultaneously
     print('=========================================================================')
     print('Case 1.')
 
@@ -165,9 +173,9 @@ def main():
     usdc_amt = 50000 * 10**6  # 50000 USDC
     usdt_amt = 40000 * 10**6  # 40000 USDT
     lp_amt = 0  # 1 * 10**18
-    borrow_dai_amt = 0  # 2000 * 10**18  # 2000 DAI
-    borrow_usdc_amt = 0  # 200 * 10**6  # 200 USDC
-    borrow_usdt_amt = 0  # 1000 * 10**6  # 1000 USDT
+    borrow_dai_amt = 2000 * 10**18  # 2000 DAI
+    borrow_usdc_amt = 200 * 10**6  # 200 USDC
+    borrow_usdt_amt = 1000 * 10**6  # 1000 USDT
     borrow_lp_amt = 0
     minLPMint = 0
 

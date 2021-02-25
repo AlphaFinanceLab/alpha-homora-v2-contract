@@ -66,7 +66,7 @@ def main():
     werc20 = WERC20.deploy({'from': admin})
 
     simple_oracle = SimpleOracle.deploy({'from': admin})
-    simple_oracle.setETHPx([dai, usdt, usdc, adai, ausdc, ausdt], [2**112 // 700,
+    simple_oracle.setETHPx([dai, usdt, usdc, adai, ausdc, ausdt], [2**112 // 700 // 10**12,
                                                                    2**112 // 700,
                                                                    2**112 // 700,
                                                                    2**112 // 700,
@@ -148,6 +148,15 @@ def main():
     # first time call to reduce gas
     curve_spell.ensureApproveN(lp, 3, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([curve_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([dai, usdc, usdt], [True, True, True], {'from': admin})
+
+    # whitelist lp in spell
+    curve_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
+
     #####################################################################################
 
     print('=========================================================================')
@@ -164,9 +173,9 @@ def main():
     usdc_amt = 10000 * 10**6  # 10000 USDC
     usdt_amt = 20000 * 10**6  # 20000 USDT
     lp_amt = 0  # 1 * 10**18
-    borrow_dai_amt = 0  # 2000 * 10**18  # 2000 DAI
-    borrow_usdc_amt = 0  # 200 * 10**6  # 200 USDC
-    borrow_usdt_amt = 0  # 1000 * 10**6  # 1000 USDT
+    borrow_dai_amt_1 = 2000 * 10**18  # 2000 DAI
+    borrow_usdc_amt_1 = 200 * 10**6  # 200 USDC
+    borrow_usdt_amt_1 = 1000 * 10**6  # 1000 USDT
     borrow_lp_amt = 0
     minLPMint = 0
 
@@ -180,7 +189,7 @@ def main():
             lp,  # LP
             [dai_amt, usdc_amt, usdt_amt],  # supply tokens
             lp_amt,  # supply LP
-            [borrow_dai_amt, borrow_usdc_amt, borrow_usdt_amt],  # borrow tokens
+            [borrow_dai_amt_1, borrow_usdc_amt_1, borrow_usdt_amt_1],  # borrow tokens
             borrow_lp_amt,  # borrow LP
             minLPMint,  # min LP mint
             pid,
@@ -236,9 +245,9 @@ def main():
     assert lp.balanceOf(curve_spell) == 0, 'non-zero spell LP balance'
 
     # debt
-    assert daiDebt == borrow_dai_amt
-    assert usdcDebt == borrow_usdc_amt
-    assert usdtDebt == borrow_usdt_amt
+    assert daiDebt == borrow_dai_amt_1
+    assert usdcDebt == borrow_usdc_amt_1
+    assert usdtDebt == borrow_usdt_amt_1
 
     _, _, collId, collSize = homora.getPositionInfo(1)
     print('collSize', collSize)
@@ -272,9 +281,9 @@ def main():
     usdc_amt = 10000 * 10**6  # 10000 USDC
     usdt_amt = 20000 * 10**6  # 20000 USDT
     lp_amt = 0  # 1 * 10**18
-    borrow_dai_amt = 0  # 2000 * 10**18  # 2000 DAI
-    borrow_usdc_amt = 0  # 200 * 10**6  # 200 USDC
-    borrow_usdt_amt = 0  # 1000 * 10**6  # 1000 USDT
+    borrow_dai_amt_2 = 0  # 2000 * 10**18  # 2000 DAI
+    borrow_usdc_amt_2 = 0  # 200 * 10**6  # 200 USDC
+    borrow_usdt_amt_2 = 0  # 1000 * 10**6  # 1000 USDT
     borrow_lp_amt = 0
     minLPMint = 0
 
@@ -288,7 +297,7 @@ def main():
             lp,  # LP
             [dai_amt, usdc_amt, usdt_amt],  # supply tokens
             lp_amt,  # supply LP
-            [borrow_dai_amt, borrow_usdc_amt, borrow_usdt_amt],  # borrow tokens
+            [borrow_dai_amt_2, borrow_usdc_amt_2, borrow_usdt_amt_2],  # borrow tokens
             borrow_lp_amt,  # borrow LP
             minLPMint,  # min LP mint
             pid,
@@ -344,9 +353,9 @@ def main():
     assert lp.balanceOf(curve_spell) == 0, 'non-zero spell LP balance'
 
     # debt
-    assert daiDebt == borrow_dai_amt
-    assert usdcDebt == borrow_usdc_amt
-    assert usdtDebt == borrow_usdt_amt
+    assert almostEqual(daiDebt, borrow_dai_amt_1 + borrow_dai_amt_2), 'incorrect DAI borrow amt'
+    assert almostEqual(usdcDebt, borrow_usdc_amt_1 + borrow_usdc_amt_2), 'incorrect USDC borrow amt'
+    assert almostEqual(usdtDebt, borrow_usdt_amt_1 + borrow_usdt_amt_2), 'incorrect USDT borrow amt'
 
     curAliceCrvBalance = crv.balanceOf(alice)
     print('Alice crv balance', curAliceCrvBalance)

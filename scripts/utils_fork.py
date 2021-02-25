@@ -96,22 +96,22 @@ def mint_tokens(token, to, interface=None, amount=None):
         token.increaseSupply(amount, {'from': supply_controller})
         token.transfer(to, amount, {'from': supply_controller})
     elif token == YDAI:
-        mint_tokens(interface.IERC20Ex(DAI), to, amount)
+        mint_tokens(interface.IERC20Ex(DAI), to, interface, amount)
         interface.IERC20Ex(DAI).approve(token, 0, {'from': to})
         interface.IERC20Ex(DAI).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == YUSDT:
-        mint_tokens(interface.IERC20Ex(USDT), to, amount)
+        mint_tokens(interface.IERC20Ex(USDT), to, interface, amount)
         interface.IERC20Ex(USDT).approve(token, 0, {'from': to})
         interface.IERC20Ex(USDT).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == YBUSD:
-        mint_tokens(interface.IERC20Ex(BUSD), to, amount)
+        mint_tokens(interface.IERC20Ex(BUSD), to, interface, amount)
         interface.IERC20Ex(BUSD).approve(token, 0, {'from': to})
         interface.IERC20Ex(BUSD).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
     elif token == YUSDC:
-        mint_tokens(interface.IERC20Ex(USDC), to, amount)
+        mint_tokens(interface.IERC20Ex(USDC), to, interface, amount)
         interface.IERC20Ex(USDC).approve(token, 0, {'from': to})
         interface.IERC20Ex(USDC).approve(token, 2**256-1, {'from': to})
         token.deposit(amount, {'from': to})
@@ -183,8 +183,8 @@ def mint_tokens(token, to, interface=None, amount=None):
         # mint underlying
         amount0 = 10**12 * 10**token0.decimals()
         amount1 = 10**12 * 10**token1.decimals()
-        mint_tokens(token0, to, amount0)
-        mint_tokens(token1, to, amount1)
+        mint_tokens(token0, to, interface, amount0)
+        mint_tokens(token1, to, interface, amount1)
         # approve router
         token0.approve(router, 0, {'from': to})
         token0.approve(router, 2**256-1, {'from': to})
@@ -201,8 +201,8 @@ def mint_tokens(token, to, interface=None, amount=None):
         # mint underlying
         amount0 = 10**12 * 10**token0.decimals()
         amount1 = 10**12 * 10**token1.decimals()
-        mint_tokens(token0, to, amount0)
-        mint_tokens(token1, to, amount1)
+        mint_tokens(token0, to, interface, amount0)
+        mint_tokens(token1, to, interface, amount1)
         # approve router
         token0.approve(router, 0, {'from': to})
         token0.approve(router, 2**256-1, {'from': to})
@@ -219,7 +219,7 @@ def mint_tokens(token, to, interface=None, amount=None):
         for _token in tokens:
             _token = interface.IERC20Ex(_token)
             amt = 10**12 * 10**_token.decimals()
-            mint_tokens(_token, to, amt)
+            mint_tokens(_token, to, interface, amt)
             _token.approve(token, 0, {'from': to})
             _token.approve(token, 2**256-1, {'from': to})
             max_amts.append(amt)
@@ -237,7 +237,7 @@ def mint_tokens(token, to, interface=None, amount=None):
             _token = interface.IERC20Ex(_token)
             amt = 10**6 * 10**_token.decimals()
             prevBal = _token.balanceOf(to)
-            mint_tokens(_token, to, amt)
+            mint_tokens(_token, to, interface, amt)
             curBal = _token.balanceOf(to)
             amts.append(curBal - prevBal)
             interface.IERC20Ex(_token).approve(pool, 0, {'from': to})

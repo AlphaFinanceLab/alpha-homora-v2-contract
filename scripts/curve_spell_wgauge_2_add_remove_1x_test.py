@@ -152,6 +152,12 @@ def main():
     curve_spell.ensureApproveN(lp, 2, {'from': admin})
     curve_spell.ensureApproveN(lp_eurs, 2, {'from': admin})
 
+    # whitelist spell in bank
+    homora.setWhitelistSpells([curve_spell], [True], {'from': admin})
+
+    # whitelist lp in spell
+    curve_spell.setWhitelistLPTokens([lp, lp_eurs], [True, True], {'from': admin})
+
     #####################################################################################
 
     print('=========================================================================')
@@ -167,7 +173,7 @@ def main():
     wbtc_amt = 1 * 10**7
     lp_amt = 10**13
     borrow_renbtc_amt = 0
-    borrow_wbtc_amt = 20 * 10**6
+    borrow_wbtc_amt = 0
     borrow_lp_amt = 0
     minLPMint = 0
 

@@ -77,6 +77,8 @@ def main():
     mint_tokens(dpi, alice)
     mint_tokens(weth, alice)
 
+    mint_tokens(dpi, crdpi)
+
     # check alice's funds
     print(f'Alice dpi balance {dpi.balanceOf(alice)}')
     print(f'Alice weth balance {weth.balanceOf(alice)}')
@@ -96,6 +98,15 @@ def main():
         homora, werc20, router, {'from': admin})
     # first time call to reduce gas
     uniswap_spell.getPair(weth, dpi, {'from': admin})
+
+    # whitelist spell in bank
+    homora.setWhitelistSpells([uniswap_spell], [True], {'from': admin})
+
+    # whitelist token in bank
+    homora.setWhitelistTokens([dpi], [True], {'from': admin})
+
+    # whitelist lp in spell
+    uniswap_spell.setWhitelistLPTokens([lp], [True], {'from': admin})
 
     #####################################################################################
     print('=========================================================================')
@@ -218,7 +229,7 @@ def main():
     dpi_amt = 10 * 10**18
     weth_amt = 10**18
     lp_amt = 0
-    borrow_dpi_amt = 0
+    borrow_dpi_amt = 10**10
     borrow_weth_amt = 0
 
     tx = homora.execute(
