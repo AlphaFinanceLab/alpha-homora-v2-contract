@@ -61,6 +61,7 @@ contract CurveOracle is UsingBaseOracle, IBaseOracle {
       if (tokenPx < minPx) minPx = tokenPx;
     }
     require(minPx != uint(-1), 'no min px');
+    // use min underlying token prices
     return minPx.mul(ICurvePool(pool).get_virtual_price()).div(1e18);
   }
 }

@@ -67,7 +67,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Return token price relative to ETH, multiplied by 2**112
   /// @param token Token to get price of
-  /// NOTE: Only support at most 3 oracle sources per token
+  /// NOTE: Support at most 3 oracle sources per token
   function getETHPx(address token) external view override returns (uint) {
     uint candidateSourceCount = primarySourceCount[token];
     require(candidateSourceCount > 0, 'no primary source');
