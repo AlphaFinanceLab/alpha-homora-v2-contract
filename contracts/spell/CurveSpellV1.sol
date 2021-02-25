@@ -53,7 +53,6 @@ contract CurveSpellV1 is WhitelistSpell {
   }
 
   function ensureApproveN(address lp, uint n) public {
-    require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     require(ulTokens[lp].length == n, 'incorrect pool length');
     address pool = poolOf[lp];
     address[] memory tokens = ulTokens[lp];
