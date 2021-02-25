@@ -27,6 +27,16 @@ contract BalancerPairOracle is UsingBaseOracle, IBaseOracle, BNum {
     uint pxA,
     uint pxB
   ) internal pure returns (uint fairResA, uint fairResB) {
+    // NOTE: wA + wB = 1 (normalize weights)
+    // constant product = resA^wA * resB^wB
+    // constraints:
+    // - fairResA^wA * fairResB^wB = constant product
+    // - fairResA * pxA / wA = fairResB * pxB / wB
+    // Solving equations:
+    // --> fairResA^wA * (fairResA * (pxA * wB) / (wA * pxB))^wB = constant product
+    // --> fairResA / r1^wB = constant product
+    // --> fairResA = resA^wA * resB^wB * r1^wB
+    // --> fairResA = resA * (resB/resA)^wB * r1^wB = resA * (r1/r0)^wB
     uint r0 = bdiv(resA, resB);
     uint r1 = bdiv(bmul(wA, pxB), bmul(wB, pxA));
     // fairResA = resA * (r1 / r0) ^ wB
@@ -61,6 +71,8 @@ contract BalancerPairOracle is UsingBaseOracle, IBaseOracle, BNum {
         pxA,
         pxB
       );
+    // use fairReserveA and fairReserveB to compute LP token price
+    // LP price = (fairResA * pxA + fairResB * pxB) / totalLPSupply
     return fairResA.mul(pxA).add(fairResB.mul(pxB)).div(pool.totalSupply());
   }
 }
