@@ -85,4 +85,8 @@ contract HomoraBankV2LiquidateRouter {
       }
     }
   }
+
+  function onERC1155Received(address, address, uint, uint, bytes calldata) external view returns (bytes4) {
+    return this.onERC1155Received.selector;
+  }
 }
