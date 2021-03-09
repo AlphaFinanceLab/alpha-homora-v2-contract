@@ -66,7 +66,7 @@ contract HomoraBankV2LiquidateRouter {
         IERC20(address(collId)).balanceOf(address(this))
       );
     } else {
-      IWrapper(collToken).burn(collId, IERC1155(collToken).balanceOf(msg.sender, collId));
+      IWrapper(collToken).burn(collId, IERC1155(collToken).balanceOf(address(this), collId));
       address lp = IERC20Wrapper(collToken).getUnderlyingToken(collId);
       IERC20(lp).safeTransfer(msg.sender, IERC20(lp).balanceOf(address(this)));
 
