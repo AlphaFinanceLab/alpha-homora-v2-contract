@@ -73,7 +73,7 @@ contract HomoraBankV2LiquidateRouter {
       IERC20 rewardToken;
       if (target == keccak256(abi.encodePacked('WMasterChef'))) {
         rewardToken = IERC20(IWMasterChef(collToken).sushi());
-      } else if (target == keccak256(abi.encodePacked('WLiquidityGuage'))) {
+      } else if (target == keccak256(abi.encodePacked('WLiquidityGauge'))) {
         rewardToken = IERC20(IWLiquidityGauge(collToken).crv());
       } else if (target == keccak256(abi.encodePacked('WStakingRewards'))) {
         rewardToken = IERC20(IWStakingRewards(collToken).reward());
