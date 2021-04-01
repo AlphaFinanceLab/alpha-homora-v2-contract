@@ -48,7 +48,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint8 index; // Reverse look up index for this bank.
     address cToken; // The CToken to draw liquidity from.
     uint reserve; // The reserve portion allocated to Homora protocol.
-    uint pendingReserve; // The pending reserve portion waiting to be resolve.
     uint totalDebt; // The last recorded total debt since last action.
     uint totalShare; // The total debt share count across all open positions.
   }
@@ -188,7 +187,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
       bank.totalDebt = debt;
-      bank.pendingReserve = bank.pendingReserve.add(fee);
+      bank.reserve = bank.reserve.add(doBorrow(token, fee));
     } else if (totalDebt != debt) {
       // We should never reach here because CREAMv2 does not support *repayBorrowBehalf*
       // functionality. We set bank.totalDebt = debt nonetheless to ensure consistency. But do
@@ -203,24 +202,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   function accrueAll(address[] memory tokens) external {
     for (uint idx = 0; idx < tokens.length; idx++) {
       accrue(tokens[idx]);
-    }
-  }
-
-  /// @dev Trigger reserve resolve by borrowing the pending amount for reserve.
-  /// @param token The underlying token to trigger reserve resolve.
-  function resolveReserve(address token) public lock poke(token) onlyGov {
-    Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exists');
-    uint pendingReserve = bank.pendingReserve;
-    bank.pendingReserve = 0;
-    bank.reserve = bank.reserve.add(doBorrow(token, pendingReserve));
-  }
-
-  /// @dev Convenient function to trigger reserve resolve for the list of banks.
-  /// @param tokens The list of banks to trigger reserve resolve.
-  function resolveReserveAll(address[] memory tokens) external {
-    for (uint idx = 0; idx < tokens.length; idx++) {
-      resolveReserve(tokens[idx]);
     }
   }
 
