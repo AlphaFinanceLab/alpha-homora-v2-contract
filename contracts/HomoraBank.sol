@@ -13,6 +13,15 @@ import '../interfaces/IBank.sol';
 import '../interfaces/ICErc20.sol';
 import '../interfaces/IOracle.sol';
 
+library HomoraSafeMath {
+  using SafeMath for uint;
+
+  /// @dev Computes round-up division.
+  function ceilDiv(uint a, uint b) internal pure returns (uint) {
+    return a.add(b).sub(1).div(b);
+  }
+}
+
 contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
@@ -36,6 +45,7 @@ contract HomoraCaster {
 
 contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   using SafeMath for uint;
+  using HomoraSafeMath for uint;
   using SafeERC20 for IERC20;
 
   uint private constant _NOT_ENTERED = 1;
@@ -234,7 +244,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     if (share == 0 || totalDebt == 0) {
       return 0;
     } else {
-      return share.mul(totalDebt).div(totalShare);
+      return share.mul(totalDebt).ceilDiv(totalShare);
     }
   }
 
@@ -311,7 +321,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
         address token = allBanks[idx];
         Bank storage bank = banks[token];
         tokens[count] = token;
-        debts[count] = pos.debtShareOf[token].mul(bank.totalDebt).div(bank.totalShare);
+        debts[count] = pos.debtShareOf[token].mul(bank.totalDebt).ceilDiv(bank.totalShare);
         count++;
       }
       idx++;
@@ -345,7 +355,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
         address token = allBanks[idx];
         uint share = pos.debtShareOf[token];
         Bank storage bank = banks[token];
-        uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
+        uint debt = share.mul(bank.totalDebt).ceilDiv(bank.totalShare);
         value = value.add(oracle.asETHBorrow(token, debt, owner));
       }
       idx++;
@@ -460,7 +470,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt).add(1);
+    uint share = totalShare == 0 ? amount : amount.mul(totalShare).ceilDiv(totalDebt);
     bank.totalShare = bank.totalShare.add(share);
     uint newShare = pos.debtShareOf[token].add(share);
     pos.debtShareOf[token] = newShare;
@@ -495,7 +505,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
     uint oldShare = pos.debtShareOf[token];
-    uint oldDebt = oldShare.mul(totalDebt).div(totalShare);
+    uint oldDebt = oldShare.mul(totalDebt).ceilDiv(totalShare);
     if (amountCall == uint(-1)) {
       amountCall = oldDebt;
     }
