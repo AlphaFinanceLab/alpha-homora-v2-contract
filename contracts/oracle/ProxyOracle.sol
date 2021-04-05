@@ -124,8 +124,8 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
-  /// @param token ERC1155 token address to get borrow value
-  /// @param amount ERC1155 token amount to get borrow value
+  /// @param token ERC20 token address to get borrow value
+  /// @param amount ERC20 token amount to get borrow value
   /// @param owner Token owner address (currently unused by this implementation)
   function asETHBorrow(
     address token,
