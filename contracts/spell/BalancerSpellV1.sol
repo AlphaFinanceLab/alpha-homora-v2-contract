@@ -127,6 +127,7 @@ contract BalancerSpellV1 is WhitelistSpell {
     (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
       require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+      require(collToken == wstaking, 'collateral token & wstaking mismatched');
       bank.takeCollateral(wstaking, collId, collSize);
       IWStakingRewards(wstaking).burn(collId, collSize);
     }
@@ -258,6 +259,7 @@ contract BalancerSpellV1 is WhitelistSpell {
 
     // 1. Take out collateral
     require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == wstaking, 'collateral token & wstaking mismatched');
     bank.takeCollateral(wstaking, collId, amt.amtLPTake);
     IWStakingRewards(wstaking).burn(collId, amt.amtLPTake);
 
@@ -272,9 +274,10 @@ contract BalancerSpellV1 is WhitelistSpell {
   /// @param wstaking Wrapped staking rewards
   function harvestWStakingRewards(address wstaking) external {
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
     address lp = IWStakingRewards(wstaking).getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+    require(collToken == wstaking, 'collateral token & wstaking mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(wstaking, collId, uint(-1));
