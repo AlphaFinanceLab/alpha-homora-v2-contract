@@ -82,6 +82,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
   mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
 
+  uint public bankStatus; // Each bit stores certain bank status, e.g. borrow allowed, repay allowed
+
   /// @dev Ensure that the function is called from EOA when allowContractStatus is set to false and caller is not whitelisted
   modifier onlyEOAEx() {
     if (!allowContractStatus && !whitelistedUsers[msg.sender]) {
@@ -128,6 +130,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(address(_oracle) != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
+    bankStatus = 3; // allow both borrow and repay
     emit SetOracle(address(_oracle));
     emit SetFeeBps(_feeBps);
   }
@@ -176,6 +179,24 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     for (uint idx = 0; idx < users.length; idx++) {
       whitelistedUsers[users[idx]] = statuses[idx];
     }
+  }
+
+  /// @dev Set bank status
+  /// @param _bankStatus new bank status to change to
+  function setBankStatus(uint _bankStatus) external onlyGov {
+    bankStatus = _bankStatus;
+  }
+
+  /// @dev Bank borrow status allowed or not
+  /// @notice check last bit of bankStatus
+  function allowBorrowStatus() public view returns (bool) {
+    return (bankStatus & 0x01) > 0;
+  }
+
+  /// @dev Bank repay status allowed or not
+  /// @notice Check second-to-last bit of bankStatus
+  function allowRepayStatus() public view returns (bool) {
+    return (bankStatus & 0x02) > 0;
   }
 
   /// @dev Trigger interest accrual for the given bank.
@@ -454,6 +475,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to borrow from the bank.
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
+    require(allowBorrowStatus(), 'borrow not allowed');
     require(whitelistedTokens[token], 'token not whitelisted');
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
@@ -475,6 +497,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
+    require(allowRepayStatus(), 'repay not allowed');
     require(whitelistedTokens[token], 'token not whitelisted');
     (uint amount, uint share) = repayInternal(POSITION_ID, token, amountCall);
     emit Repay(POSITION_ID, msg.sender, token, amount, share);
