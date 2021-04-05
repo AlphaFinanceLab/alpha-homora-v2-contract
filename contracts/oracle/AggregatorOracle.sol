@@ -13,7 +13,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
-  mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (in bps)
+  mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (multiplied by 1e18)
 
   uint public constant MIN_PRICE_DEVIATION = 1e18; // min price deviation
   uint public constant MAX_PRICE_DEVIATION = 1.5e18; // max price deviation
