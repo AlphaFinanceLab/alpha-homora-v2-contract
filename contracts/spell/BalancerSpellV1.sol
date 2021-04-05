@@ -67,8 +67,8 @@ contract BalancerSpellV1 is WhitelistSpell {
 
     // 3.1 Add Liquidity using equal value two side to minimize swap fee
     uint[] memory maxAmountsIn = new uint[](2);
-    maxAmountsIn[0] = amt.amtAUser.add(amt.amtABorrow);
-    maxAmountsIn[1] = amt.amtBUser.add(amt.amtBBorrow);
+    maxAmountsIn[0] = IERC20(tokenA).balanceOf(address(this));
+    maxAmountsIn[1] = IERC20(tokenB).balanceOf(address(this));
     uint totalLPSupply = IBalancerPool(lp).totalSupply();
     uint poolAmountFromA =
       maxAmountsIn[0].mul(1e18).div(IBalancerPool(lp).getBalance(tokenA)).mul(totalLPSupply).div(
