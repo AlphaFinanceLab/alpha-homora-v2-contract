@@ -15,6 +15,9 @@ contract AggregatorOracle is IBaseOracle, Governable {
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
   mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (in bps)
 
+  uint public constant MIN_PRICE_DEVIATION = 1e18; // min price deviation
+  uint public constant MAX_PRICE_DEVIATION = 1.5e18; // max price deviation
+
   constructor() public {
     __Governable__init();
   }
@@ -57,7 +60,10 @@ contract AggregatorOracle is IBaseOracle, Governable {
     IBaseOracle[] memory sources
   ) internal {
     primarySourceCount[token] = sources.length;
-    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
+    require(
+      maxPriceDeviation >= MIN_PRICE_DEVIATION && maxPriceDeviation <= MAX_PRICE_DEVIATION,
+      'bad max deviation value'
+    );
     maxPriceDeviations[token] = maxPriceDeviation;
     for (uint idx = 0; idx < sources.length; idx++) {
       primarySources[token][idx] = sources[idx];
@@ -89,7 +95,10 @@ contract AggregatorOracle is IBaseOracle, Governable {
       }
     }
     uint maxPriceDeviation = maxPriceDeviations[token];
-    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
+    require(
+      maxPriceDeviation >= MIN_PRICE_DEVIATION && maxPriceDeviation <= MAX_PRICE_DEVIATION,
+      'bad max deviation value'
+    );
 
     // Algo:
     // - 1 valid source --> return price
