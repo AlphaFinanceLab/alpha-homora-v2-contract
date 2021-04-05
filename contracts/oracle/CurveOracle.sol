@@ -36,7 +36,7 @@ contract CurveOracle is UsingBaseOracle, IBaseOracle {
     pool = registry.get_pool_from_lp_token(lp);
     require(pool != address(0), 'no corresponding pool for lp token');
     poolOf[lp] = pool;
-    uint n = registry.get_n_coins(pool);
+    (uint n, ) = registry.get_n_coins(pool);
     address[8] memory tokens = registry.get_coins(pool);
     for (uint i = 0; i < n; i++) {
       ulTokens[lp].push(
