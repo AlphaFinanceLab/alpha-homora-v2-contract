@@ -69,9 +69,9 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return whether the oracle supports evaluating collateral value of the given token.
-  /// @param token Token address to check for support
-  /// @param id Token id to check for support
-  function support(address token, uint id) external view override returns (bool) {
+  /// @param token ERC1155 token address to check for support
+  /// @param id ERC1155 token id to check for support
+  function supportWrappedToken(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     return oracles[tokenUnderlying].liqIncentive != 0;
@@ -136,5 +136,15 @@ contract ProxyOracle is IOracle, Governable {
     require(oracle.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
+  }
+
+  /// @dev Return whether the ERC20 token is supported
+  /// @param token The ERC20 token to check for support
+  function support(address token) external view override returns (bool) {
+    try source.getETHPx(token) returns (uint px) {
+      return px != 0 && oracles[token].liqIncentive != 0;
+    } catch {
+      return false;
+    }
   }
 }
