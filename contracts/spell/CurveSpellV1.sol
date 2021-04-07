@@ -94,7 +94,7 @@ contract CurveSpellV1 is WhitelistSpell {
     (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
-      require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
+      require(decodedPid == pid && decodedGid == gid, 'bad pid or gid');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }

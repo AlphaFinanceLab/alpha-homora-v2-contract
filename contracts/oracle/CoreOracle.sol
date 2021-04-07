@@ -26,7 +26,7 @@ contract CoreOracle is IBaseOracle, Governable {
   /// @param token The ERC-20 token to check the value.
   function getETHPx(address token) external view override returns (uint) {
     uint px = IBaseOracle(routes[token]).getETHPx(token);
-    require(px != 0, 'no px');
+    require(px != 0, 'price oracle failure');
     return px;
   }
 }
