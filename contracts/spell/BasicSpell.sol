@@ -8,7 +8,7 @@ import '../../interfaces/IBank.sol';
 import '../../interfaces/IWERC20.sol';
 import '../../interfaces/IWETH.sol';
 
-contract BasicSpell is ERC1155NaiveReceiver {
+abstract contract BasicSpell is ERC1155NaiveReceiver {
   using SafeERC20 for IERC20;
 
   IBank public immutable bank;
