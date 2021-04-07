@@ -154,14 +154,23 @@ contract SushiswapSpellV1 is WhitelistSpell {
     if (swapAmt > 0) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = isReversed ? (tokenB, tokenA) : (tokenA, tokenB);
-      router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
+      router.swapExactTokensForTokens(swapAmt, 0, path, address(this), block.timestamp);
     }
 
     // 5. Add liquidity
     uint balA = IERC20(tokenA).balanceOf(address(this));
     uint balB = IERC20(tokenB).balanceOf(address(this));
     if (balA > 0 || balB > 0) {
-      router.addLiquidity(tokenA, tokenB, balA, balB, amt.amtAMin, amt.amtBMin, address(this), now);
+      router.addLiquidity(
+        tokenA,
+        tokenB,
+        balA,
+        balB,
+        amt.amtAMin,
+        amt.amtBMin,
+        address(this),
+        block.timestamp
+      );
     }
   }
 
@@ -282,7 +291,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         0,
         0,
         address(this),
-        now
+        block.timestamp
       );
     }
 
@@ -298,7 +307,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         amtB.sub(amtBDesired),
         path,
         address(this),
-        now
+        block.timestamp
       );
     } else if (amtA > amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
@@ -308,7 +317,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         amtA.sub(amtADesired),
         path,
         address(this),
-        now
+        block.timestamp
       );
     }
 
