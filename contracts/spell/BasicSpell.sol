@@ -33,7 +33,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   /// @param token The token to approve.
   /// @param spender The spender to allow spending.
   /// NOTE: This is safe because spell is never built to hold fund custody.
-  function ensureApprove(address token, address spender) public {
+  function ensureApprove(address token, address spender) internal {
     if (!approved[token][spender]) {
       IERC20(token).safeApprove(spender, uint(-1));
       approved[token][spender] = true;
