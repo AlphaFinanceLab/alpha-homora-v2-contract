@@ -12,20 +12,20 @@ contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
   /// The governor sets oracle information for a token.
-  event SetOracle(address token, Oracle info);
+  event SetOracle(address token, TokenFactors info);
   /// The governor unsets oracle information for a token.
   event UnsetOracle(address token);
   /// The governor sets token whitelist for an ERC1155 token.
   event SetWhitelist(address token, bool ok);
 
-  struct Oracle {
+  struct TokenFactors {
     uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
     uint16 collateralFactor; // The collateral factor for this token, multiplied by 1e4.
     uint16 liqIncentive; // The liquidation incentive, multiplied by 1e4.
   }
 
   IBaseOracle public immutable source; // Main oracle source
-  mapping(address => Oracle) public oracles; // Mapping from token address to oracle info.
+  mapping(address => TokenFactors) public oracles; // Mapping from token address to oracle info.
   mapping(address => bool) public whitelistERC1155; // Mapping from token address to whitelist status
 
   /// @dev Create the contract and initialize the first governor.
@@ -37,7 +37,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @dev Set oracle information for the given list of token addresses.
   /// @param tokens List of tokens to set info
   /// @param info List of oracle info
-  function setOracles(address[] memory tokens, Oracle[] memory info) external onlyGov {
+  function setOracles(address[] memory tokens, TokenFactors[] memory info) external onlyGov {
     require(tokens.length == info.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
       require(info[idx].borrowFactor >= 10000, 'borrow factor must be at least 100%');
@@ -53,7 +53,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @param tokens List of tokens to unset info
   function unsetOracles(address[] memory tokens) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
-      oracles[tokens[idx]] = Oracle(0, 0, 0);
+      oracles[tokens[idx]] = TokenFactors(0, 0, 0);
       emit UnsetOracle(tokens[idx]);
     }
   }
@@ -91,8 +91,8 @@ contract ProxyOracle is IOracle, Governable {
     require(whitelistERC1155[tokenOut], 'bad token');
     address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlyingToken(tokenOutId);
     uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
-    Oracle memory oracleIn = oracles[tokenIn];
-    Oracle memory oracleOut = oracles[tokenOutUnderlying];
+    TokenFactors memory oracleIn = oracles[tokenIn];
+    TokenFactors memory oracleOut = oracles[tokenOutUnderlying];
     require(oracleIn.liqIncentive != 0, 'bad underlying in');
     require(oracleOut.liqIncentive != 0, 'bad underlying out');
     uint pxIn = source.getETHPx(tokenIn);
@@ -117,7 +117,7 @@ contract ProxyOracle is IOracle, Governable {
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     uint rateUnderlying = IERC20Wrapper(token).getUnderlyingRate(id);
     uint amountUnderlying = amount.mul(rateUnderlying).div(2**112);
-    Oracle memory oracle = oracles[tokenUnderlying];
+    TokenFactors memory oracle = oracles[tokenUnderlying];
     require(oracle.liqIncentive != 0, 'bad underlying collateral');
     uint ethValue = source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
     return ethValue.mul(oracle.collateralFactor).div(10000);
@@ -132,7 +132,7 @@ contract ProxyOracle is IOracle, Governable {
     uint amount,
     address owner
   ) external view override returns (uint) {
-    Oracle memory oracle = oracles[token];
+    TokenFactors memory oracle = oracles[token];
     require(oracle.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);

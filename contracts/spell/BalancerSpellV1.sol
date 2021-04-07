@@ -23,7 +23,7 @@ contract BalancerSpellV1 is WhitelistSpell {
 
   /// @dev Return the underlying pairs for the lp token.
   /// @param lp LP token
-  function getPair(address lp) public returns (address tokenA, address tokenB) {
+  function getAndApprovePair(address lp) public returns (address tokenA, address tokenB) {
     address[2] memory ulTokens = pairs[lp];
     tokenA = ulTokens[0];
     tokenB = ulTokens[1];
@@ -52,7 +52,7 @@ contract BalancerSpellV1 is WhitelistSpell {
   /// @param amt Amounts of tokens to supply, borrow, and get.
   function addLiquidityInternal(address lp, Amounts calldata amt) internal {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-    (address tokenA, address tokenB) = getPair(lp);
+    (address tokenA, address tokenB) = getAndApprovePair(lp);
 
     // 1. Get user input amounts
     doTransmitETH();
@@ -104,7 +104,7 @@ contract BalancerSpellV1 is WhitelistSpell {
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
 
     // 6. Refund leftovers to users
-    (address tokenA, address tokenB) = getPair(lp);
+    (address tokenA, address tokenB) = getAndApprovePair(lp);
     doRefundETH();
     doRefund(tokenA);
     doRefund(tokenB);
@@ -141,7 +141,7 @@ contract BalancerSpellV1 is WhitelistSpell {
     bank.putCollateral(address(wstaking), id, amount);
 
     // 7. Refund leftovers to users
-    (address tokenA, address tokenB) = getPair(lp);
+    (address tokenA, address tokenB) = getAndApprovePair(lp);
     doRefundETH();
     doRefund(tokenA);
     doRefund(tokenB);
@@ -165,7 +165,7 @@ contract BalancerSpellV1 is WhitelistSpell {
   /// @param amt Amounts of tokens to take out, withdraw, repay and get.
   function removeLiquidityInternal(address lp, RepayAmounts calldata amt) internal {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
-    (address tokenA, address tokenB) = getPair(lp);
+    (address tokenA, address tokenB) = getAndApprovePair(lp);
     uint amtARepay = amt.amtARepay;
     uint amtBRepay = amt.amtBRepay;
     uint amtLPRepay = amt.amtLPRepay;
