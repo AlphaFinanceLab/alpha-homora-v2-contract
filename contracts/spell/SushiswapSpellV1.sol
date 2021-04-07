@@ -288,7 +288,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     uint amtADesired = amtARepay.add(amt.amtAMin);
     uint amtBDesired = amtBRepay.add(amt.amtBMin);
 
-    if (amtA < amtADesired && amtB >= amtBDesired) {
+    if (amtA < amtADesired && amtB > amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
       router.swapTokensForExactTokens(
@@ -298,7 +298,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         address(this),
         now
       );
-    } else if (amtA >= amtADesired && amtB < amtBDesired) {
+    } else if (amtA > amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
       router.swapTokensForExactTokens(
