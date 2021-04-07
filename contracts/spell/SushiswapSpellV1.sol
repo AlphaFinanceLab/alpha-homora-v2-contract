@@ -204,8 +204,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     addLiquidityInternal(tokenA, tokenB, amt);
 
     // 6. Take out collateral
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       (uint decodedPid, ) = wmasterchef.decodeId(collId);
       require(pid == decodedPid, 'incorrect pid');
@@ -355,8 +354,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     RepayAmounts calldata amt
   ) external {
     address lp = getPair(tokenA, tokenB);
-    uint positionId = bank.POSITION_ID();
-    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     require(IWMasterChef(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
 
     // 1. Take out collateral
@@ -372,8 +370,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
 
   /// @dev Harvest SUSHI reward tokens to in-exec position's owner
   function harvestWMasterChef() external {
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, , uint collId, ) = bank.getCurrentPositionInfo();
     (uint pid, ) = wmasterchef.decodeId(collId);
     address lp = wmasterchef.getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');

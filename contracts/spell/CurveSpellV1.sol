@@ -86,12 +86,11 @@ contract CurveSpellV1 is WhitelistSpell {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address pool = getPool(lp);
     require(ulTokens[lp].length == 2, 'incorrect pool length');
-    require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
+    require(wgauge.getUnderlyingTokenFromIds(pid, gid) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Take out collateral
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
       require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
@@ -154,12 +153,11 @@ contract CurveSpellV1 is WhitelistSpell {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address pool = getPool(lp);
     require(ulTokens[lp].length == 3, 'incorrect pool length');
-    require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
+    require(wgauge.getUnderlyingTokenFromIds(pid, gid) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. take out collateral
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
       require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
@@ -222,12 +220,11 @@ contract CurveSpellV1 is WhitelistSpell {
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     address pool = getPool(lp);
     require(ulTokens[lp].length == 4, 'incorrect pool length');
-    require(wgauge.getUnderlyingToken(wgauge.encodeId(pid, gid, 0)) == lp, 'incorrect underlying');
+    require(wgauge.getUnderlyingTokenFromIds(pid, gid) == lp, 'incorrect underlying');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Take out collateral
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
       require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
@@ -482,8 +479,7 @@ contract CurveSpellV1 is WhitelistSpell {
 
   /// @dev Harvest CRV reward tokens to in-exec position's owner
   function harvest() external {
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
     (uint pid, uint gid, ) = wgauge.decodeId(collId);
     address lp = wgauge.getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');

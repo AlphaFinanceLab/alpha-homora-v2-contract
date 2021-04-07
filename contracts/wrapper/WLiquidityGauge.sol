@@ -66,13 +66,20 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     crvPerShare = id & ((1 << 240) - 1); // Last 240 bits
   }
 
+  /// @dev Get underlying ERC20 token of ERC1155 given pid, gid
+  /// @param pid pool id
+  /// @param gid gauge id
+  function getUnderlyingTokenFromIds(uint pid, uint gid) public view returns (address) {
+    ILiquidityGauge impl = gauges[pid][gid].impl;
+    require(address(impl) != address(0), 'no gauge');
+    return impl.lp_token();
+  }
+
   /// @dev Get underlying ERC20 token of ERC1155 given token id
   /// @param id Token id
   function getUnderlyingToken(uint id) external view override returns (address) {
     (uint pid, uint gid, ) = decodeId(id);
-    ILiquidityGauge impl = gauges[pid][gid].impl;
-    require(address(impl) != address(0), 'no gauge');
-    return impl.lp_token();
+    return getUnderlyingTokenFromIds(pid, gid);
   }
 
   /// @dev Return the conversion rate from ERC-1155 to ERC-20, multiplied by 2**112.
