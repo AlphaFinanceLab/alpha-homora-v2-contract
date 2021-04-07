@@ -34,7 +34,7 @@ contract HomoraCaster {
   }
 }
 
-contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
+contract HomoraBank is Governable, ERC1155NaiveReceiver, IBank {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
 
