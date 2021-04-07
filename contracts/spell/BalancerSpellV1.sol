@@ -13,7 +13,7 @@ contract BalancerSpellV1 is WhitelistSpell {
   using SafeMath for uint;
   using HomoraMath for uint;
 
-  mapping(address => address[2]) pairs; // Mapping from lp token to underlying token (only pairs)
+  mapping(address => address[2]) public pairs; // Mapping from lp token to underlying token (only pairs)
 
   constructor(
     IBank _bank,
