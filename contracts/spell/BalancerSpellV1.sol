@@ -23,18 +23,18 @@ contract BalancerSpellV1 is WhitelistSpell {
 
   /// @dev Return the underlying pairs for the lp token.
   /// @param lp LP token
-  function getPair(address lp) public returns (address tokenA, address tokenB) {
+  function getPair(address lp) public returns (address, address) {
     address[2] memory ulTokens = pairs[lp];
-    tokenA = ulTokens[0];
-    tokenB = ulTokens[1];
-    if (tokenA == address(0) || tokenB == address(0)) {
+    if (ulTokens[0] == address(0) || ulTokens[1] == address(0)) {
       address[] memory tokens = IBalancerPool(lp).getFinalTokens();
       require(tokens.length == 2, 'underlying tokens not 2');
-      tokenA = tokens[0];
-      tokenB = tokens[1];
-      ensureApprove(tokenA, lp);
-      ensureApprove(tokenB, lp);
+      ulTokens[0] = tokens[0];
+      ulTokens[1] = tokens[1];
+      pairs[lp] = ulTokens;
+      ensureApprove(ulTokens[0], lp);
+      ensureApprove(ulTokens[1], lp);
     }
+    return (ulTokens[0], ulTokens[1]);
   }
 
   struct Amounts {
