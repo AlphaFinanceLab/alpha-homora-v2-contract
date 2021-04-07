@@ -238,7 +238,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     uint amtBMin; // Desired tokenB amount
   }
 
-  /// @dev Remove liqudity from Sushiswap pool
+  /// @dev Remove liquidity from Sushiswap pool
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
@@ -327,7 +327,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     doRefund(lp);
   }
 
-  /// @dev Remove liqudity from Sushiswap pool, with no staking rewards (use WERC20 wrapper)
+  /// @dev Remove liquidity from Sushiswap pool, with no staking rewards (use WERC20 wrapper)
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
@@ -345,7 +345,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     removeLiquidityInternal(tokenA, tokenB, amt);
   }
 
-  /// @dev Remove liqudity from Sushiswap pool, from masterChef staking
+  /// @dev Remove liquidity from Sushiswap pool, from masterChef staking
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.

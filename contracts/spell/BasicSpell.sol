@@ -29,7 +29,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
     IWERC20(_werc20).setApprovalForAll(address(_bank), true);
   }
 
-  /// @dev Ensure that the spell approve the given spender to spend all of its tokens.
+  /// @dev Ensure that the spell has approved the given spender to spend all of its tokens.
   /// @param token The token to approve.
   /// @param spender The spender to allow spending.
   /// NOTE: This is safe because spell is never built to hold fund custody.
@@ -94,9 +94,9 @@ contract BasicSpell is ERC1155NaiveReceiver {
     }
   }
 
-  /// @dev Internal call to put collateral tokens to the bank.
-  /// @param token The token to put to the bank.
-  /// @param amount The amount to put to the bank.
+  /// @dev Internal call to put collateral tokens in the bank.
+  /// @param token The token to put in the bank.
+  /// @param amount The amount to put in the bank.
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
       ensureApprove(token, address(werc20));

@@ -231,7 +231,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     uint amtBMin; // Desired tokenB amount
   }
 
-  /// @dev Remove liqudity from Uniswap pool
+  /// @dev Remove liquidity from Uniswap pool
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
@@ -320,7 +320,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     doRefund(lp);
   }
 
-  /// @dev Remove liqudity from Uniswap pool, with no staking rewards (use WERC20 wrapper)
+  /// @dev Remove liquidity from Uniswap pool, with no staking rewards (use WERC20 wrapper)
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
@@ -338,7 +338,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     removeLiquidityInternal(tokenA, tokenB, amt);
   }
 
-  /// @dev Remove liqudity from Uniswap pool, from staking rewards
+  /// @dev Remove liquidity from Uniswap pool, from staking rewards
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
