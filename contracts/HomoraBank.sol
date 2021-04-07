@@ -414,6 +414,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @dev Set the oracle smart contract address.
   /// @param _oracle The new oracle smart contract address.
   function setOracle(IOracle _oracle) external onlyGov {
+    require(address(_oracle) != address(0), 'cannot set zero address oracle');
     oracle = _oracle;
     emit SetOracle(address(_oracle));
   }
