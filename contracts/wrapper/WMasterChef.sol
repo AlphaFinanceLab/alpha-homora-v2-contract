@@ -89,17 +89,4 @@ contract WMasterChef is ERC1155('WMasterChef'), ReentrancyGuard, IERC20Wrapper {
     }
     return pid;
   }
-
-  /// @dev Burn ERC1155 token to redeem LP ERC20 token back without taking SUSHI rewards.
-  /// @param id Token id
-  /// @param amount Token amount to emergency burn
-  /// @return The pool id that that you received LP token back.
-  function emergencyBurn(uint id, uint amount) external nonReentrant returns (uint) {
-    (uint pid, ) = decodeId(id);
-    _burn(msg.sender, id, amount);
-    chef.withdraw(pid, amount);
-    (address lpToken, , , ) = chef.poolInfo(pid);
-    IERC20(lpToken).safeTransfer(msg.sender, amount);
-    return pid;
-  }
 }
