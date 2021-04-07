@@ -6,6 +6,8 @@ contract Governable is Initializable {
   address public governor; // The current governor.
   address public pendingGovernor; // The address pending to become the governor once accepted.
 
+  bytes32[64] _gap; // reserve space for upgrade
+
   modifier onlyGov() {
     require(msg.sender == governor, 'not the governor');
     _;
