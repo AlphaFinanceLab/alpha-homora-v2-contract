@@ -200,7 +200,7 @@ contract BalancerSpellV1 is WhitelistSpell {
     uint amtA = IERC20(tokenA).balanceOf(address(this));
     uint amtB = IERC20(tokenB).balanceOf(address(this));
 
-    if (amtA < amtADesired && amtB >= amtBDesired) {
+    if (amtA < amtADesired && amtB > amtBDesired) {
       IBalancerPool(lp).swapExactAmountOut(
         tokenB,
         amtB.sub(amtBDesired),
@@ -208,7 +208,7 @@ contract BalancerSpellV1 is WhitelistSpell {
         amtADesired.sub(amtA),
         uint(-1)
       );
-    } else if (amtA >= amtADesired && amtB < amtBDesired) {
+    } else if (amtA > amtADesired && amtB < amtBDesired) {
       IBalancerPool(lp).swapExactAmountOut(
         tokenA,
         amtA.sub(amtADesired),
