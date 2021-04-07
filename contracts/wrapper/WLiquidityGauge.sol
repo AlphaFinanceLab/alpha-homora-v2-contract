@@ -43,7 +43,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     uint pid,
     uint gid,
     uint crvPerShare
-  ) public pure returns (uint id) {
+  ) public pure returns (uint) {
     require(pid < (1 << 8), 'bad pid');
     require(gid < (1 << 8), 'bad gid');
     require(crvPerShare < (1 << 240), 'bad crv per share');
