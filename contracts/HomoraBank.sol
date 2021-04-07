@@ -171,6 +171,9 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
+  /// @dev Set whitelist user status
+  /// @param users list of users to change status
+  /// @param statuses list of statuses to change to
   function setWhitelistUsers(address[] calldata users, bool[] calldata statuses) external onlyGov {
     require(users.length == statuses.length, 'users & statuses length mismatched');
     for (uint idx = 0; idx < users.length; idx++) {
@@ -282,11 +285,14 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   }
 
   /// @dev Return the debt share of the given bank token for the given position id.
+  /// @param positionId position id to get debt of
+  /// @param token ERC20 debt token to query
   function getPositionDebtShareOf(uint positionId, address token) external view returns (uint) {
     return positions[positionId].debtShareOf[token];
   }
 
   /// @dev Return the list of all debts for the given position id.
+  /// @param positionId position id to get debts of
   function getPositionDebts(uint positionId)
     external
     view
