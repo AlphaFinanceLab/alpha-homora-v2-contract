@@ -13,6 +13,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   event SetPrimarySources(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
 
+  address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH address
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
   mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (multiplied by 1e18)
@@ -77,7 +78,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
   /// @dev Return token price relative to ETH, multiplied by 2**112
   /// @param token Token to get price of
   /// NOTE: Support at most 3 oracle sources per token
-  function getETHPx(address token) external view override returns (uint) {
+  function getETHPx(address token) public view override returns (uint) {
     uint candidateSourceCount = primarySourceCount[token];
     require(candidateSourceCount > 0, 'no primary source');
     uint[] memory prices = new uint[](candidateSourceCount);
@@ -131,6 +132,17 @@ contract AggregatorOracle is IBaseOracle, Governable {
       }
     } else {
       revert('more than 3 valid sources not supported');
+    }
+  }
+
+  /// @dev Return the price of token0/token1, multiplied by 1e18
+  /// @notice One of the input tokens must be WETH
+  function getPrice(address token0, address token1) external view returns (uint, uint) {
+    require(token0 == WETH || token1 == WETH, 'one of the requested tokens must be WETH');
+    if (token0 == WETH) {
+      return (uint(2**112).mul(1e18).div(getETHPx(token1)), block.timestamp);
+    } else {
+      return (getETHPx(token0).mul(1e18).div(2**112), block.timestamp);
     }
   }
 }
