@@ -116,9 +116,9 @@ contract SushiswapSpellV1 is WhitelistSpell {
   function addLiquidityInternal(
     address tokenA,
     address tokenB,
-    Amounts calldata amt
+    Amounts calldata amt,
+    address lp
   ) internal {
-    address lp = getPair(tokenA, tokenB);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Get user input amounts
@@ -174,7 +174,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
   ) external payable {
     address lp = getPair(tokenA, tokenB);
     // 1-5. add liquidity
-    addLiquidityInternal(tokenA, tokenB, amt);
+    addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
@@ -201,7 +201,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     require(lpToken == lp, 'incorrect lp token');
 
     // 1-5. add liquidity
-    addLiquidityInternal(tokenA, tokenB, amt);
+    addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Take out collateral
     (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
