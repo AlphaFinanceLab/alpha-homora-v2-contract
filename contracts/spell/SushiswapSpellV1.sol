@@ -244,9 +244,9 @@ contract SushiswapSpellV1 is WhitelistSpell {
   function removeLiquidityInternal(
     address tokenA,
     address tokenB,
-    RepayAmounts calldata amt
+    RepayAmounts calldata amt,
+    address lp
   ) internal {
-    address lp = getPair(tokenA, tokenB);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     uint positionId = bank.POSITION_ID();
 
@@ -341,7 +341,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     doTakeCollateral(lp, amt.amtLPTake);
 
     // 2-8. remove liquidity
-    removeLiquidityInternal(tokenA, tokenB, amt);
+    removeLiquidityInternal(tokenA, tokenB, amt, lp);
   }
 
   /// @dev Remove liqudity from Sushiswap pool, from masterChef staking
@@ -362,7 +362,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     wmasterchef.burn(collId, amt.amtLPTake);
 
     // 2-8. remove liquidity
-    removeLiquidityInternal(tokenA, tokenB, amt);
+    removeLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 9. Refund sushi
     doRefund(sushi);
