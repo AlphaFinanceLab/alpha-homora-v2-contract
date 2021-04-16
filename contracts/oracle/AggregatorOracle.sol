@@ -24,7 +24,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Set oracle primary sources for the token
   /// @param token Token address to set oracle sources
-  /// @param maxPriceDeviation Max price deviation (in bps) for token
+  /// @param maxPriceDeviation Max price deviation (in 1e18) for token
   /// @param sources Oracle sources for the token
   function setPrimarySources(
     address token,
@@ -36,7 +36,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Set oracle primary sources for multiple tokens
   /// @param tokens List of token addresses to set oracle sources
-  /// @param maxPriceDeviationList List of max price deviations (in bps) for tokens
+  /// @param maxPriceDeviationList List of max price deviations (in 1e18) for tokens
   /// @param allSources List of oracle sources for tokens
   function setMultiPrimarySources(
     address[] memory tokens,
@@ -52,7 +52,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Set oracle primary sources for tokens
   /// @param token Token to set oracle sources
-  /// @param maxPriceDeviation Max price deviation (in bps) for token
+  /// @param maxPriceDeviation Max price deviation (in 1e18) for token
   /// @param sources Oracle sources for the token
   function _setPrimarySources(
     address token,
