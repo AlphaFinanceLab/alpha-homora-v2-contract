@@ -4,7 +4,7 @@ interface IOracle {
   /// @dev Return whether the oracle supports evaluating collateral value of the given address.
   /// @param token The ERC-1155 token to check the acceptence.
   /// @param id The token id to check the acceptance.
-  function support(address token, uint id) external view returns (bool);
+  function supportWrappedToken(address token, uint id) external view returns (bool);
 
   /// @dev Return the amount of token out as liquidation reward for liquidating token in.
   /// @param tokenIn The ERC-20 token that gets liquidated.
@@ -39,4 +39,8 @@ interface IOracle {
     uint amount,
     address owner
   ) external view returns (uint);
+
+  /// @dev Return whether the ERC-20 token is supported
+  /// @param token The ERC-20 token to check for support
+  function support(address token) external view returns (bool);
 }

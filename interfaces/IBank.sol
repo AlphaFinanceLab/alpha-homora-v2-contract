@@ -111,4 +111,7 @@ interface IBank {
       uint collId,
       uint collateralSize
     );
+
+  function support(address token) external view returns (bool);
+
 }

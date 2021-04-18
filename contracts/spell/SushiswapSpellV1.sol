@@ -204,10 +204,11 @@ contract SushiswapSpellV1 is WhitelistSpell {
     addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Take out collateral
-    (, , uint collId, uint collSize) = bank.getCurrentPositionInfo();
+    (, address collToken, uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       (uint decodedPid, ) = wmasterchef.decodeId(collId);
       require(pid == decodedPid, 'incorrect pid');
+      require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');
       bank.takeCollateral(address(wmasterchef), collId, collSize);
       wmasterchef.burn(collId, collSize);
     }
@@ -287,7 +288,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     uint amtADesired = amtARepay.add(amt.amtAMin);
     uint amtBDesired = amtBRepay.add(amt.amtBMin);
 
-    if (amtA < amtADesired && amtB >= amtBDesired) {
+    if (amtA < amtADesired && amtB > amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
       router.swapTokensForExactTokens(
@@ -297,7 +298,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         address(this),
         now
       );
-    } else if (amtA >= amtADesired && amtB < amtBDesired) {
+    } else if (amtA > amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
       router.swapTokensForExactTokens(
@@ -356,6 +357,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address lp = getPair(tokenA, tokenB);
     (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     require(IWMasterChef(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wmasterchef), collId, amt.amtLPTake);
@@ -370,10 +372,11 @@ contract SushiswapSpellV1 is WhitelistSpell {
 
   /// @dev Harvest SUSHI reward tokens to in-exec position's owner
   function harvestWMasterChef() external {
-    (, , uint collId, ) = bank.getCurrentPositionInfo();
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     (uint pid, ) = wmasterchef.decodeId(collId);
     address lp = wmasterchef.getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+    require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wmasterchef), collId, uint(-1));

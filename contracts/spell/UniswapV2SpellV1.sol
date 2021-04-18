@@ -198,6 +198,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     (, address collToken, uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+      require(collToken == wstaking, 'collateral token & wstaking mismatched');
       bank.takeCollateral(wstaking, collId, collSize);
       IWStakingRewards(wstaking).burn(collId, collSize);
     }
@@ -280,7 +281,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     uint amtADesired = amtARepay.add(amt.amtAMin);
     uint amtBDesired = amtBRepay.add(amt.amtBMin);
 
-    if (amtA < amtADesired && amtB >= amtBDesired) {
+    if (amtA < amtADesired && amtB > amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
       router.swapTokensForExactTokens(
@@ -290,7 +291,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
         address(this),
         now
       );
-    } else if (amtA >= amtADesired && amtB < amtBDesired) {
+    } else if (amtA > amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
       router.swapTokensForExactTokens(
@@ -353,6 +354,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
 
     // 1. Take out collateral
     require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == wstaking, 'collateral token & wstaking mismatched');
     bank.takeCollateral(wstaking, collId, amt.amtLPTake);
     IWStakingRewards(wstaking).burn(collId, amt.amtLPTake);
 
@@ -367,9 +369,10 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   /// @param wstaking Wrapped staking rewards address
   function harvestWStakingRewards(address wstaking) external {
     address reward = IWStakingRewards(wstaking).reward();
-    (, , uint collId, ) = bank.getCurrentPositionInfo();
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     address lp = IWStakingRewards(wstaking).getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+    require(collToken == wstaking, 'collateral token & wstaking mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(wstaking, collId, uint(-1));
