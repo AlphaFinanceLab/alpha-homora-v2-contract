@@ -80,7 +80,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
 
   address public caster; // The caster address for untrusted execution.
   IOracle public oracle; // The oracle address for determining prices.
-  uint public feeBps; // The fee collected as protocol reserve in basis point from interest.
+  uint public feeBps; // The fee collected as protocol reserve in basis points from interest.
   uint public override nextPositionId; // Next available position ID, starting from 1 (see initialize).
 
   address[] public allBanks; // The list of all listed banks.
@@ -228,7 +228,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The underlying token to trigger the interest accrual.
   function accrue(address token) public override {
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exists');
+    require(bank.isListed, 'bank not exist');
     uint totalDebt = bank.totalDebt;
     uint debt = ICErc20(bank.cToken).borrowBalanceCurrent(address(this));
     if (debt > totalDebt) {
@@ -252,7 +252,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
-  /// @dev Return the borrow balance for given positon and token without trigger interest accrual.
+  /// @dev Return the borrow balance for given position and token without triggering interest accrual.
   /// @param positionId The position to query for borrow balance.
   /// @param token The token to query for borrow balance.
   function borrowBalanceStored(uint positionId, address token) public view override returns (uint) {
@@ -439,7 +439,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param amount The amount of tokens to withdraw.
   function withdrawReserve(address token, uint amount) external onlyGov lock {
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exists');
+    require(bank.isListed, 'bank not exist');
     bank.reserve = bank.reserve.sub(amount);
     IERC20(token).safeTransfer(msg.sender, amount);
     emit WithdrawReserve(msg.sender, token, amount);

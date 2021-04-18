@@ -89,7 +89,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
     return 2**112;
   }
 
-  /// @dev Register curve gauge to storage given pood id and gauge id
+  /// @dev Register curve gauge to storage given pool id and gauge id
   /// @param pid Pool id
   /// @param gid Gauge id
   function registerGauge(uint pid, uint gid) external onlyGov {
@@ -128,7 +128,7 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
 
   /// @dev Burn ERC1155 token to redeem ERC20 token back
   /// @param id Token id to burn
-  /// @param amount Token amont to burn
+  /// @param amount Token amount to burn
   function burn(uint id, uint amount) external nonReentrant returns (uint) {
     if (amount == uint(-1)) {
       amount = balanceOf(msg.sender, id);

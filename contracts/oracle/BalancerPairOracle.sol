@@ -16,7 +16,7 @@ contract BalancerPairOracle is UsingBaseOracle, IBaseOracle, BNum {
 
   /// @dev Return fair reserve amounts given spot reserves, weights, and fair prices.
   /// @param resA Reserve of the first asset
-  /// @param resB Reserev of the second asset
+  /// @param resB Reserve of the second asset
   /// @param wA Weight of the first asset
   /// @param wB Weight of the second asset
   /// @param pxA Fair price of the first asset
