@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -53,7 +55,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @param tokens List of tokens to unset info
   function unsetOracles(address[] memory tokens) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
-      oracles[tokens[idx]] = TokenFactors(0, 0, 0);
+      delete oracles[tokens[idx]];
       emit UnsetOracle(tokens[idx]);
     }
   }
