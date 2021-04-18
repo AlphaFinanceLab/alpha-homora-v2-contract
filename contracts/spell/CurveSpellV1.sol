@@ -11,7 +11,6 @@ import '../utils/HomoraMath.sol';
 import '../../interfaces/ICurvePool.sol';
 import '../../interfaces/ICurveRegistry.sol';
 import '../../interfaces/IWLiquidityGauge.sol';
-import '../../interfaces/IWERC20.sol';
 
 contract CurveSpellV1 is WhitelistSpell {
   using SafeMath for uint;

@@ -3,7 +3,6 @@
 pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC1155/ERC1155Receiver.sol';
-import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC1155/IERC1155Receiver.sol';
 
 contract ERC1155NaiveReceiver is ERC1155Receiver {
   bytes32[64] __gap; // reserve space for upgrade
