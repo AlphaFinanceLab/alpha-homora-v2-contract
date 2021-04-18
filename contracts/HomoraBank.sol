@@ -13,6 +13,15 @@ import '../interfaces/IBank.sol';
 import '../interfaces/ICErc20.sol';
 import '../interfaces/IOracle.sol';
 
+library HomoraSafeMath {
+  using SafeMath for uint;
+
+  /// @dev Computes round-up division.
+  function ceilDiv(uint a, uint b) internal pure returns (uint) {
+    return a.add(b).sub(1).div(b);
+  }
+}
+
 contract HomoraCaster {
   /// @dev Call to the target using the given data.
   /// @param target The address target to call.
@@ -36,6 +45,7 @@ contract HomoraCaster {
 
 contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   using SafeMath for uint;
+  using HomoraSafeMath for uint;
   using SafeERC20 for IERC20;
 
   uint private constant _NOT_ENTERED = 1;
@@ -48,7 +58,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint8 index; // Reverse look up index for this bank.
     address cToken; // The CToken to draw liquidity from.
     uint reserve; // The reserve portion allocated to Homora protocol.
-    uint pendingReserve; // The pending reserve portion waiting to be resolve.
     uint totalDebt; // The last recorded total debt since last action.
     uint totalShare; // The total debt share count across all open positions.
   }
@@ -81,6 +90,8 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public whitelistedTokens; // Mapping from token to whitelist status
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
   mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
+
+  uint public bankStatus; // Each bit stores certain bank status, e.g. borrow allowed, repay allowed
 
   /// @dev Ensure that the function is called from EOA when allowContractStatus is set to false and caller is not whitelisted
   modifier onlyEOAEx() {
@@ -128,6 +139,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(address(_oracle) != address(0), 'bad oracle address');
     feeBps = _feeBps;
     nextPositionId = 1;
+    bankStatus = 3; // allow both borrow and repay
     emit SetOracle(address(_oracle));
     emit SetFeeBps(_feeBps);
   }
@@ -178,6 +190,24 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
+  /// @dev Set bank status
+  /// @param _bankStatus new bank status to change to
+  function setBankStatus(uint _bankStatus) external onlyGov {
+    bankStatus = _bankStatus;
+  }
+
+  /// @dev Bank borrow status allowed or not
+  /// @notice check last bit of bankStatus
+  function allowBorrowStatus() public view returns (bool) {
+    return (bankStatus & 0x01) > 0;
+  }
+
+  /// @dev Bank repay status allowed or not
+  /// @notice Check second-to-last bit of bankStatus
+  function allowRepayStatus() public view returns (bool) {
+    return (bankStatus & 0x02) > 0;
+  }
+
   /// @dev Trigger interest accrual for the given bank.
   /// @param token The underlying token to trigger the interest accrual.
   function accrue(address token) public override {
@@ -188,7 +218,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     if (debt > totalDebt) {
       uint fee = debt.sub(totalDebt).mul(feeBps).div(10000);
       bank.totalDebt = debt;
-      bank.pendingReserve = bank.pendingReserve.add(fee);
+      bank.reserve = bank.reserve.add(doBorrow(token, fee));
     } else if (totalDebt != debt) {
       // We should never reach here because CREAMv2 does not support *repayBorrowBehalf*
       // functionality. We set bank.totalDebt = debt nonetheless to ensure consistency. But do
@@ -206,24 +236,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
-  /// @dev Trigger reserve resolve by borrowing the pending amount for reserve.
-  /// @param token The underlying token to trigger reserve resolve.
-  function resolveReserve(address token) public lock poke(token) onlyGov {
-    Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exists');
-    uint pendingReserve = bank.pendingReserve;
-    bank.pendingReserve = 0;
-    bank.reserve = bank.reserve.add(doBorrow(token, pendingReserve));
-  }
-
-  /// @dev Convenient function to trigger reserve resolve for the list of banks.
-  /// @param tokens The list of banks to trigger reserve resolve.
-  function resolveReserveAll(address[] memory tokens) external {
-    for (uint idx = 0; idx < tokens.length; idx++) {
-      resolveReserve(tokens[idx]);
-    }
-  }
-
   /// @dev Return the borrow balance for given positon and token without trigger interest accrual.
   /// @param positionId The position to query for borrow balance.
   /// @param token The token to query for borrow balance.
@@ -234,7 +246,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     if (share == 0 || totalDebt == 0) {
       return 0;
     } else {
-      return share.mul(totalDebt).div(totalShare);
+      return share.mul(totalDebt).ceilDiv(totalShare);
     }
   }
 
@@ -311,7 +323,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
         address token = allBanks[idx];
         Bank storage bank = banks[token];
         tokens[count] = token;
-        debts[count] = pos.debtShareOf[token].mul(bank.totalDebt).div(bank.totalShare);
+        debts[count] = pos.debtShareOf[token].mul(bank.totalDebt).ceilDiv(bank.totalShare);
         count++;
       }
       idx++;
@@ -345,7 +357,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
         address token = allBanks[idx];
         uint share = pos.debtShareOf[token];
         Bank storage bank = banks[token];
-        uint debt = share.mul(bank.totalDebt).div(bank.totalShare);
+        uint debt = share.mul(bank.totalDebt).ceilDiv(bank.totalShare);
         value = value.add(oracle.asETHBorrow(token, debt, owner));
       }
       idx++;
@@ -454,13 +466,14 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to borrow from the bank.
   /// @param amount The amount of tokens to borrow.
   function borrow(address token, uint amount) external override inExec poke(token) {
+    require(allowBorrowStatus(), 'borrow not allowed');
     require(whitelistedTokens[token], 'token not whitelisted');
     Bank storage bank = banks[token];
     require(bank.isListed, 'bank not exists');
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
-    uint share = totalShare == 0 ? amount : amount.mul(totalShare).div(totalDebt).add(1);
+    uint share = totalShare == 0 ? amount : amount.mul(totalShare).ceilDiv(totalDebt);
     bank.totalShare = bank.totalShare.add(share);
     uint newShare = pos.debtShareOf[token].add(share);
     pos.debtShareOf[token] = newShare;
@@ -475,6 +488,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @param token The token to repay to the bank.
   /// @param amountCall The amount of tokens to repay via transferFrom.
   function repay(address token, uint amountCall) external override inExec poke(token) {
+    require(allowRepayStatus(), 'repay not allowed');
     require(whitelistedTokens[token], 'token not whitelisted');
     (uint amount, uint share) = repayInternal(POSITION_ID, token, amountCall);
     emit Repay(POSITION_ID, msg.sender, token, amount, share);
@@ -495,7 +509,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
     uint oldShare = pos.debtShareOf[token];
-    uint oldDebt = oldShare.mul(totalDebt).div(totalShare);
+    uint oldDebt = oldShare.mul(totalDebt).ceilDiv(totalShare);
     if (amountCall == uint(-1)) {
       amountCall = oldDebt;
     }

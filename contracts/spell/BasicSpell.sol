@@ -50,6 +50,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   /// @dev Internal call to transmit tokens from the bank if amount is positive.
   /// @param token The token to perform the transmit action.
   /// @param amount The amount to transmit.
+  /// @notice Do not use `amount` input argument to handle the received amount.
   function doTransmit(address token, uint amount) internal {
     if (amount > 0) {
       bank.transmit(token, amount);
@@ -78,6 +79,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   /// @dev Internal call to borrow tokens from the bank on behalf of the current executor.
   /// @param token The token to borrow from the bank.
   /// @param amount The amount to borrow.
+  /// @notice Do not use `amount` input argument to handle the received amount.
   function doBorrow(address token, uint amount) internal {
     if (amount > 0) {
       bank.borrow(token, amount);
