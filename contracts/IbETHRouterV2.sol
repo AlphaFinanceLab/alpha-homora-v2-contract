@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/math/SafeMath.sol';
 import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/IERC20.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/SafeERC20.sol';
 import './utils/HomoraMath.sol';
 
 interface IbETHRouterV2IbETHv2 is IERC20 {
@@ -68,6 +71,7 @@ interface IbETHRouterV2UniswapFactory {
 
 contract IbETHRouterV2 {
   using SafeMath for uint;
+  using SafeERC20 for IERC20;
 
   IERC20 public immutable alpha;
   IbETHRouterV2IbETHv2 public immutable ibETHv2;
@@ -87,9 +91,9 @@ contract IbETHRouterV2 {
     ibETHv2 = _ibETHv2;
     lpToken = _lpToken;
     router = _router;
-    require(_alpha.approve(address(_router), uint(-1)));
-    require(_ibETHv2.approve(address(_router), uint(-1)));
-    require(_lpToken.approve(address(_router), uint(-1)));
+    IERC20(_alpha).safeApprove(address(_router), uint(-1));
+    IERC20(_ibETHv2).safeApprove(address(_router), uint(-1));
+    IERC20(_lpToken).safeApprove(address(_router), uint(-1));
   }
 
   function optimalDeposit(

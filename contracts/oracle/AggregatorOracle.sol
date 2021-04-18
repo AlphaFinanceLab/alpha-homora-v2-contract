@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -9,11 +11,14 @@ import '../../interfaces/IBaseOracle.sol';
 contract AggregatorOracle is IBaseOracle, Governable {
   using SafeMath for uint;
 
-  event SetPrimarySource(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
+  event SetPrimarySources(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
 
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
-  mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (in bps)
+  mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (multiplied by 1e18)
+
+  uint public constant MIN_PRICE_DEVIATION = 1e18; // min price deviation
+  uint public constant MAX_PRICE_DEVIATION = 1.5e18; // max price deviation
 
   constructor() public {
     __Governable__init();
@@ -21,7 +26,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Set oracle primary sources for the token
   /// @param token Token address to set oracle sources
-  /// @param maxPriceDeviation Max price deviation (in bps) for token
+  /// @param maxPriceDeviation Max price deviation (in 1e18) for token
   /// @param sources Oracle sources for the token
   function setPrimarySources(
     address token,
@@ -33,7 +38,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Set oracle primary sources for multiple tokens
   /// @param tokens List of token addresses to set oracle sources
-  /// @param maxPriceDeviationList List of max price deviations (in bps) for tokens
+  /// @param maxPriceDeviationList List of max price deviations (in 1e18) for tokens
   /// @param allSources List of oracle sources for tokens
   function setMultiPrimarySources(
     address[] memory tokens,
@@ -49,7 +54,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   /// @dev Set oracle primary sources for tokens
   /// @param token Token to set oracle sources
-  /// @param maxPriceDeviation Max price deviation (in bps) for token
+  /// @param maxPriceDeviation Max price deviation (in 1e18) for token
   /// @param sources Oracle sources for the token
   function _setPrimarySources(
     address token,
@@ -57,12 +62,16 @@ contract AggregatorOracle is IBaseOracle, Governable {
     IBaseOracle[] memory sources
   ) internal {
     primarySourceCount[token] = sources.length;
-    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
+    require(
+      maxPriceDeviation >= MIN_PRICE_DEVIATION && maxPriceDeviation <= MAX_PRICE_DEVIATION,
+      'bad max deviation value'
+    );
+    require(sources.length <= 3, 'sources length exceed 3');
     maxPriceDeviations[token] = maxPriceDeviation;
     for (uint idx = 0; idx < sources.length; idx++) {
       primarySources[token][idx] = sources[idx];
     }
-    emit SetPrimarySource(token, maxPriceDeviation, sources);
+    emit SetPrimarySources(token, maxPriceDeviation, sources);
   }
 
   /// @dev Return token price relative to ETH, multiplied by 2**112
@@ -89,7 +98,6 @@ contract AggregatorOracle is IBaseOracle, Governable {
       }
     }
     uint maxPriceDeviation = maxPriceDeviations[token];
-    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
 
     // Algo:
     // - 1 valid source --> return price

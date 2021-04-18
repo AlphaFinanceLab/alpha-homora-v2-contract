@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -73,7 +75,7 @@ contract BandAdapterOracle is IBaseOracle, Governable {
   function getETHPx(address token) external view override returns (uint) {
     string memory sym = symbols[token];
     require(bytes(sym).length != 0, 'no mapping');
-    uint8 decimals = BandDetailedERC20(token).decimals();
+    uint decimals = uint(BandDetailedERC20(token).decimals());
     IStdReference.ReferenceData memory data = ref.getReferenceData(sym, ETH);
     require(data.lastUpdatedBase >= block.timestamp.sub(maxDelayTime), 'delayed base data');
     require(data.lastUpdatedQuote >= block.timestamp.sub(maxDelayTime), 'delayed quote data');

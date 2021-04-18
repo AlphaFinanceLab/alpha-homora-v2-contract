@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC1155/ERC1155.sol';
@@ -36,18 +38,18 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
   }
 
   /// @dev Encode pid, gid, crvPerShare to a ERC1155 token id
-  /// @param pid Curve pool id (8-bit)
-  /// @param gid Curve gauge id (8-bit)
+  /// @param pid Curve pool id (10-bit)
+  /// @param gid Curve gauge id (6-bit)
   /// @param crvPerShare CRV amount per share, multiplied by 1e18 (240-bit)
   function encodeId(
     uint pid,
     uint gid,
     uint crvPerShare
-  ) public pure returns (uint id) {
-    require(pid < (1 << 8), 'bad pid');
-    require(gid < (1 << 8), 'bad gid');
+  ) public pure returns (uint) {
+    require(pid < (1 << 10), 'bad pid');
+    require(gid < (1 << 6), 'bad gid');
     require(crvPerShare < (1 << 240), 'bad crv per share');
-    return (pid << 248) | (gid << 240) | crvPerShare;
+    return (pid << 246) | (gid << 240) | crvPerShare;
   }
 
   /// @dev Decode ERC1155 token id to pid, gid, crvPerShare
@@ -61,18 +63,25 @@ contract WLiquidityGauge is ERC1155('WLiquidityGauge'), ReentrancyGuard, IERC20W
       uint crvPerShare
     )
   {
-    pid = id >> 248; // First 8 bits
-    gid = (id >> 240) & (255); // Next 8 bits
+    pid = id >> 246; // First 10 bits
+    gid = (id >> 240) & (63); // Next 6 bits
     crvPerShare = id & ((1 << 240) - 1); // Last 240 bits
+  }
+
+  /// @dev Get underlying ERC20 token of ERC1155 given pid, gid
+  /// @param pid pool id
+  /// @param gid gauge id
+  function getUnderlyingTokenFromIds(uint pid, uint gid) public view returns (address) {
+    ILiquidityGauge impl = gauges[pid][gid].impl;
+    require(address(impl) != address(0), 'no gauge');
+    return impl.lp_token();
   }
 
   /// @dev Get underlying ERC20 token of ERC1155 given token id
   /// @param id Token id
   function getUnderlyingToken(uint id) external view override returns (address) {
     (uint pid, uint gid, ) = decodeId(id);
-    ILiquidityGauge impl = gauges[pid][gid].impl;
-    require(address(impl) != address(0), 'no gauge');
-    return impl.lp_token();
+    return getUnderlyingTokenFromIds(pid, gid);
   }
 
   /// @dev Return the conversion rate from ERC-1155 to ERC-20, multiplied by 2**112.
