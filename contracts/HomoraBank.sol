@@ -86,16 +86,16 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   mapping(address => bool) public cTokenInBank; // Mapping from cToken to its existence in bank.
   mapping(uint => Position) public positions; // Mapping from position ID to position data.
 
-  bool public allowContractStatus; // The boolean status whether to allow call from contract (false = onlyEOA)
+  bool public allowContractCalls; // The boolean status whether to allow call from contract (false = onlyEOA)
   mapping(address => bool) public whitelistedTokens; // Mapping from token to whitelist status
   mapping(address => bool) public whitelistedSpells; // Mapping from spell to whitelist status
   mapping(address => bool) public whitelistedUsers; // Mapping from user to whitelist status
 
   uint public bankStatus; // Each bit stores certain bank status, e.g. borrow allowed, repay allowed
 
-  /// @dev Ensure that the function is called from EOA when allowContractStatus is set to false and caller is not whitelisted
+  /// @dev Ensure that the function is called from EOA when allowContractCalls is set to false and caller is not whitelisted
   modifier onlyEOAEx() {
-    if (!allowContractStatus && !whitelistedUsers[msg.sender]) {
+    if (!allowContractCalls && !whitelistedUsers[msg.sender]) {
       require(msg.sender == tx.origin, 'not eoa');
     }
     _;
@@ -151,10 +151,10 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     return positions[positionId].owner;
   }
 
-  /// @dev Set allowContractStatus
-  /// @param ok The status to set allowContractStatus to (false = onlyEOA)
-  function setAllowContractStatus(bool ok) external onlyGov {
-    allowContractStatus = ok;
+  /// @dev Set allowContractCalls
+  /// @param ok The status to set allowContractCalls to (false = onlyEOA)
+  function setAllowContractCalls(bool ok) external onlyGov {
+    allowContractCalls = ok;
   }
 
   /// @dev Set whitelist spell status

@@ -9,7 +9,7 @@ import '../../interfaces/IBaseOracle.sol';
 contract AggregatorOracle is IBaseOracle, Governable {
   using SafeMath for uint;
 
-  event SetPrimarySource(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
+  event SetPrimarySources(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
 
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
@@ -69,7 +69,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
     for (uint idx = 0; idx < sources.length; idx++) {
       primarySources[token][idx] = sources[idx];
     }
-    emit SetPrimarySource(token, maxPriceDeviation, sources);
+    emit SetPrimarySources(token, maxPriceDeviation, sources);
   }
 
   /// @dev Return token price relative to ETH, multiplied by 2**112

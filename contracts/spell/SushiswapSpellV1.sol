@@ -40,7 +40,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
   /// @dev Return the LP token for the token pairs (can be in any order)
   /// @param tokenA Token A to get LP token
   /// @param tokenB Token B to get LP token
-  function getPair(address tokenA, address tokenB) public returns (address) {
+  function getAndApprovePair(address tokenA, address tokenB) public returns (address) {
     address lp = pairs[tokenA][tokenB];
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
@@ -172,7 +172,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address tokenB,
     Amounts calldata amt
   ) external payable {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     // 1-5. add liquidity
     addLiquidityInternal(tokenA, tokenB, amt, lp);
 
@@ -196,7 +196,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     Amounts calldata amt,
     uint pid
   ) external payable {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     (address lpToken, , , ) = wmasterchef.chef().poolInfo(pid);
     require(lpToken == lp, 'incorrect lp token');
 
@@ -336,7 +336,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address tokenB,
     RepayAmounts calldata amt
   ) external {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
 
     // 1. Take out collateral
     doTakeCollateral(lp, amt.amtLPTake);
@@ -354,7 +354,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address tokenB,
     RepayAmounts calldata amt
   ) external {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     require(IWMasterChef(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
     require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');

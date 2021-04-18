@@ -32,7 +32,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   /// @dev Return the LP token for the token pairs (can be in any order)
   /// @param tokenA Token A to get LP token
   /// @param tokenB Token B to get LP token
-  function getPair(address tokenA, address tokenB) public returns (address) {
+  function getAndApprovePair(address tokenA, address tokenB) public returns (address) {
     address lp = pairs[tokenA][tokenB];
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
@@ -164,7 +164,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     address tokenB,
     Amounts calldata amt
   ) external payable {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     // 1-5. add liquidity
     addLiquidityInternal(tokenA, tokenB, amt, lp);
 
@@ -188,7 +188,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     Amounts calldata amt,
     address wstaking
   ) external payable {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     address reward = IWStakingRewards(wstaking).reward();
 
     // 1-5. add liquidity
@@ -329,7 +329,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     address tokenB,
     RepayAmounts calldata amt
   ) external {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
 
     // 1. Take out collateral
     doTakeCollateral(lp, amt.amtLPTake);
@@ -348,7 +348,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     RepayAmounts calldata amt,
     address wstaking
   ) external {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     address reward = IWStakingRewards(wstaking).reward();
 
