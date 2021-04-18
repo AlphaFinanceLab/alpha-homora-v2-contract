@@ -26,7 +26,7 @@ contract WStakingRewards is ERC1155('WStakingRewards'), ReentrancyGuard, IERC20W
     staking = _staking;
     underlying = _underlying;
     reward = _reward;
-    IERC20(_underlying).approve(_staking, uint(-1));
+    IERC20(_underlying).safeApprove(_staking, uint(-1));
   }
 
   /// @dev Return the underlying ERC20 for the given ERC1155 token id.

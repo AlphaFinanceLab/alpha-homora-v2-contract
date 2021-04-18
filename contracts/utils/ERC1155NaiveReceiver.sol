@@ -4,6 +4,8 @@ import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC1155/ERC115
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC1155/IERC1155Receiver.sol';
 
 contract ERC1155NaiveReceiver is ERC1155Receiver {
+  bytes32[64] __gap; // reserve space for upgrade
+
   function onERC1155Received(
     address operator,
     address from,

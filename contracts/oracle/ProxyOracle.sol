@@ -12,11 +12,11 @@ contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
   /// The governor sets oracle information for a token.
-  event SetOracle(address token, TokenFactors info);
+  event SetOracle(address indexed token, TokenFactors info);
   /// The governor unsets oracle information for a token.
-  event UnsetOracle(address token);
+  event UnsetOracle(address indexed token);
   /// The governor sets token whitelist for an ERC1155 token.
-  event SetWhitelist(address token, bool ok);
+  event SetWhitelist(address indexed token, bool ok);
 
   struct TokenFactors {
     uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
@@ -69,9 +69,9 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return whether the oracle supports evaluating collateral value of the given token.
-  /// @param token Token address to check for support
-  /// @param id Token id to check for support
-  function support(address token, uint id) external view override returns (bool) {
+  /// @param token ERC1155 token address to check for support
+  /// @param id ERC1155 token id to check for support
+  function supportWrappedToken(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     return oracles[tokenUnderlying].liqIncentive != 0;
@@ -124,8 +124,8 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
-  /// @param token ERC1155 token address to get borrow value
-  /// @param amount ERC1155 token amount to get borrow value
+  /// @param token ERC20 token address to get borrow value
+  /// @param amount ERC20 token amount to get borrow value
   /// @param owner Token owner address (currently unused by this implementation)
   function asETHBorrow(
     address token,
@@ -136,5 +136,15 @@ contract ProxyOracle is IOracle, Governable {
     require(oracle.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
+  }
+
+  /// @dev Return whether the ERC20 token is supported
+  /// @param token The ERC20 token to check for support
+  function support(address token) external view override returns (bool) {
+    try source.getETHPx(token) returns (uint px) {
+      return px != 0 && oracles[token].liqIncentive != 0;
+    } catch {
+      return false;
+    }
   }
 }
