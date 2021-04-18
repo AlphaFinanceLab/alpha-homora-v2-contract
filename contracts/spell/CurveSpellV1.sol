@@ -42,7 +42,7 @@ contract CurveSpellV1 is WhitelistSpell {
       pool = registry.get_pool_from_lp_token(lp);
       require(pool != address(0), 'no corresponding pool for lp token');
       poolOf[lp] = pool;
-      uint n = registry.get_n_coins(pool);
+      (uint n, ) = registry.get_n_coins(pool);
       address[8] memory tokens = registry.get_coins(pool);
       ulTokens[lp] = new address[](n);
       for (uint i = 0; i < n; i++) {
@@ -91,10 +91,11 @@ contract CurveSpellV1 is WhitelistSpell {
 
     // 0. Take out collateral
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
       require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
+      require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }
@@ -120,10 +121,12 @@ contract CurveSpellV1 is WhitelistSpell {
     }
 
     // 5. Put collateral
-    uint amount = IERC20(lp).balanceOf(address(this));
     ensureApprove(lp, address(wgauge));
-    uint id = wgauge.mint(pid, gid, amount);
-    bank.putCollateral(address(wgauge), id, amount);
+    {
+      uint amount = IERC20(lp).balanceOf(address(this));
+      uint id = wgauge.mint(pid, gid, amount);
+      bank.putCollateral(address(wgauge), id, amount);
+    }
 
     // 6. Refund
     for (uint i = 0; i < 2; i++) doRefund(tokens[i]);
@@ -159,10 +162,11 @@ contract CurveSpellV1 is WhitelistSpell {
 
     // 0. take out collateral
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
       require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
+      require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }
@@ -188,10 +192,12 @@ contract CurveSpellV1 is WhitelistSpell {
     }
 
     // 5. put collateral
-    uint amount = IERC20(lp).balanceOf(address(this));
     ensureApprove(lp, address(wgauge));
-    uint id = wgauge.mint(pid, gid, amount);
-    bank.putCollateral(address(wgauge), id, amount);
+    {
+      uint amount = IERC20(lp).balanceOf(address(this));
+      uint id = wgauge.mint(pid, gid, amount);
+      bank.putCollateral(address(wgauge), id, amount);
+    }
 
     // 6. Refund
     for (uint i = 0; i < 3; i++) doRefund(tokens[i]);
@@ -227,10 +233,11 @@ contract CurveSpellV1 is WhitelistSpell {
 
     // 0. Take out collateral
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     if (collSize > 0) {
       (uint decodedPid, uint decodedGid, ) = wgauge.decodeId(collId);
       require(decodedPid == pid && decodedGid == gid, 'incorrect coll id');
+      require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
       bank.takeCollateral(address(wgauge), collId, collSize);
       wgauge.burn(collId, collSize);
     }
@@ -256,10 +263,12 @@ contract CurveSpellV1 is WhitelistSpell {
     }
 
     // 5. Put collateral
-    uint amount = IERC20(lp).balanceOf(address(this));
     ensureApprove(lp, address(wgauge));
-    uint id = wgauge.mint(pid, gid, amount);
-    bank.putCollateral(address(wgauge), id, amount);
+    {
+      uint amount = IERC20(lp).balanceOf(address(this));
+      uint id = wgauge.mint(pid, gid, amount);
+      bank.putCollateral(address(wgauge), id, amount);
+    }
 
     // 6. Refund
     for (uint i = 0; i < 4; i++) doRefund(tokens[i]);
@@ -288,6 +297,7 @@ contract CurveSpellV1 is WhitelistSpell {
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
     require(IWLiquidityGauge(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
@@ -358,6 +368,7 @@ contract CurveSpellV1 is WhitelistSpell {
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
     require(IWLiquidityGauge(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
@@ -429,6 +440,7 @@ contract CurveSpellV1 is WhitelistSpell {
     uint positionId = bank.POSITION_ID();
     (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
     require(IWLiquidityGauge(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
     address[] memory tokens = ulTokens[lp];
 
     // 0. Ensure approve
@@ -483,10 +495,11 @@ contract CurveSpellV1 is WhitelistSpell {
   /// @dev Harvest CRV reward tokens to in-exec position's owner
   function harvest() external {
     uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
     (uint pid, uint gid, ) = wgauge.decodeId(collId);
     address lp = wgauge.getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+    require(collToken == address(wgauge), 'collateral token & wgauge mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wgauge), collId, collSize);

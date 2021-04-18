@@ -12,11 +12,11 @@ contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
   /// The governor sets oracle information for a token.
-  event SetOracle(address token, Oracle info);
+  event SetOracle(address indexed token, Oracle info);
   /// The governor unsets oracle information for a token.
-  event UnsetOracle(address token);
+  event UnsetOracle(address indexed token);
   /// The governor sets token whitelist for an ERC1155 token.
-  event SetWhitelist(address token, bool ok);
+  event SetWhitelist(address indexed token, bool ok);
 
   struct Oracle {
     uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
@@ -124,8 +124,8 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
-  /// @param token ERC1155 token address to get borrow value
-  /// @param amount ERC1155 token amount to get borrow value
+  /// @param token ERC20 token address to get borrow value
+  /// @param amount ERC20 token amount to get borrow value
   /// @param owner Token owner address (currently unused by this implementation)
   function asETHBorrow(
     address token,
