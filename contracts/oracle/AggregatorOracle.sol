@@ -64,6 +64,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
       maxPriceDeviation >= MIN_PRICE_DEVIATION && maxPriceDeviation <= MAX_PRICE_DEVIATION,
       'bad max deviation value'
     );
+    require(sources.length <= 3, 'sources length exceed 3');
     maxPriceDeviations[token] = maxPriceDeviation;
     for (uint idx = 0; idx < sources.length; idx++) {
       primarySources[token][idx] = sources[idx];
