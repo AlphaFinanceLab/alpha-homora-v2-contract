@@ -179,6 +179,10 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   {
     require(tokens.length == statuses.length, 'tokens & statuses length mismatched');
     for (uint idx = 0; idx < tokens.length; idx++) {
+      if (statuses[idx]) {
+        // check oracle suppport
+        require(support(tokens[idx]), 'oracle not support token');
+      }
       whitelistedTokens[tokens[idx]] = statuses[idx];
     }
   }
@@ -188,6 +192,13 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     for (uint idx = 0; idx < users.length; idx++) {
       whitelistedUsers[users[idx]] = statuses[idx];
     }
+  }
+
+
+  /// @dev Check whether the oracle supports the token
+  /// @param token ERC-20 token to check for support
+  function support(address token) public view override returns (bool) {
+    return oracle.support(token);
   }
 
   /// @dev Set bank status
@@ -544,7 +555,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   ) external override inExec {
     Position storage pos = positions[POSITION_ID];
     if (pos.collToken != collToken || pos.collId != collId) {
-      require(oracle.support(collToken, collId), 'collateral not supported');
+      require(oracle.supportWrappedToken(collToken, collId), 'collateral not supported');
       require(pos.collateralSize == 0, 'another type of collateral already exists');
       pos.collToken = collToken;
       pos.collId = collId;
