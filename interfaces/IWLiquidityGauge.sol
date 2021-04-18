@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC1155/IERC1155.sol';
@@ -36,4 +38,6 @@ interface IWLiquidityGauge is IERC1155, IERC20Wrapper {
       uint,
       uint
     );
+
+  function getUnderlyingTokenFromIds(uint pid, uint gid) external view returns (address);
 }

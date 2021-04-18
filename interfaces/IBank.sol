@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 interface IBank {
@@ -100,4 +102,18 @@ interface IBank {
   function accrue(address token) external;
 
   function nextPositionId() external view returns (uint);
+
+  /// @dev Return current position information.
+  function getCurrentPositionInfo()
+    external
+    view
+    returns (
+      address owner,
+      address collToken,
+      uint collId,
+      uint collateralSize
+    );
+
+  function support(address token) external view returns (bool);
+
 }

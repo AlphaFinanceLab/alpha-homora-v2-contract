@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -12,20 +14,20 @@ contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
   /// The governor sets oracle information for a token.
-  event SetOracle(address token, Oracle info);
+  event SetOracle(address indexed token, TokenFactors info);
   /// The governor unsets oracle information for a token.
-  event UnsetOracle(address token);
+  event UnsetOracle(address indexed token);
   /// The governor sets token whitelist for an ERC1155 token.
-  event SetWhitelist(address token, bool ok);
+  event SetWhitelist(address indexed token, bool ok);
 
-  struct Oracle {
+  struct TokenFactors {
     uint16 borrowFactor; // The borrow factor for this token, multiplied by 1e4.
     uint16 collateralFactor; // The collateral factor for this token, multiplied by 1e4.
     uint16 liqIncentive; // The liquidation incentive, multiplied by 1e4.
   }
 
   IBaseOracle public immutable source; // Main oracle source
-  mapping(address => Oracle) public oracles; // Mapping from token address to oracle info.
+  mapping(address => TokenFactors) public oracles; // Mapping from token address to oracle info.
   mapping(address => bool) public whitelistERC1155; // Mapping from token address to whitelist status
 
   /// @dev Create the contract and initialize the first governor.
@@ -37,7 +39,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @dev Set oracle information for the given list of token addresses.
   /// @param tokens List of tokens to set info
   /// @param info List of oracle info
-  function setOracles(address[] memory tokens, Oracle[] memory info) external onlyGov {
+  function setOracles(address[] memory tokens, TokenFactors[] memory info) external onlyGov {
     require(tokens.length == info.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
       require(info[idx].borrowFactor >= 10000, 'borrow factor must be at least 100%');
@@ -69,9 +71,9 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   /// @dev Return whether the oracle supports evaluating collateral value of the given token.
-  /// @param token Token address to check for support
-  /// @param id Token id to check for support
-  function support(address token, uint id) external view override returns (bool) {
+  /// @param token ERC1155 token address to check for support
+  /// @param id ERC1155 token id to check for support
+  function supportWrappedToken(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     return oracles[tokenUnderlying].liqIncentive != 0;
@@ -91,8 +93,8 @@ contract ProxyOracle is IOracle, Governable {
     require(whitelistERC1155[tokenOut], 'bad token');
     address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlyingToken(tokenOutId);
     uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
-    Oracle memory oracleIn = oracles[tokenIn];
-    Oracle memory oracleOut = oracles[tokenOutUnderlying];
+    TokenFactors memory oracleIn = oracles[tokenIn];
+    TokenFactors memory oracleOut = oracles[tokenOutUnderlying];
     require(oracleIn.liqIncentive != 0, 'bad underlying in');
     require(oracleOut.liqIncentive != 0, 'bad underlying out');
     uint pxIn = source.getETHPx(tokenIn);
@@ -117,24 +119,34 @@ contract ProxyOracle is IOracle, Governable {
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     uint rateUnderlying = IERC20Wrapper(token).getUnderlyingRate(id);
     uint amountUnderlying = amount.mul(rateUnderlying).div(2**112);
-    Oracle memory oracle = oracles[tokenUnderlying];
+    TokenFactors memory oracle = oracles[tokenUnderlying];
     require(oracle.liqIncentive != 0, 'bad underlying collateral');
     uint ethValue = source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
     return ethValue.mul(oracle.collateralFactor).div(10000);
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
-  /// @param token ERC1155 token address to get borrow value
-  /// @param amount ERC1155 token amount to get borrow value
+  /// @param token ERC20 token address to get borrow value
+  /// @param amount ERC20 token amount to get borrow value
   /// @param owner Token owner address (currently unused by this implementation)
   function asETHBorrow(
     address token,
     uint amount,
     address owner
   ) external view override returns (uint) {
-    Oracle memory oracle = oracles[token];
+    TokenFactors memory oracle = oracles[token];
     require(oracle.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
+  }
+
+  /// @dev Return whether the ERC20 token is supported
+  /// @param token The ERC20 token to check for support
+  function support(address token) external view override returns (bool) {
+    try source.getETHPx(token) returns (uint px) {
+      return px != 0 && oracles[token].liqIncentive != 0;
+    } catch {
+      return false;
+    }
   }
 }

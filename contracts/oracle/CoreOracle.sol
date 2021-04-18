@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import '../../interfaces/IBaseOracle.sol';
 import '../Governable.sol';
 
 contract CoreOracle is IBaseOracle, Governable {
-  event SetRoute(address token, address route);
+  event SetRoute(address indexed token, address route);
   mapping(address => address) public routes; // Mapping from token to oracle source
 
   constructor() public {
