@@ -56,7 +56,7 @@ def check_tokens():
             assert k == f'bal_{token0}_{token1}', 'bal: ' + f'{token0} + {token1}'
         elif k.startswith('crv_'):
             pool = crv_registry.get_pool_from_lp_token(v)
-            n = crv_registry.get_n_coins(pool)
+            n, _ = crv_registry.get_n_coins(pool)
             coins = crv_registry.get_coins(pool)[:n]
             coin_names = list(map(lambda coin: interface.IERC20Ex(coin).symbol().lower(), coins))
             assert k == f'crv_' + '_'.join(coin_names), 'crv: ' + '+'.join(coin_names)

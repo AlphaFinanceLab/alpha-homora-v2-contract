@@ -1,14 +1,16 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/SafeERC20.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/IERC20.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/SafeERC20.sol';
 
 import '../utils/ERC1155NaiveReceiver.sol';
 import '../../interfaces/IBank.sol';
 import '../../interfaces/IWERC20.sol';
 import '../../interfaces/IWETH.sol';
 
-contract BasicSpell is ERC1155NaiveReceiver {
+abstract contract BasicSpell is ERC1155NaiveReceiver {
   using SafeERC20 for IERC20;
 
   IBank public immutable bank;
@@ -29,11 +31,11 @@ contract BasicSpell is ERC1155NaiveReceiver {
     IWERC20(_werc20).setApprovalForAll(address(_bank), true);
   }
 
-  /// @dev Ensure that the spell approve the given spender to spend all of its tokens.
+  /// @dev Ensure that the spell has approved the given spender to spend all of its tokens.
   /// @param token The token to approve.
   /// @param spender The spender to allow spending.
   /// NOTE: This is safe because spell is never built to hold fund custody.
-  function ensureApprove(address token, address spender) public {
+  function ensureApprove(address token, address spender) internal {
     if (!approved[token][spender]) {
       IERC20(token).safeApprove(spender, uint(-1));
       approved[token][spender] = true;
@@ -50,6 +52,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   /// @dev Internal call to transmit tokens from the bank if amount is positive.
   /// @param token The token to perform the transmit action.
   /// @param amount The amount to transmit.
+  /// @notice Do not use `amount` input argument to handle the received amount.
   function doTransmit(address token, uint amount) internal {
     if (amount > 0) {
       bank.transmit(token, amount);
@@ -78,6 +81,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   /// @dev Internal call to borrow tokens from the bank on behalf of the current executor.
   /// @param token The token to borrow from the bank.
   /// @param amount The amount to borrow.
+  /// @notice Do not use `amount` input argument to handle the received amount.
   function doBorrow(address token, uint amount) internal {
     if (amount > 0) {
       bank.borrow(token, amount);
@@ -94,9 +98,9 @@ contract BasicSpell is ERC1155NaiveReceiver {
     }
   }
 
-  /// @dev Internal call to put collateral tokens to the bank.
-  /// @param token The token to put to the bank.
-  /// @param amount The amount to put to the bank.
+  /// @dev Internal call to put collateral tokens in the bank.
+  /// @param token The token to put in the bank.
+  /// @param amount The amount to put in the bank.
   function doPutCollateral(address token, uint amount) internal {
     if (amount > 0) {
       ensureApprove(token, address(werc20));
@@ -111,7 +115,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
       if (amount == uint(-1)) {
-        (, , , amount) = bank.getPositionInfo(bank.POSITION_ID());
+        (, , , amount) = bank.getCurrentPositionInfo();
       }
       bank.takeCollateral(address(werc20), uint(token), amount);
       werc20.burn(token, amount);
