@@ -113,7 +113,7 @@ contract BasicSpell is ERC1155NaiveReceiver {
   function doTakeCollateral(address token, uint amount) internal {
     if (amount > 0) {
       if (amount == uint(-1)) {
-        (, , , amount) = bank.getPositionInfo(bank.POSITION_ID());
+        (, , , amount) = bank.getCurrentPositionInfo();
       }
       bank.takeCollateral(address(werc20), uint(token), amount);
       werc20.burn(token, amount);

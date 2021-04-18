@@ -108,9 +108,9 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   function addLiquidityInternal(
     address tokenA,
     address tokenB,
-    Amounts calldata amt
+    Amounts calldata amt,
+    address lp
   ) internal {
-    address lp = getPair(tokenA, tokenB);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Get user input amounts
@@ -166,7 +166,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   ) external payable {
     address lp = getPair(tokenA, tokenB);
     // 1-5. add liquidity
-    addLiquidityInternal(tokenA, tokenB, amt);
+    addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
@@ -192,11 +192,10 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     address reward = IWStakingRewards(wstaking).reward();
 
     // 1-5. add liquidity
-    addLiquidityInternal(tokenA, tokenB, amt);
+    addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Take out collateral
-    uint positionId = bank.POSITION_ID();
-    (, address collToken, uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       require(IWStakingRewards(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
       require(collToken == wstaking, 'collateral token & wstaking mismatched');
@@ -239,9 +238,9 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   function removeLiquidityInternal(
     address tokenA,
     address tokenB,
-    RepayAmounts calldata amt
+    RepayAmounts calldata amt,
+    address lp
   ) internal {
-    address lp = getPair(tokenA, tokenB);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     uint positionId = bank.POSITION_ID();
 
@@ -282,7 +281,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     uint amtADesired = amtARepay.add(amt.amtAMin);
     uint amtBDesired = amtBRepay.add(amt.amtBMin);
 
-    if (amtA < amtADesired && amtB >= amtBDesired) {
+    if (amtA < amtADesired && amtB > amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
       router.swapTokensForExactTokens(
@@ -292,7 +291,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
         address(this),
         now
       );
-    } else if (amtA >= amtADesired && amtB < amtBDesired) {
+    } else if (amtA > amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
       router.swapTokensForExactTokens(
@@ -336,7 +335,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     doTakeCollateral(lp, amt.amtLPTake);
 
     // 2-8. remove liquidity
-    removeLiquidityInternal(tokenA, tokenB, amt);
+    removeLiquidityInternal(tokenA, tokenB, amt, lp);
   }
 
   /// @dev Remove liqudity from Uniswap pool, from staking rewards
@@ -350,8 +349,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     address wstaking
   ) external {
     address lp = getPair(tokenA, tokenB);
-    uint positionId = bank.POSITION_ID();
-    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     address reward = IWStakingRewards(wstaking).reward();
 
     // 1. Take out collateral
@@ -361,7 +359,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
     IWStakingRewards(wstaking).burn(collId, amt.amtLPTake);
 
     // 2-8. remove liquidity
-    removeLiquidityInternal(tokenA, tokenB, amt);
+    removeLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 9. Refund reward
     doRefund(reward);
@@ -371,8 +369,7 @@ contract UniswapV2SpellV1 is WhitelistSpell {
   /// @param wstaking Wrapped staking rewards address
   function harvestWStakingRewards(address wstaking) external {
     address reward = IWStakingRewards(wstaking).reward();
-    uint positionId = bank.POSITION_ID();
-    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     address lp = IWStakingRewards(wstaking).getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     require(collToken == wstaking, 'collateral token & wstaking mismatched');

@@ -290,7 +290,7 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   /// @dev Return position information for the given position id.
   /// @param positionId The position id to query for position information.
   function getPositionInfo(uint positionId)
-    external
+    public
     view
     override
     returns (
@@ -302,6 +302,22 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
   {
     Position storage pos = positions[positionId];
     return (pos.owner, pos.collToken, pos.collId, pos.collateralSize);
+  }
+
+  /// @dev Return current position information
+  function getCurrentPositionInfo()
+    external
+    view
+    override
+    returns (
+      address owner,
+      address collToken,
+      uint collId,
+      uint collateralSize
+    )
+  {
+    require(POSITION_ID != _NO_ID, 'no id');
+    return getPositionInfo(POSITION_ID);
   }
 
   /// @dev Return the debt share of the given bank token for the given position id.
@@ -480,7 +496,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     require(allowBorrowStatus(), 'borrow not allowed');
     require(whitelistedTokens[token], 'token not whitelisted');
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exists');
     Position storage pos = positions[POSITION_ID];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;
@@ -515,7 +530,6 @@ contract HomoraBank is Initializable, Governable, ERC1155NaiveReceiver, IBank {
     uint amountCall
   ) internal returns (uint, uint) {
     Bank storage bank = banks[token];
-    require(bank.isListed, 'bank not exists');
     Position storage pos = positions[positionId];
     uint totalShare = bank.totalShare;
     uint totalDebt = bank.totalDebt;

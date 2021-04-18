@@ -101,5 +101,17 @@ interface IBank {
 
   function nextPositionId() external view returns (uint);
 
+  /// @dev Return current position information.
+  function getCurrentPositionInfo()
+    external
+    view
+    returns (
+      address owner,
+      address collToken,
+      uint collId,
+      uint collateralSize
+    );
+
   function support(address token) external view returns (bool);
+
 }

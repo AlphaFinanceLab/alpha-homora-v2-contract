@@ -36,4 +36,6 @@ interface IWLiquidityGauge is IERC1155, IERC20Wrapper {
       uint,
       uint
     );
+
+  function getUnderlyingTokenFromIds(uint pid, uint gid) external view returns (address);
 }

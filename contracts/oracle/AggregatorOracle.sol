@@ -96,10 +96,6 @@ contract AggregatorOracle is IBaseOracle, Governable {
       }
     }
     uint maxPriceDeviation = maxPriceDeviations[token];
-    require(
-      maxPriceDeviation >= MIN_PRICE_DEVIATION && maxPriceDeviation <= MAX_PRICE_DEVIATION,
-      'bad max deviation value'
-    );
 
     // Algo:
     // - 1 valid source --> return price
