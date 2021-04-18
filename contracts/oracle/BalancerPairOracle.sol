@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/math/SafeMath.sol';
 
 import './UsingBaseOracle.sol';
 import '../utils/BNum.sol';
@@ -14,7 +16,7 @@ contract BalancerPairOracle is UsingBaseOracle, IBaseOracle, BNum {
 
   /// @dev Return fair reserve amounts given spot reserves, weights, and fair prices.
   /// @param resA Reserve of the first asset
-  /// @param resB Reserev of the second asset
+  /// @param resB Reserve of the second asset
   /// @param wA Weight of the first asset
   /// @param wB Weight of the second asset
   /// @param pxA Fair price of the first asset

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 import './BasicSpell.sol';
@@ -23,6 +25,9 @@ contract WhitelistSpell is BasicSpell, Governable {
   {
     require(lpTokens.length == statuses.length, 'lpTokens & statuses length mismatched');
     for (uint idx = 0; idx < lpTokens.length; idx++) {
+      if (statuses[idx]) {
+        require(bank.support(lpTokens[idx]), 'oracle not support lp token');
+      }
       whitelistedLpTokens[lpTokens[idx]] = statuses[idx];
     }
   }

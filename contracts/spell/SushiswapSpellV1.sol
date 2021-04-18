@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/token/ERC20/IERC20.sol';
-import 'OpenZeppelin/openzeppelin-contracts@3.2.0/contracts/math/SafeMath.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/IERC20.sol';
+import 'OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/math/SafeMath.sol';
 
 import './WhitelistSpell.sol';
 import '../utils/HomoraMath.sol';
@@ -40,7 +42,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
   /// @dev Return the LP token for the token pairs (can be in any order)
   /// @param tokenA Token A to get LP token
   /// @param tokenB Token B to get LP token
-  function getPair(address tokenA, address tokenB) public returns (address) {
+  function getAndApprovePair(address tokenA, address tokenB) public returns (address) {
     address lp = pairs[tokenA][tokenB];
     if (lp == address(0)) {
       lp = factory.getPair(tokenA, tokenB);
@@ -116,9 +118,9 @@ contract SushiswapSpellV1 is WhitelistSpell {
   function addLiquidityInternal(
     address tokenA,
     address tokenB,
-    Amounts calldata amt
+    Amounts calldata amt,
+    address lp
   ) internal {
-    address lp = getPair(tokenA, tokenB);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
 
     // 1. Get user input amounts
@@ -152,14 +154,23 @@ contract SushiswapSpellV1 is WhitelistSpell {
     if (swapAmt > 0) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = isReversed ? (tokenB, tokenA) : (tokenA, tokenB);
-      router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
+      router.swapExactTokensForTokens(swapAmt, 0, path, address(this), block.timestamp);
     }
 
     // 5. Add liquidity
     uint balA = IERC20(tokenA).balanceOf(address(this));
     uint balB = IERC20(tokenB).balanceOf(address(this));
     if (balA > 0 || balB > 0) {
-      router.addLiquidity(tokenA, tokenB, balA, balB, amt.amtAMin, amt.amtBMin, address(this), now);
+      router.addLiquidity(
+        tokenA,
+        tokenB,
+        balA,
+        balB,
+        amt.amtAMin,
+        amt.amtBMin,
+        address(this),
+        block.timestamp
+      );
     }
   }
 
@@ -172,9 +183,9 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address tokenB,
     Amounts calldata amt
   ) external payable {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     // 1-5. add liquidity
-    addLiquidityInternal(tokenA, tokenB, amt);
+    addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Put collateral
     doPutCollateral(lp, IERC20(lp).balanceOf(address(this)));
@@ -196,19 +207,19 @@ contract SushiswapSpellV1 is WhitelistSpell {
     Amounts calldata amt,
     uint pid
   ) external payable {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
     (address lpToken, , , ) = wmasterchef.chef().poolInfo(pid);
     require(lpToken == lp, 'incorrect lp token');
 
     // 1-5. add liquidity
-    addLiquidityInternal(tokenA, tokenB, amt);
+    addLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 6. Take out collateral
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, uint collSize) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, uint collSize) = bank.getCurrentPositionInfo();
     if (collSize > 0) {
       (uint decodedPid, ) = wmasterchef.decodeId(collId);
       require(pid == decodedPid, 'incorrect pid');
+      require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');
       bank.takeCollateral(address(wmasterchef), collId, collSize);
       wmasterchef.burn(collId, collSize);
     }
@@ -238,16 +249,16 @@ contract SushiswapSpellV1 is WhitelistSpell {
     uint amtBMin; // Desired tokenB amount
   }
 
-  /// @dev Remove liqudity from Sushiswap pool
+  /// @dev Remove liquidity from Sushiswap pool
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
   function removeLiquidityInternal(
     address tokenA,
     address tokenB,
-    RepayAmounts calldata amt
+    RepayAmounts calldata amt,
+    address lp
   ) internal {
-    address lp = getPair(tokenA, tokenB);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
     uint positionId = bank.POSITION_ID();
 
@@ -280,7 +291,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         0,
         0,
         address(this),
-        now
+        block.timestamp
       );
     }
 
@@ -288,7 +299,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     uint amtADesired = amtARepay.add(amt.amtAMin);
     uint amtBDesired = amtBRepay.add(amt.amtBMin);
 
-    if (amtA < amtADesired && amtB >= amtBDesired) {
+    if (amtA < amtADesired && amtB > amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenB, tokenA);
       router.swapTokensForExactTokens(
@@ -296,9 +307,9 @@ contract SushiswapSpellV1 is WhitelistSpell {
         amtB.sub(amtBDesired),
         path,
         address(this),
-        now
+        block.timestamp
       );
-    } else if (amtA >= amtADesired && amtB < amtBDesired) {
+    } else if (amtA > amtADesired && amtB < amtBDesired) {
       address[] memory path = new address[](2);
       (path[0], path[1]) = (tokenA, tokenB);
       router.swapTokensForExactTokens(
@@ -306,7 +317,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
         amtA.sub(amtADesired),
         path,
         address(this),
-        now
+        block.timestamp
       );
     }
 
@@ -327,7 +338,7 @@ contract SushiswapSpellV1 is WhitelistSpell {
     doRefund(lp);
   }
 
-  /// @dev Remove liqudity from Sushiswap pool, with no staking rewards (use WERC20 wrapper)
+  /// @dev Remove liquidity from Sushiswap pool, with no staking rewards (use WERC20 wrapper)
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
@@ -336,16 +347,16 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address tokenB,
     RepayAmounts calldata amt
   ) external {
-    address lp = getPair(tokenA, tokenB);
+    address lp = getAndApprovePair(tokenA, tokenB);
 
     // 1. Take out collateral
     doTakeCollateral(lp, amt.amtLPTake);
 
     // 2-8. remove liquidity
-    removeLiquidityInternal(tokenA, tokenB, amt);
+    removeLiquidityInternal(tokenA, tokenB, amt, lp);
   }
 
-  /// @dev Remove liqudity from Sushiswap pool, from masterChef staking
+  /// @dev Remove liquidity from Sushiswap pool, from masterChef staking
   /// @param tokenA Token A for the pair
   /// @param tokenB Token B for the pair
   /// @param amt Amounts of tokens to take out, withdraw, repay, and get.
@@ -354,17 +365,17 @@ contract SushiswapSpellV1 is WhitelistSpell {
     address tokenB,
     RepayAmounts calldata amt
   ) external {
-    address lp = getPair(tokenA, tokenB);
-    uint positionId = bank.POSITION_ID();
-    (, address collToken, uint collId, ) = bank.getPositionInfo(positionId);
+    address lp = getAndApprovePair(tokenA, tokenB);
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     require(IWMasterChef(collToken).getUnderlyingToken(collId) == lp, 'incorrect underlying');
+    require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wmasterchef), collId, amt.amtLPTake);
     wmasterchef.burn(collId, amt.amtLPTake);
 
     // 2-8. remove liquidity
-    removeLiquidityInternal(tokenA, tokenB, amt);
+    removeLiquidityInternal(tokenA, tokenB, amt, lp);
 
     // 9. Refund sushi
     doRefund(sushi);
@@ -372,11 +383,11 @@ contract SushiswapSpellV1 is WhitelistSpell {
 
   /// @dev Harvest SUSHI reward tokens to in-exec position's owner
   function harvestWMasterChef() external {
-    uint positionId = bank.POSITION_ID();
-    (, , uint collId, ) = bank.getPositionInfo(positionId);
+    (, address collToken, uint collId, ) = bank.getCurrentPositionInfo();
     (uint pid, ) = wmasterchef.decodeId(collId);
     address lp = wmasterchef.getUnderlyingToken(collId);
     require(whitelistedLpTokens[lp], 'lp token not whitelisted');
+    require(collToken == address(wmasterchef), 'collateral token & wmasterchef mismatched');
 
     // 1. Take out collateral
     bank.takeCollateral(address(wmasterchef), collId, uint(-1));
