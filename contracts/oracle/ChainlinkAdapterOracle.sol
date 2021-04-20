@@ -103,7 +103,7 @@ contract ChainlinkAdapterOracle is IBaseOracle, Governable {
   /// @dev Return token price in ETH, multiplied by 2**112
   /// @param token Token address to get price
   function getETHPx(address token) external view override returns (uint) {
-    if (token == WETH) return uint(2**112);
+    if (token == WETH || token == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) return uint(2**112);
     uint decimals = uint(ChainlinkDetailedERC20(token).decimals());
     uint maxDelayTime = maxDelayTimes[token];
     require(maxDelayTime != 0, 'max delay time not set');
