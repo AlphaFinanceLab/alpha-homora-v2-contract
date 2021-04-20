@@ -85,7 +85,7 @@ contract BandAdapterOracle is IBaseOracle, Governable {
   /// @dev Return the value of the given input as ETH per unit, multiplied by 2**112.
   /// @param token The ERC-20 token to check the value.
   function getETHPx(address token) external view override returns (uint) {
-    if (token == WETH) return uint(2**112);
+    if (token == WETH || token == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) return uint(2**112);
 
     string memory sym = symbols[token];
     uint maxDelayTime = maxDelayTimes[token];
