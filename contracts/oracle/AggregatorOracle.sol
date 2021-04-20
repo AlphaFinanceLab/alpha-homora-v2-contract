@@ -138,14 +138,8 @@ contract AggregatorOracle is IBaseOracle, Governable {
   /// @dev Return the price of token0/token1, multiplied by 1e18
   /// @notice One of the input tokens must be WETH
   function getPrice(address token0, address token1) external view returns (uint, uint) {
-    require(
-      token0 == WETH ||
-        token1 == WETH ||
-        token0 == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE ||
-        token1 == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE,
-      'one of the requested tokens must be ETH or WETH'
-    );
-    if (token0 == WETH || token0 == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+    require(token0 == WETH || token1 == WETH, 'one of the requested tokens must be ETH or WETH');
+    if (token0 == WETH) {
       return (uint(2**112).mul(1e18).div(getETHPx(token1)), block.timestamp);
     } else {
       return (getETHPx(token0).mul(1e18).div(2**112), block.timestamp);
