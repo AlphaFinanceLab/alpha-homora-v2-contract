@@ -64,11 +64,11 @@ contract SafeBox is Governable, ERC20, ReentrancyGuard {
     uToken.safeTransfer(msg.sender, uBalanceAfter.sub(uBalanceBefore));
   }
 
-  function claim(uint totalReward, bytes32[] memory proof) public nonReentrant {
-    bytes32 leaf = keccak256(abi.encodePacked(msg.sender, totalReward));
+  function claim(uint totalAmount, bytes32[] memory proof) public nonReentrant {
+    bytes32 leaf = keccak256(abi.encodePacked(msg.sender, totalAmount));
     require(MerkleProof.verify(proof, root, leaf), '!proof');
-    uint send = totalReward.sub(claimed[msg.sender]);
-    claimed[msg.sender] = totalReward;
+    uint send = totalAmount.sub(claimed[msg.sender]);
+    claimed[msg.sender] = totalAmount;
     uToken.safeTransfer(msg.sender, send);
     emit Claim(msg.sender, send);
   }
