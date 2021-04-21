@@ -1,10 +1,37 @@
 from brownie import interface, accounts, Contract
 from brownie import AggregatorOracle, BandAdapterOracle, ChainlinkAdapterOracle, HomoraBank, CoreOracle, UniswapV2SpellV1
 from .utils import *
+
+from brownie.convert import to_decimal, to_string
 import eth_abi
 
-token_names = ['dai', 'usdt', 'usdc', 'weth', 'uni']
-tokens = [DAI, USDT, USDC, WETH, UNI]
+
+token_infos = [
+    (WETH, 'WETH'),
+    (AAVE, 'AAVE'),
+    (BAND, 'BAND'),
+    (COMP, 'COMP'),
+    (CRV, 'CRV'),
+    (DAI, 'DAI'),
+    (DPI, 'DPI'),
+    (INDEX, 'INDEX'),
+    (LINK, 'LINK'),
+    (MKR, 'MKR'),
+    (PERP, 'PERP'),
+    (REN, 'REN'),
+    (renBTC, 'RENBTC'),
+    (SNX, 'SNX'),
+    (sUSD, 'SUSD'),
+    (SUSHI, 'SUSHI'),
+    (UMA, 'UMA'),
+    (UNI, 'UNI'),
+    (USDC, 'USDC'),
+    (USDT, 'USDT'),
+    (WBTC, 'WBTC'),
+    (wNXM, 'WNXM'),
+    (YFI, 'YFI'),
+]
+tokens, token_names = zip(*token_infos)
 
 
 def almostEqual(a, b):
@@ -19,53 +46,72 @@ def sort_tokens(token):
         return WETH, token
 
 
+def to_float(x):
+    return float(to_string(x))
+
+
 def check_token_prices(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer):
     for idx, token in enumerate(tokens):
         try:
-            print('band', token_names[idx], ':', band_oracle.getETHPx(token))
+            band_price = to_float(band_oracle.getETHPx(token))
+            print('band', token_names[idx], ':', band_price)
         except:
             pass
         try:
-            print('link', token_names[idx], ':', link_oracle.getETHPx(token))
+            link_price = to_float(link_oracle.getETHPx(token))
+            print('link', token_names[idx], ':', link_price)
+        except:
+            pass
+        try:
+            print('diff', max(band_price / link_price, link_price/band_price))
         except:
             pass
         print('agg', token_names[idx], ':', agg_oracle.getETHPx(token))
         token0, token1 = sort_tokens(token)
         print(token0, token1)
-        agg_price = agg_oracle.getPrice(token0, token1)
+        agg_price = to_float(agg_oracle.getPrice(token0, token1)[0])
         print('agg v1', token_names[idx], ':', agg_price)
         try:
-            simple_price = simple_oracle.getPrice(token0, token1)
+            simple_price = to_float(simple_oracle.getPrice(token0, token1)[0])
             print('simple', token_names[idx], ':', simple_price)
-            assert 1/1.05 < agg_price / simple_price < 1.05, 'deviation exceeds 5%'
-        except:
-            pass
+            print('diff', max(agg_price / simple_price, simple_price / agg_price))
+        except Exception as e:
+            print(e)
         print('===========================================')
 
 
-def check_replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer):
+def replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer):
     bank_v1 = interface.IAny('0x67B66C99D3Eb37Fa76Aa3Ed1ff33E8e39F0b9c7A')
     goblin_config = interface.IAny('0x61858a3d3d8fDbC622a64a9fFB5b77Cc57beCB98')
     goblin_config.setOracle(agg_oracle, {'from': deployer})
 
-    simple_oracle_owner = simple_oracle.owner()
+    # ###################################################33
+    # # test
+    # simple_oracle_owner = simple_oracle.owner()
 
-    # remove prices from simple oracle
-    token0s = []
-    token1s = []
-    for idx, token in enumerate(tokens):
-        token0, token1 = sort_tokens(token)
-        token0s.append(token0)
-        token1s.append(token1)
+    # # remove prices from simple oracle
+    # token0s = []
+    # token1s = []
+    # for idx, token in enumerate(tokens):
+    #     token0, token1 = sort_tokens(token)
+    #     token0s.append(token0)
+    #     token1s.append(token1)
 
-    simple_oracle.setPrices(token0s, token1s, [0] * len(token0s), {'from': simple_oracle_owner})
+    # simple_oracle.setPrices(token0s, token1s, [0] * len(token0s), {'from': simple_oracle_owner})
 
-    print('working....')
-    alice = accounts[1]
-    goblin = interface.IAny('0x14804802592c0f6e2fd03e78ec3efc9b56f1963d')  # UNI DAI-ETH
-    two_side = '0xa1dc7CE03cB285aca8BDE9C27D1e5d4731871814'
-    bank_v1.work(0, goblin, 2 * 10**18, 0, eth_abi.encode_abi(['address', 'bytes'], [two_side, eth_abi.encode_abi(
-        ['address', 'uint256', 'uint256'], [DAI, 0, 0])]), {'from': alice, 'value': '1.8 ether'})
+    # print('working ETH-DAI....')
+    # alice = accounts[1]
+    # goblin = interface.IAny('0x14804802592c0f6e2fd03e78ec3efc9b56f1963d')  # UNI DAI-ETH
+    # two_side = '0xa1dc7CE03cB285aca8BDE9C27D1e5d4731871814'
+    # bank_v1.work(0, goblin, 2 * 10**18, 0, eth_abi.encode_abi(['address', 'bytes'], [two_side, eth_abi.encode_abi(
+    #     ['address', 'uint256', 'uint256'], [DAI, 0, 0])]), {'from': alice, 'value': '1.8 ether'})
+
+    # print('working ETH-USDT...')
+    # alice = accounts[1]
+    # goblin = interface.IAny('0x4668ff4d478c5459d6023c4a7efda853412fb999')
+    # two_side = '0x1debf8e2ddfc4764376e8e4ed5bc8f1b403d2629'
+    # bank_v1.work(0, goblin, 2 * 10**18, 0, eth_abi.encode_abi(['address', 'bytes'], [two_side, eth_abi.encode_abi(
+    #     ['address', 'uint256', 'uint256'], [USDT, 0, 0])]), {'from': alice, 'value': '1.8 ether'})
 
 
 def check_replace_v2_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer):
@@ -232,8 +278,8 @@ def main():
     # setup agg oracle
     agg_token_addresses = token_addresses + (INDEX, WETH,)
     agg_deviations = list(map(lambda d: (100 + d) * 10**16, deviations + (8 + 2, 0, )))
-    agg_sources = [[band_oracle.address, link_oracle.address]] * \
-        len(token_addresses) + [[band_oracle.address]] + \
+    agg_sources = [[band_oracle.address, link_oracle.address]] * len(token_addresses) + \
+        [[band_oracle.address]] + \
         [[band_oracle.address, link_oracle.address]]
     agg_oracle.setMultiPrimarySources(agg_token_addresses,
                                       agg_deviations,
@@ -241,14 +287,14 @@ def main():
                                       {'from': deployer})
 
     ########################################################################
+    # replace in v1 bank
+    print('Replacing v1 simple oracle...')
+    replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer)
+
+    ########################################################################
     # check token prices
 
     # check_token_prices(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer)
-
-    ########################################################################
-    # try replacing in v1 bank
-
-    # check_replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer)
 
     ########################################################################
     # try replacing in v2 bank
