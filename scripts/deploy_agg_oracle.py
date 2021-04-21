@@ -265,10 +265,8 @@ def main():
     band_token_addresses = token_addresses + (INDEX,)
     band_symbols = symbols + ('INDEX',)
     band_oracle.setSymbols(band_token_addresses, band_symbols, {'from': deployer})
-    # band_oracle.setMaxDelayTimes(
-    #     band_token_addresses, [3700] * len(band_token_addresses), {'from': deployer})  # ~1 hour
     band_oracle.setMaxDelayTimes(
-        band_token_addresses, [3600 * 24 + 60] * len(band_token_addresses), {'from': deployer})  # ~1 hour
+        band_token_addresses, [3600 + 5 * 60] * len(band_token_addresses), {'from': deployer})  # ~1 hour
 
     # setup link oracle
     link_oracle.setRefsETH(token_addresses, link_eth_refs, {'from': deployer})
