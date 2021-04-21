@@ -81,11 +81,11 @@ contract SafeBoxETH is Governable, ERC20, ReentrancyGuard {
   }
 
   function claimAndWithdraw(
-    uint claimAmount,
+    uint totalAmount,
     bytes32[] memory proof,
     uint withdrawAmount
   ) external {
-    claim(claimAmount, proof);
+    claim(totalAmount, proof);
     withdraw(withdrawAmount);
   }
 
