@@ -19,7 +19,7 @@ contract Governable is Initializable {
     _;
   }
 
-  /// @dev Initialize the bank smart contract, using msg.sender as the first governor.
+  /// @dev Initialize using msg.sender as the first governor.
   function __Governable__init() internal initializer {
     governor = msg.sender;
     pendingGovernor = address(0);
