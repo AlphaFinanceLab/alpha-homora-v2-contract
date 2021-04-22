@@ -85,7 +85,7 @@ def replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deplo
     goblin_config = interface.IAny('0x61858a3d3d8fDbC622a64a9fFB5b77Cc57beCB98')
     goblin_config.setOracle(agg_oracle, {'from': deployer})
 
-    # ###################################################33
+    # ########################################################
     # # test
     # simple_oracle_owner = simple_oracle.owner()
 
@@ -286,8 +286,8 @@ def main():
 
     ########################################################################
     # replace in v1 bank
-    print('Replacing v1 simple oracle...')
-    replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer)
+    # print('Replacing v1 simple oracle...')
+    # replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer)
 
     ########################################################################
     # check token prices

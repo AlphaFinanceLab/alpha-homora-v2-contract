@@ -48,46 +48,54 @@ class Tokens:
     CRV_DAI_USDC_USDT_SUSD = '0xC25a3A3b969415c80451098fa907EC722572917F'  # crv susd
 
     # cyTokens
-    CYWETH = '0x41c84c0e2EE0b740Cf0d31F63f3B6F627DC6b393'
-    CYDAI = '0x8e595470Ed749b85C6F7669de83EAe304C2ec68F'
-    CYLINK = '0xE7BFf2Da8A2f619c2586FB83938Fa56CE803aA16'
-    CYYFI = '0xFa3472f7319477c9bFEcdD66E4B948569E7621b9'
-    CYSNX = '0x12A9cC33A980DAa74E00cc2d1A0E74C57A93d12C'
-    CYWBTC = '0x8Fc8BFD80d6A9F17Fb98A373023d72531792B431'
-    CYUSDT = '0x48759F220ED983dB51fA7A8C0D2AAb8f3ce4166a'
-    CYUSDC = '0x76Eb2FE28b36B3ee97F3Adae0C69606eeDB2A37c'
-    CYSUSD = '0xa7c4054AFD3DbBbF5bFe80f41862b89ea05c9806'
-    CYDPI = '0x7736Ffb07104c0C400Bb0CC9A7C228452A732992'
+    CY_WETH = '0x41c84c0e2EE0b740Cf0d31F63f3B6F627DC6b393'
+    CY_DAI = '0x8e595470Ed749b85C6F7669de83EAe304C2ec68F'
+    CY_LINK = '0xE7BFf2Da8A2f619c2586FB83938Fa56CE803aA16'
+    CY_YFI = '0xFa3472f7319477c9bFEcdD66E4B948569E7621b9'
+    CY_SNX = '0x12A9cC33A980DAa74E00cc2d1A0E74C57A93d12C'
+    CY_WBTC = '0x8Fc8BFD80d6A9F17Fb98A373023d72531792B431'
+    CY_USDT = '0x48759F220ED983dB51fA7A8C0D2AAb8f3ce4166a'
+    CY_USDC = '0x76Eb2FE28b36B3ee97F3Adae0C69606eeDB2A37c'
+    CY_SUSD = '0xa7c4054AFD3DbBbF5bFe80f41862b89ea05c9806'
+    CY_DPI = '0x7736Ffb07104c0C400Bb0CC9A7C228452A732992'
 
 
 def check_tokens():
     tokens = dict(filter(lambda k: not k[0].startswith('_'), vars(Tokens).items()))
 
     for k, v in tokens.items():
-        if interface.IERC20Ex(v).symbol().lower() == k:
+        print(k, v)
+        if k == 'ETH' or k == 'MKR':
+            continue
+        if interface.IERC20Ex(v).symbol().upper() == k:
             continue
         elif k.startswith('UNI_'):
             assert interface.IERC20Ex(v).symbol() == 'UNI-V2'
-            token0 = interface.IERC20Ex(interface.IERC20Ex(v).token0()).symbol().lower()
-            token1 = interface.IERC20Ex(interface.IERC20Ex(v).token1()).symbol().lower()
+            token0 = interface.IERC20Ex(interface.IERC20Ex(v).token0()).symbol().upper()
+            token1 = interface.IERC20Ex(interface.IERC20Ex(v).token1()).symbol().upper()
             assert k == f'UNI_{token0}_{token1}', 'uni: ' + f'{token0} + {token1}'
         elif k.startswith('SUSHI_'):
             assert interface.IERC20Ex(v).symbol() == 'SLP'
-            token0 = interface.IERC20Ex(interface.IERC20Ex(v).token0()).symbol().lower()
-            token1 = interface.IERC20Ex(interface.IERC20Ex(v).token1()).symbol().lower()
+            token0 = interface.IERC20Ex(interface.IERC20Ex(v).token0()).symbol().upper()
+            token1 = interface.IERC20Ex(interface.IERC20Ex(v).token1()).symbol().upper()
             assert k == f'SUSHI_{token0}_{token1}', 'sushi: ' + f'{token0} + {token1}'
         elif k.startswith('BAL_'):
             token0, token1 = interface.IERC20Ex(v).getFinalTokens()
-            token0 = interface.IERC20Ex(token0).symbol().lower()
-            token1 = interface.IERC20Ex(token1).symbol().lower()
+            token0 = interface.IERC20Ex(token0).symbol().upper()
+            token1 = interface.IERC20Ex(token1).symbol().upper()
             assert interface.IERC20Ex(v).symbol() == 'BPT'
             assert k == f'BAL_{token0}_{token1}', 'bal: ' + f'{token0} + {token1}'
         elif k.startswith('CRV_'):
             pool = crv_registry.get_pool_from_lp_token(v)
             n, _ = crv_registry.get_n_coins(pool)
             coins = crv_registry.get_coins(pool)[:n]
-            coin_names = list(map(lambda coin: interface.IERC20Ex(coin).symbol().lower(), coins))
+            coin_names = list(map(lambda coin: interface.IERC20Ex(coin).symbol().upper(), coins))
             assert k == f'CRV_' + '_'.join(coin_names), 'crv: ' + '+'.join(coin_names)
+        elif k.startswith('CY_'):
+            cy_token = interface.IERC20Ex(v)
+            assert k == f'CY_' + cy_token.symbol()[2:].upper(), 'cy: ' + cy_token.symbol()[2:].upper()
+        else:
+            raise Exception(f'Error: {k} not found')
 
 
 def main():
