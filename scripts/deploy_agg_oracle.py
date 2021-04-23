@@ -269,12 +269,12 @@ def main():
     band_symbols = symbols + ('INDEX',)
     band_oracle.setSymbols(band_token_addresses, band_symbols, {'from': deployer, 'gas_price': gas_strategy})
     band_oracle.setMaxDelayTimes(
-        band_token_addresses, [3600 + 5 * 60] * len(band_token_addresses), {'from': deployer, 'gas_price': gas_strategy})  # ~1 hour
+        band_token_addresses, [3600 * 3 + 5 * 60] * len(band_token_addresses), {'from': deployer, 'gas_price': gas_strategy})  # ~3 hour
 
     # setup link oracle
     link_oracle.setRefsETH(token_addresses, link_eth_refs, {'from': deployer, 'gas_price': gas_strategy})
     link_oracle.setMaxDelayTimes(
-        token_addresses, [3600 * 24 + 60] * len(token_addresses), {'from': deployer, 'gas_price': gas_strategy})
+        token_addresses, [3600 * 36 + 5 * 60] * len(token_addresses), {'from': deployer, 'gas_price': gas_strategy})  # ~1.5 day
 
     # setup agg oracle
     agg_token_addresses = token_addresses + (INDEX, WETH,)
