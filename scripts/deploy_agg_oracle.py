@@ -4,6 +4,10 @@ from .utils import *
 
 from brownie.convert import to_decimal, to_string
 import eth_abi
+from brownie.network.gas.strategies import GasNowScalingStrategy
+
+gas_strategy = GasNowScalingStrategy(
+    initial_speed="fast", max_speed="fast", increment=1.085, block_duration=20)
 
 
 token_infos = [
@@ -83,7 +87,7 @@ def check_token_prices(band_oracle, link_oracle, simple_oracle, agg_oracle, depl
 def replace_v1_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle, deployer):
     bank_v1 = interface.IAny('0x67B66C99D3Eb37Fa76Aa3Ed1ff33E8e39F0b9c7A')
     goblin_config = interface.IAny('0x61858a3d3d8fDbC622a64a9fFB5b77Cc57beCB98')
-    goblin_config.setOracle(agg_oracle, {'from': deployer})
+    goblin_config.setOracle(agg_oracle, {'from': deployer, 'gas_price': gas_strategy})
 
     # ########################################################
     # # test
@@ -121,7 +125,7 @@ def check_replace_v2_oracle(band_oracle, link_oracle, simple_oracle, agg_oracle,
     simple_oracle_v2 = interface.IAny('0x487e0ae63Bfd8364a11e840900BaAD92D5aF7C42')
 
     # set route
-    core_oracle.setRoute(tokens, [agg_oracle] * len(tokens), {'from': deployer})
+    core_oracle.setRoute(tokens, [agg_oracle] * len(tokens), {'from': deployer, 'gas_price': gas_strategy})
 
     print(simple_oracle_v2.getETHPx(DAI))
     print(agg_oracle.getETHPx(DAI))
@@ -227,12 +231,11 @@ def main():
 
     simple_oracle = interface.IAny('0x05e7b38931948e10171e643e5f3004dcd0bef22b')
     band_oracle = BandAdapterOracle.deploy(
-        '0xDA7a001b254CD22e46d3eAB04d937489c93174C3', {'from': deployer})
-    link_oracle = ChainlinkAdapterOracle.deploy({'from': deployer})
-    agg_oracle = AggregatorOracle.deploy({'from': deployer})
+        '0xDA7a001b254CD22e46d3eAB04d937489c93174C3', {'from': deployer, 'gas_price': gas_strategy})
+    link_oracle = ChainlinkAdapterOracle.deploy({'from': deployer, 'gas_price': gas_strategy})
+    agg_oracle = AggregatorOracle.deploy({'from': deployer, 'gas_price': gas_strategy})
 
     # token list
-    # tokens to check: DPI
 
     # list of (token address, band symbols, chainlink eth ref, agg deviation % (band + link))
     token_info_eth_refs = [
@@ -264,14 +267,14 @@ def main():
     # setup band oracle
     band_token_addresses = token_addresses + (INDEX,)
     band_symbols = symbols + ('INDEX',)
-    band_oracle.setSymbols(band_token_addresses, band_symbols, {'from': deployer})
+    band_oracle.setSymbols(band_token_addresses, band_symbols, {'from': deployer, 'gas_price': gas_strategy})
     band_oracle.setMaxDelayTimes(
-        band_token_addresses, [3600 + 5 * 60] * len(band_token_addresses), {'from': deployer})  # ~1 hour
+        band_token_addresses, [3600 + 5 * 60] * len(band_token_addresses), {'from': deployer, 'gas_price': gas_strategy})  # ~1 hour
 
     # setup link oracle
-    link_oracle.setRefsETH(token_addresses, link_eth_refs, {'from': deployer})
+    link_oracle.setRefsETH(token_addresses, link_eth_refs, {'from': deployer, 'gas_price': gas_strategy})
     link_oracle.setMaxDelayTimes(
-        token_addresses, [3600 * 24 + 60] * len(token_addresses), {'from': deployer})
+        token_addresses, [3600 * 24 + 60] * len(token_addresses), {'from': deployer, 'gas_price': gas_strategy})
 
     # setup agg oracle
     agg_token_addresses = token_addresses + (INDEX, WETH,)
@@ -282,7 +285,7 @@ def main():
     agg_oracle.setMultiPrimarySources(agg_token_addresses,
                                       agg_deviations,
                                       agg_sources,
-                                      {'from': deployer})
+                                      {'from': deployer, 'gas_price': gas_strategy})
 
     ########################################################################
     # replace in v1 bank
