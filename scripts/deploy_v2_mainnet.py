@@ -152,7 +152,7 @@ def main():
     #######################################################################
     # Set oracle token factors
     # NOTE: base tokens should have 0 collateral factors
-    # NOTE: LP tokens should have 50000 collateral factors
+    # NOTE: LP tokens should have 50000 borrow factors
     print('================================================================')
     print('Setting oracle token factors...')
 
