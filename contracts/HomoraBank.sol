@@ -198,7 +198,6 @@ contract HomoraBank is Governable, ERC1155NaiveReceiver, IBank {
     }
   }
 
-
   /// @dev Check whether the oracle supports the token
   /// @param token ERC-20 token to check for support
   function support(address token) public view override returns (bool) {
