@@ -14,9 +14,9 @@ contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
   /// The governor sets oracle information for a token.
-  event SetOracle(address indexed token, TokenFactors info);
+  event SetTokenFactor(address indexed token, TokenFactors tokenFactor);
   /// The governor unsets oracle information for a token.
-  event UnsetOracle(address indexed token);
+  event UnsetTokenFactor(address indexed token);
   /// The governor sets token whitelist for an ERC1155 token.
   event SetWhitelist(address indexed token, bool ok);
 
@@ -27,7 +27,7 @@ contract ProxyOracle is IOracle, Governable {
   }
 
   IBaseOracle public immutable source; // Main oracle source
-  mapping(address => TokenFactors) public oracles; // Mapping from token address to oracle info.
+  mapping(address => TokenFactors) public tokenFactors; // Mapping from token address to oracle info.
   mapping(address => bool) public whitelistERC1155; // Mapping from token address to whitelist status
 
   /// @dev Create the contract and initialize the first governor.
@@ -36,27 +36,33 @@ contract ProxyOracle is IOracle, Governable {
     __Governable__init();
   }
 
-  /// @dev Set oracle information for the given list of token addresses.
+  /// @dev Set oracle token factors for the given list of token addresses.
   /// @param tokens List of tokens to set info
-  /// @param info List of oracle info
-  function setOracles(address[] memory tokens, TokenFactors[] memory info) external onlyGov {
-    require(tokens.length == info.length, 'inconsistent length');
+  /// @param _tokenFactors List of oracle token factors
+  function setTokenFactors(address[] memory tokens, TokenFactors[] memory _tokenFactors)
+    external
+    onlyGov
+  {
+    require(tokens.length == _tokenFactors.length, 'inconsistent length');
     for (uint idx = 0; idx < tokens.length; idx++) {
-      require(info[idx].borrowFactor >= 10000, 'borrow factor must be at least 100%');
-      require(info[idx].collateralFactor <= 10000, 'collateral factor must be at most 100%');
-      require(info[idx].liqIncentive >= 10000, 'incentive must be at least 100%');
-      require(info[idx].liqIncentive <= 20000, 'incentive must be at most 200%');
-      oracles[tokens[idx]] = info[idx];
-      emit SetOracle(tokens[idx], info[idx]);
+      require(_tokenFactors[idx].borrowFactor >= 10000, 'borrow factor must be at least 100%');
+      require(
+        _tokenFactors[idx].collateralFactor <= 10000,
+        'collateral factor must be at most 100%'
+      );
+      require(_tokenFactors[idx].liqIncentive >= 10000, 'incentive must be at least 100%');
+      require(_tokenFactors[idx].liqIncentive <= 20000, 'incentive must be at most 200%');
+      tokenFactors[tokens[idx]] = _tokenFactors[idx];
+      emit SetTokenFactor(tokens[idx], _tokenFactors[idx]);
     }
   }
 
   /// @dev Unset oracle information for the given list of token addresses
   /// @param tokens List of tokens to unset info
-  function unsetOracles(address[] memory tokens) external onlyGov {
+  function unsetTokenFactors(address[] memory tokens) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
-      delete oracles[tokens[idx]];
-      emit UnsetOracle(tokens[idx]);
+      delete tokenFactors[tokens[idx]];
+      emit UnsetTokenFactor(tokens[idx]);
     }
   }
 
@@ -76,7 +82,7 @@ contract ProxyOracle is IOracle, Governable {
   function supportWrappedToken(address token, uint id) external view override returns (bool) {
     if (!whitelistERC1155[token]) return false;
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
-    return oracles[tokenUnderlying].liqIncentive != 0;
+    return tokenFactors[tokenUnderlying].liqIncentive != 0;
   }
 
   /// @dev Return the amount of token out as liquidation reward for liquidating token in.
@@ -93,8 +99,8 @@ contract ProxyOracle is IOracle, Governable {
     require(whitelistERC1155[tokenOut], 'bad token');
     address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlyingToken(tokenOutId);
     uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
-    TokenFactors memory oracleIn = oracles[tokenIn];
-    TokenFactors memory oracleOut = oracles[tokenOutUnderlying];
+    TokenFactors memory oracleIn = tokenFactors[tokenIn];
+    TokenFactors memory oracleOut = tokenFactors[tokenOutUnderlying];
     require(oracleIn.liqIncentive != 0, 'bad underlying in');
     require(oracleOut.liqIncentive != 0, 'bad underlying out');
     uint pxIn = source.getETHPx(tokenIn);
@@ -119,10 +125,10 @@ contract ProxyOracle is IOracle, Governable {
     address tokenUnderlying = IERC20Wrapper(token).getUnderlyingToken(id);
     uint rateUnderlying = IERC20Wrapper(token).getUnderlyingRate(id);
     uint amountUnderlying = amount.mul(rateUnderlying).div(2**112);
-    TokenFactors memory oracle = oracles[tokenUnderlying];
-    require(oracle.liqIncentive != 0, 'bad underlying collateral');
+    TokenFactors memory tokenFactor = tokenFactors[tokenUnderlying];
+    require(tokenFactor.liqIncentive != 0, 'bad underlying collateral');
     uint ethValue = source.getETHPx(tokenUnderlying).mul(amountUnderlying).div(2**112);
-    return ethValue.mul(oracle.collateralFactor).div(10000);
+    return ethValue.mul(tokenFactor.collateralFactor).div(10000);
   }
 
   /// @dev Return the value of the given input as ETH for borrow purpose.
@@ -134,7 +140,7 @@ contract ProxyOracle is IOracle, Governable {
     uint amount,
     address owner
   ) external view override returns (uint) {
-    TokenFactors memory oracle = oracles[token];
+    TokenFactors memory oracle = tokenFactors[token];
     require(oracle.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
     return ethValue.mul(oracle.borrowFactor).div(10000);
@@ -144,7 +150,7 @@ contract ProxyOracle is IOracle, Governable {
   /// @param token The ERC20 token to check for support
   function support(address token) external view override returns (bool) {
     try source.getETHPx(token) returns (uint px) {
-      return px != 0 && oracles[token].liqIncentive != 0;
+      return px != 0 && tokenFactors[token].liqIncentive != 0;
     } catch {
       return false;
     }
