@@ -31,6 +31,8 @@ def fake_credit_limit(bank):
 
 
 def main():
+    publish_status = False  # TODO: Change to true
+
     #######################################################################
     # Load deployer account
 
@@ -40,54 +42,59 @@ def main():
     #######################################################################
     # Deploy/get aggregator oracle
 
-    # agg_oracle = AggregatorOracle.at('')
-    agg_oracle = AggregatorOracle.deploy({'from': deployer})
+    agg_oracle = AggregatorOracle.at('0x636478DcecA0308ec6b39e3ab1e6b9EBF00Cd01c')
 
     #######################################################################
     # Deploy upgradeable homora bank
+    print('================================================================')
     print('Deploying Homora Bank...')
     proxy_admin = ProxyAdminImpl.at('0x090eCE252cEc5998Db765073D07fac77b8e60CB2')
-    bank_impl = HomoraBank.deploy({'from': deployer})
+    bank_impl = HomoraBank.deploy({'from': deployer}, publish_source=publish_status)
     bank = TransparentUpgradeableProxyImpl.deploy(
-        bank_impl, proxy_admin, bank_impl.initialize.encode_input(agg_oracle, 2000), {'from': deployer})
+        bank_impl, proxy_admin, bank_impl.initialize.encode_input(agg_oracle, 2000), {'from': deployer}, publish_source=publish_status)
     bank = interface.IAny(bank)
 
     #######################################################################
     # Deploy wrappers
+    print('================================================================')
     print('Deploying Wrappers...')
-    werc20 = WERC20.deploy({'from': deployer})
-    wchef = WMasterChef.deploy(MASTERCHEF, {'from': deployer})
-    wgauge = WLiquidityGauge.deploy(CRV_REGISTRY, CRV_TOKEN, {'from': deployer})
+    werc20 = WERC20.deploy({'from': deployer}, publish_source=publish_status)
+    wchef = WMasterChef.deploy(MASTERCHEF, {'from': deployer}, publish_source=publish_status)
+    wgauge = WLiquidityGauge.deploy(CRV_REGISTRY, CRV_TOKEN, {'from': deployer}, publish_source=publish_status)
     wstaking_index = WStakingRewards.deploy(
         '0xB93b505Ed567982E2b6756177ddD23ab5745f309',  # staking contract
         Tokens.UNI_DPI_WETH,  # UNI DPI-WETH
         Tokens.INDEX,  # INDEX
-        {'from': deployer}
+        {'from': deployer},
+        publish_source=publish_status
     )
 
     #######################################################################
     # Deploy spells
+    print('================================================================')
     print('Deploying Spells...')
     uniswap_spell = UniswapV2SpellV1.deploy(
-        bank, werc20, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', {'from': deployer})
+        bank, werc20, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', {'from': deployer}, publish_source=publish_status)
     sushiswap_spell = SushiswapSpellV1.deploy(
-        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wchef, {'from': deployer})
+        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wchef, {'from': deployer}, publish_source=publish_status)
     balancer_spell = BalancerSpellV1.deploy(
-        bank, werc20, Tokens.WETH, {'from': deployer})
+        bank, werc20, Tokens.WETH, {'from': deployer}, publish_source=publish_status)
     curve_spell = CurveSpellV1.deploy(
-        bank, werc20, Tokens.WETH, wgauge, {'from': deployer})
+        bank, werc20, Tokens.WETH, wgauge, {'from': deployer}, publish_source=publish_status)
 
     #######################################################################
     # Deploy oracles
+    print('================================================================')
     print('Deploying Oracles...')
-    core_oracle = CoreOracle.deploy({'from': deployer})
-    uni_oracle = UniswapV2Oracle.deploy(core_oracle, {'from': deployer})
-    bal_oracle = BalancerPairOracle.deploy(core_oracle, {'from': deployer})
-    crv_oracle = CurveOracle.deploy(core_oracle, CRV_REGISTRY, {'from': deployer})
-    proxy_oracle = ProxyOracle.deploy(core_oracle, {'from': deployer})
+    core_oracle = CoreOracle.deploy({'from': deployer}, publish_source=publish_status)
+    uni_oracle = UniswapV2Oracle.deploy(core_oracle, {'from': deployer}, publish_source=publish_status)
+    bal_oracle = BalancerPairOracle.deploy(core_oracle, {'from': deployer}, publish_source=publish_status)
+    crv_oracle = CurveOracle.deploy(core_oracle, CRV_REGISTRY, {'from': deployer}, publish_source=publish_status)
+    proxy_oracle = ProxyOracle.deploy(core_oracle, {'from': deployer}, publish_source=publish_status)
 
     #######################################################################
     # Set oracle routes for base tokens
+    print('================================================================')
     print('Setting oracle routers for base tokens to aggregator oracle...')
     base_token_list = [Tokens.ETH,
                        Tokens.WETH,
@@ -116,6 +123,7 @@ def main():
 
     #######################################################################
     # Set oracle routes for lp tokens
+    print('================================================================')
     print('Setting oracle routes for LP tokens...')
     core_oracle_configs = [
         (Tokens.UNI_UNI_WETH, uni_oracle),
@@ -145,6 +153,7 @@ def main():
     # Set oracle token factors
     # NOTE: base tokens should have 0 collateral factors
     # NOTE: LP tokens should have 50000 collateral factors
+    print('================================================================')
     print('Setting oracle token factors...')
 
     token_factors = [
@@ -190,10 +199,11 @@ def main():
 
     proxy_oracle_tokens, proxy_oracle_configs = zip(*token_factors)
 
-    proxy_oracle.setOracles(proxy_oracle_tokens, proxy_oracle_configs)
+    proxy_oracle.setTokenFactors(proxy_oracle_tokens, proxy_oracle_configs)
 
     #######################################################################
     # Set whitelist ERC1155 for wrappers in Proxy Oracle
+    print('================================================================')
     print('Whitelisting wrappers in Proxy Oracle...')
     proxy_oracle.setWhitelistERC1155(
         [werc20, wchef, wgauge, wstaking_index],
@@ -203,41 +213,47 @@ def main():
 
     #######################################################################
     # Set proxy oracle to bank
+    print('================================================================')
     print('Setting Proxy Oracle to Homora Bank')
     bank.setOracle(proxy_oracle, {'from': deployer})
 
     #######################################################################
     # Deploy SafeBoxes
+    print('================================================================')
     print('Deploying SafeBoxes...')
     safebox_eth = SafeBoxETH.at('0xeEa3311250FE4c3268F8E684f7C87A82fF183Ec1')
     safebox_dai = SafeBox.at('0xee8389d235E092b2945fE363e97CDBeD121A0439')
     safebox_usdt = SafeBox.at('0x020eDC614187F9937A1EfEeE007656C6356Fb13A')
     safebox_usdc = SafeBox.at('0x08bd64BFC832F1C2B3e07e634934453bA7Fa2db2')
-    safebox_yfi = SafeBox.deploy(Tokens.CYYFI, 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer})
-    safebox_dpi = SafeBox.deploy(Tokens.CYDPI, 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer})
-    safebox_snx = SafeBox.deploy(Tokens.CYSNX, 'Interest Bearing Synthetix Network Token v2', 'ibSNXv2', {'from': deployer})
-    safebox_susd = SafeBox.deploy(Tokens.CYSUSD, 'Interest Bearing Synth sUSD v2', 'ibsUSDv2', {'from': deployer})
+    safebox_yfi = SafeBox.deploy(Tokens.CYYFI, 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer}, publish_source=publish_status)
+    safebox_dpi = SafeBox.deploy(Tokens.CYDPI, 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer}, publish_source=publish_status)
+    safebox_snx = SafeBox.deploy(Tokens.CYSNX, 'Interest Bearing Synthetix Network Token v2', 'ibSNXv2', {'from': deployer}, publish_source=publish_status)
+    safebox_susd = SafeBox.deploy(Tokens.CYSUSD, 'Interest Bearing Synth sUSD v2', 'ibsUSDv2', {'from': deployer}, publish_source=publish_status)
 
     #######################################################################
     # Register pool in curve oracle
+    print('================================================================')
     print('Registering Curve pools...')
     crv_oracle.registerPool('0x6c3f90f043a72fa612cbac8115ee7e52bde6e490')  # CRV 3-pool
     crv_oracle.registerPool('0xC25a3A3b969415c80451098fa907EC722572917F')  # CRV sUSD
 
     #######################################################################
     # Register liquidity gauge in gauge wrapper
+    print('================================================================')
     print('Registering Liquidity Gauge in Gauge Wrapper...')
     wgauge.registerGauge(0, 0, {'from': deployer})  # CRV 3-pool (pid 0)
     wgauge.registerGauge(12, 0, {'from': deployer})  # CRV sUSD (pid 12)
 
     #######################################################################
     # Set whitelist spells in Homora Bank
+    print('================================================================')
     print('Whitelisting Spells in HomoraBank...')
     whitelist_spells = [uniswap_spell, sushiswap_spell, balancer_spell, curve_spell]
     bank.setWhitelistSpells(whitelist_spells, [True] * len(whitelist_spells), {'from': deployer})
 
     #######################################################################
     # Set whitelist tokens in Homora Bank
+    print('================================================================')
     print('Whitelisting Tokens in Homora Bank...')
 
     # TODO: After cream enable borrowing
@@ -247,6 +263,7 @@ def main():
 
     #######################################################################
     # Add cTokens to Homora Bank
+    print('================================================================')
     print('Adding banks to Homora Bank...')
     bank.addBank(Tokens.WETH, Tokens.CYWETH, {'from': deployer})
     bank.addBank(Tokens.DAI, Tokens.CYDAI, {'from': deployer})
@@ -261,6 +278,7 @@ def main():
 
     #######################################################################
     # Set whitelist LP tokens for spells
+    print('================================================================')
     print('Whitelisting LP tokens for uniswap spells...')
     uniswap_whitelist_lp_tokens = [
         Tokens.UNI_UNI_WETH,
@@ -271,7 +289,7 @@ def main():
         Tokens.UNI_WBTC_WETH,
         Tokens.UNI_YFI_WETH
     ]
-    uniswap_spell.setWhitelistLPTokens(uniswap_whitelist_lp_tokens, [True] * uniswap_whitelist_lp_tokens, {'from': deployer})
+    uniswap_spell.setWhitelistLPTokens(uniswap_whitelist_lp_tokens, [True] * len(uniswap_whitelist_lp_tokens), {'from': deployer})
 
     print('Whitelisting LP tokens for sushiswap spells...')
     sushiswap_whitelist_lp_tokens = [
@@ -300,13 +318,37 @@ def main():
 
     #######################################################################
     # Open positions in each pool
+    print('================================================================')
     print('Opening positions...')
 
     fake_credit_limit(bank)  # for testing only. TODO: remove
 
+    borrowable_tokens = [
+        Tokens.WETH,
+        Tokens.DAI,
+        Tokens.LINK,
+        Tokens.YFI,
+        Tokens.SNX,
+        Tokens.WBTC,
+        Tokens.USDT,
+        Tokens.USDC,
+        Tokens.SUSD,
+        Tokens.DPI
+    ]
+
+    # deposit some sUSD
+    # TODO: obtain some sUSD first
+    mint_tokens(Tokens.SUSD, deployer)
+    interface.IERC20(Tokens.SUSD).approve(safebox_susd, 2**256-1, {'from': deployer})
+    safebox_susd.deposit(10 * 10**18, {'from': deployer})
+
     for uni_lp in uniswap_whitelist_lp_tokens:
         token0 = interface.IAny(uni_lp).token0()
         token1 = interface.IAny(uni_lp).token1()
+        print(f'Opening Uniswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+
+        borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
+        borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
         bank.execute(
             0,
             uniswap_spell,
@@ -316,8 +358,8 @@ def main():
                 [0,
                  0,
                  0,
-                 10**15,
-                 10**15,
+                 borrow_amt_0,
+                 borrow_amt_1,
                  0,
                  0,
                  0],
@@ -328,6 +370,10 @@ def main():
     for sushi_lp in sushiswap_whitelist_lp_tokens:
         token0 = interface.IAny(sushi_lp).token0()
         token1 = interface.IAny(sushi_lp).token1()
+        print(f'Opening Sushiswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+
+        borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
+        borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
         bank.execute(
             0,
             sushiswap_spell,
@@ -337,12 +383,12 @@ def main():
                 [0,
                  0,
                  0,
-                 10**15,
-                 10**15,
+                 borrow_amt_0,
+                 borrow_amt_1,
                  0,
                  0,
                  0],
-                SUSHI_LP_PID[sushi_lp.address]
+                SUSHI_LP_PID[sushi_lp]
             ),
             {'from': deployer, 'value': '0.1 ether'}
         )
@@ -351,6 +397,8 @@ def main():
     interface.IERC20(Tokens.USDC).approve(bank, 2**256-1, {'from': deployer})
 
     for bal_lp in balancer_whitelist_lp_tokens:
+        token0, token1 = interface.IAny(bal_lp).getFinalTokens()
+        print(f'Opening Balancer {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
         bank.execute(
             0,
             balancer_spell,
@@ -359,13 +407,14 @@ def main():
                 [0,
                  10 * 10**6,
                  0,
-                 10**15,
+                 0,
                  10**6,
                  0,
                  0]
             ), {'from': deployer}
         )
 
+    print('Opening Curve 3pool')
     bank.execute(
         0,
         curve_spell,
@@ -378,9 +427,11 @@ def main():
             0,
             0,
             0
-        )
+        ),
+        {'from': deployer}
     )
 
+    print('Opening Curve sUSD')
     bank.execute(
         0,
         curve_spell,
@@ -391,7 +442,8 @@ def main():
             [10**18, 10**6, 10**6, 10**18],
             0,
             0,
-            0,
+            12,
             0
-        )
+        ),
+        {'from': deployer}
     )

@@ -59,6 +59,7 @@ def is_crv_lp(token):
 
 
 def mint_tokens(token, to, amount=None):
+    token = interface.IAny(token)
     if amount is None:
         # default is 1M tokens
         amount = 10**12 * 10**token.decimals()
