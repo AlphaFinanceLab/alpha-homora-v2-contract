@@ -13,9 +13,9 @@ import '../../interfaces/IERC20Wrapper.sol';
 contract ProxyOracle is IOracle, Governable {
   using SafeMath for uint;
 
-  /// The governor sets oracle information for a token.
+  /// The governor sets oracle token factor for a token.
   event SetTokenFactor(address indexed token, TokenFactors tokenFactor);
-  /// The governor unsets oracle information for a token.
+  /// The governor unsets oracle token factor for a token.
   event UnsetTokenFactor(address indexed token);
   /// The governor sets token whitelist for an ERC1155 token.
   event SetWhitelist(address indexed token, bool ok);
@@ -57,7 +57,7 @@ contract ProxyOracle is IOracle, Governable {
     }
   }
 
-  /// @dev Unset oracle information for the given list of token addresses
+  /// @dev Unset token factors for the given list of token addresses
   /// @param tokens List of tokens to unset info
   function unsetTokenFactors(address[] memory tokens) external onlyGov {
     for (uint idx = 0; idx < tokens.length; idx++) {
@@ -99,15 +99,16 @@ contract ProxyOracle is IOracle, Governable {
     require(whitelistERC1155[tokenOut], 'bad token');
     address tokenOutUnderlying = IERC20Wrapper(tokenOut).getUnderlyingToken(tokenOutId);
     uint rateUnderlying = IERC20Wrapper(tokenOut).getUnderlyingRate(tokenOutId);
-    TokenFactors memory oracleIn = tokenFactors[tokenIn];
-    TokenFactors memory oracleOut = tokenFactors[tokenOutUnderlying];
-    require(oracleIn.liqIncentive != 0, 'bad underlying in');
-    require(oracleOut.liqIncentive != 0, 'bad underlying out');
+    TokenFactors memory tokenFactorIn = tokenFactors[tokenIn];
+    TokenFactors memory tokenFactorOut = tokenFactors[tokenOutUnderlying];
+    require(tokenFactorIn.liqIncentive != 0, 'bad underlying in');
+    require(tokenFactorOut.liqIncentive != 0, 'bad underlying out');
     uint pxIn = source.getETHPx(tokenIn);
     uint pxOut = source.getETHPx(tokenOutUnderlying);
     uint amountOut = amountIn.mul(pxIn).div(pxOut);
     amountOut = amountOut.mul(2**112).div(rateUnderlying);
-    return amountOut.mul(oracleIn.liqIncentive).mul(oracleOut.liqIncentive).div(10000 * 10000);
+    return
+      amountOut.mul(tokenFactorIn.liqIncentive).mul(tokenFactorOut.liqIncentive).div(10000 * 10000);
   }
 
   /// @dev Return the value of the given input as ETH for collateral purpose.
@@ -140,10 +141,10 @@ contract ProxyOracle is IOracle, Governable {
     uint amount,
     address owner
   ) external view override returns (uint) {
-    TokenFactors memory oracle = tokenFactors[token];
-    require(oracle.liqIncentive != 0, 'bad underlying borrow');
+    TokenFactors memory tokenFactor = tokenFactors[token];
+    require(tokenFactor.liqIncentive != 0, 'bad underlying borrow');
     uint ethValue = source.getETHPx(token).mul(amount).div(2**112);
-    return ethValue.mul(oracle.borrowFactor).div(10000);
+    return ethValue.mul(tokenFactor.borrowFactor).div(10000);
   }
 
   /// @dev Return whether the ERC20 token is supported
