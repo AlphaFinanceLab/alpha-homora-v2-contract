@@ -43,7 +43,7 @@ contract HomoraBankV2LiquidateRouter is Governable {
   /// @dev Ensure the target is approved
   /// @param token Token to approve
   /// @param spender Target address to approve to
-  function ensureApprove(address token, address spender) public {
+  function ensureApprove(address token, address spender) internal {
     if (!approved[token][spender]) {
       IERC20(token).safeApprove(spender, uint(-1));
       approved[token][spender] = true;
