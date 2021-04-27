@@ -44,4 +44,6 @@ interface IAny {
   function getETHPx(address) external view returns (uint);
 
   function balanceOf(address) external view returns (uint);
+
+  function admin() external view returns (address);
 }
