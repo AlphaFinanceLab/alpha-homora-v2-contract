@@ -131,7 +131,7 @@ def main():
         (Tokens.SUSHI_YFI_WETH, uni_oracle),
         (Tokens.BAL_PERP_USDC, bal_oracle),
         (Tokens.CRV_DAI_USDC_USDT, crv_oracle),
-        (Tokens.CRV_DAI_USDC_USDT_SUSD, crv_oracle),
+        # (Tokens.CRV_DAI_USDC_USDT_SUSD, crv_oracle),
     ]
 
     core_oracle_tokens, core_oracle_base_oracles = zip(*core_oracle_configs)
@@ -183,7 +183,7 @@ def main():
         (Tokens.SUSHI_YFI_WETH, [50000, 7309, 10250]),
         (Tokens.BAL_PERP_USDC, [50000, 6146, 10250]),
         (Tokens.CRV_DAI_USDC_USDT, [50000, 9502, 10250]),
-        (Tokens.CRV_DAI_USDC_USDT_SUSD, [50000, 8915, 10250])
+        # (Tokens.CRV_DAI_USDC_USDT_SUSD, [50000, 8915, 10250])
     ]
 
     proxy_oracle_tokens, proxy_oracle_configs = zip(*token_factors)
@@ -248,7 +248,7 @@ def main():
     print('================================================================')
     print('Registering Liquidity Gauge in Gauge Wrapper...')
     wgauge.registerGauge(0, 0, {'from': deployer, 'gas_price': gas_strategy})  # CRV 3-pool (pid 0)
-    wgauge.registerGauge(12, 0, {'from': deployer, 'gas_price': gas_strategy})  # CRV sUSD (pid 12)
+    # wgauge.registerGauge(12, 0, {'from': deployer, 'gas_price': gas_strategy})  # CRV sUSD (pid 12)
 
     #######################################################################
     # Set whitelist spells in Homora Bank
@@ -317,7 +317,7 @@ def main():
     print('Whitelisting LP tokens for balancer spells...')
     curve_whitelist_lp_tokens = [
         Tokens.CRV_DAI_USDC_USDT,
-        Tokens.CRV_DAI_USDC_USDT_SUSD
+        # Tokens.CRV_DAI_USDC_USDT_SUSD
     ]
     curve_spell.setWhitelistLPTokens(curve_whitelist_lp_tokens, [True] * len(curve_whitelist_lp_tokens), {'from': deployer, 'gas_price': gas_strategy})
 
