@@ -40,7 +40,8 @@ def main():
 
     # set publish status based on fork or not
     try:
-        accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
+        deployer = accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
+        deployer.transfer(deployer, 1)
         publish_status = False
     except:
         publish_status = True
