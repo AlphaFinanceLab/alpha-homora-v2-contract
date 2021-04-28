@@ -105,7 +105,7 @@ def main():
                        Tokens.WBTC,
                        Tokens.YFI]
 
-    core_oracle.setRoute(base_token_list, [agg_oracle] * len(base_token_list), {'from': deployer, 'gas_price': gas_strategy})
+    # core_oracle.setRoute(base_token_list, [agg_oracle] * len(base_token_list), {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set oracle routes for lp tokens
@@ -133,7 +133,7 @@ def main():
 
     core_oracle_tokens, core_oracle_base_oracles = zip(*core_oracle_configs)
 
-    core_oracle.setRoute(core_oracle_tokens, core_oracle_base_oracles, {'from': deployer, 'gas_price': gas_strategy})
+    # core_oracle.setRoute(core_oracle_tokens, core_oracle_base_oracles, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set oracle token factors
@@ -185,17 +185,17 @@ def main():
 
     proxy_oracle_tokens, proxy_oracle_configs = zip(*token_factors)
 
-    proxy_oracle.setTokenFactors(proxy_oracle_tokens, proxy_oracle_configs, {'from': deployer, 'gas_price': gas_strategy})
+    # proxy_oracle.setTokenFactors(proxy_oracle_tokens, proxy_oracle_configs, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set whitelist ERC1155 for wrappers in Proxy Oracle
     print('================================================================')
     print('Whitelisting wrappers in Proxy Oracle...')
-    proxy_oracle.setWhitelistERC1155(
-        [werc20, wchef, wgauge, wstaking_index],
-        True,
-        {'from': deployer, 'gas_price': gas_strategy}
-    )
+    # proxy_oracle.setWhitelistERC1155(
+    #     [werc20, wchef, wgauge, wstaking_index],
+    #     True,
+    #     {'from': deployer, 'gas_price': gas_strategy}
+    # )
 
     #######################################################################
     # Deploy upgradeable homora bank
