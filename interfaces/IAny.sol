@@ -77,4 +77,6 @@ interface IAny {
   function decimals() external view returns (uint);
 
   function symbol() external view returns (string memory);
+
+  function exchangeRateStored() external view returns (uint);
 }
