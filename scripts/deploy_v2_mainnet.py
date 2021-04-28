@@ -7,7 +7,6 @@ from brownie import (ProxyAdminImpl, HomoraBank, TransparentUpgradeableProxyImpl
 
 from .utils import *
 from .tokens import Tokens
-from brownie import web3
 
 from brownie.network.gas.strategies import GasNowScalingStrategy
 
