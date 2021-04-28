@@ -72,19 +72,6 @@ def main():
     )
 
     #######################################################################
-    # Deploy spells
-    print('================================================================')
-    print('Deploying Spells...')
-    uniswap_spell = UniswapV2SpellV1.deploy(
-        bank, werc20, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    sushiswap_spell = SushiswapSpellV1.deploy(
-        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wchef, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    balancer_spell = BalancerSpellV1.deploy(
-        bank, werc20, Tokens.WETH, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    curve_spell = CurveSpellV1.deploy(
-        bank, werc20, Tokens.WETH, wgauge, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-
-    #######################################################################
     # Deploy oracles
     print('================================================================')
     print('Deploying Oracles...')
@@ -222,6 +209,19 @@ def main():
     bank = TransparentUpgradeableProxyImpl.deploy(
         bank_impl, proxy_admin, bank_impl.initialize.encode_input(proxy_oracle, 2000), {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     bank = interface.IAny(bank)
+
+    #######################################################################
+    # Deploy spells
+    print('================================================================')
+    print('Deploying Spells...')
+    uniswap_spell = UniswapV2SpellV1.deploy(
+        bank, werc20, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    sushiswap_spell = SushiswapSpellV1.deploy(
+        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wchef, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    balancer_spell = BalancerSpellV1.deploy(
+        bank, werc20, Tokens.WETH, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    curve_spell = CurveSpellV1.deploy(
+        bank, werc20, Tokens.WETH, wgauge, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
 
     #######################################################################
     # Deploy SafeBoxes
