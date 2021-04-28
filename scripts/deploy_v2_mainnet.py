@@ -415,7 +415,7 @@ def main():
     #              0],
     #             SUSHI_LP_PID[sushi_lp]
     #         ),
-    #         {'from': deployer, 'value': '0.1 ether'}
+    #         {'from': deployer, 'value': '0.1 ether', 'gas_price': gas_strategy}
     #     )
 
     # mint_tokens(Tokens.USDC, deployer)
