@@ -38,7 +38,13 @@ def fake_credit_limit(bank):
 
 
 def main():
-    publish_status = web3.eth.chainId != 1337
+
+    # set publish status based on fork or not
+    try:
+        accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
+        publish_status = False
+    except:
+        publish_status = True
 
     #######################################################################
     # Load deployer account
@@ -206,7 +212,7 @@ def main():
 
     proxy_oracle_tokens, proxy_oracle_configs = zip(*token_factors)
 
-    proxy_oracle.setTokenFactors(proxy_oracle_tokens, proxy_oracle_configs)
+    proxy_oracle.setTokenFactors(proxy_oracle_tokens, proxy_oracle_configs, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set whitelist ERC1155 for wrappers in Proxy Oracle
@@ -232,17 +238,17 @@ def main():
     safebox_dai = SafeBox.at('0xee8389d235E092b2945fE363e97CDBeD121A0439')
     safebox_usdt = SafeBox.at('0x020eDC614187F9937A1EfEeE007656C6356Fb13A')
     safebox_usdc = SafeBox.at('0x08bd64BFC832F1C2B3e07e634934453bA7Fa2db2')
-    safebox_yfi = SafeBox.deploy(Tokens.CYYFI, 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    safebox_dpi = SafeBox.deploy(Tokens.CYDPI, 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    safebox_snx = SafeBox.deploy(Tokens.CYSNX, 'Interest Bearing Synthetix Network Token v2', 'ibSNXv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    safebox_susd = SafeBox.deploy(Tokens.CYSUSD, 'Interest Bearing Synth sUSD v2', 'ibsUSDv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_yfi = SafeBox.deploy(Tokens.CY_YFI, 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_dpi = SafeBox.deploy(Tokens.CY_DPI, 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_snx = SafeBox.deploy(Tokens.CY_SNX, 'Interest Bearing Synthetix Network Token v2', 'ibSNXv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_susd = SafeBox.deploy(Tokens.CY_SUSD, 'Interest Bearing Synth sUSD v2', 'ibsUSDv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
 
     #######################################################################
     # Register pool in curve oracle
     print('================================================================')
     print('Registering Curve pools...')
-    crv_oracle.registerPool('0x6c3f90f043a72fa612cbac8115ee7e52bde6e490')  # CRV 3-pool
-    crv_oracle.registerPool('0xC25a3A3b969415c80451098fa907EC722572917F')  # CRV sUSD
+    crv_oracle.registerPool('0x6c3f90f043a72fa612cbac8115ee7e52bde6e490', {'from': deployer, 'gas_price': gas_strategy})  # CRV 3-pool
+    crv_oracle.registerPool('0xC25a3A3b969415c80451098fa907EC722572917F', {'from': deployer, 'gas_price': gas_strategy})  # CRV sUSD
 
     #######################################################################
     # Register liquidity gauge in gauge wrapper
@@ -271,16 +277,16 @@ def main():
     # Add cTokens to Homora Bank
     print('================================================================')
     print('Adding banks to Homora Bank...')
-    bank.addBank(Tokens.WETH, Tokens.CYWETH, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.DAI, Tokens.CYDAI, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.LINK, Tokens.CYLINK, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.YFI, Tokens.CYYFI, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.SNX, Tokens.CYSNX, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.WBTC, Tokens.CYWBTC, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.USDT, Tokens.CYUSDT, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.USDC, Tokens.CYUSDC, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.SUSD, Tokens.CYSUSD, {'from': deployer, 'gas_price': gas_strategy})
-    bank.addBank(Tokens.DPI, Tokens.CYDPI, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.WETH, Tokens.CY_WETH, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.DAI, Tokens.CY_DAI, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.LINK, Tokens.CY_LINK, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.YFI, Tokens.CY_YFI, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.SNX, Tokens.CY_SNX, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.WBTC, Tokens.CY_WBTC, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.USDT, Tokens.CY_USDT, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.USDC, Tokens.CY_USDC, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.SUSD, Tokens.CY_SUSD, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.DPI, Tokens.CY_DPI, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set whitelist LP tokens for spells
