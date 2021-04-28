@@ -57,16 +57,6 @@ def main():
     agg_oracle = AggregatorOracle.at('0x636478DcecA0308ec6b39e3ab1e6b9EBF00Cd01c')
 
     #######################################################################
-    # Deploy upgradeable homora bank
-    print('================================================================')
-    print('Deploying Homora Bank...')
-    proxy_admin = ProxyAdminImpl.at('0x090eCE252cEc5998Db765073D07fac77b8e60CB2')
-    bank_impl = HomoraBank.deploy({'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    bank = TransparentUpgradeableProxyImpl.deploy(
-        bank_impl, proxy_admin, bank_impl.initialize.encode_input(agg_oracle, 2000), {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
-    bank = interface.IAny(bank)
-
-    #######################################################################
     # Deploy wrappers
     print('================================================================')
     print('Deploying Wrappers...')
@@ -224,10 +214,14 @@ def main():
     )
 
     #######################################################################
-    # Set proxy oracle to bank
+    # Deploy upgradeable homora bank
     print('================================================================')
-    print('Setting Proxy Oracle to Homora Bank')
-    bank.setOracle(proxy_oracle, {'from': deployer, 'gas_price': gas_strategy})
+    print('Deploying Homora Bank...')
+    proxy_admin = ProxyAdminImpl.at('0x090eCE252cEc5998Db765073D07fac77b8e60CB2')
+    bank_impl = HomoraBank.deploy({'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    bank = TransparentUpgradeableProxyImpl.deploy(
+        bank_impl, proxy_admin, bank_impl.initialize.encode_input(proxy_oracle, 2000), {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    bank = interface.IAny(bank)
 
     #######################################################################
     # Deploy SafeBoxes
@@ -353,6 +347,26 @@ def main():
     # interface.IERC20(Tokens.SUSD).approve(safebox_susd, 2**256-1, {'from': deployer, 'gas_price': gas_strategy})
     # safebox_susd.deposit(10 * 10**18, {'from': deployer, 'gas_price': gas_strategy})
 
+    # print(f'Opening Uniswap DPI WETH (INDEX)')
+    # bank.execute(
+    #     0,
+    #     uniswap_spell,
+    #     uniswap_spell.addLiquidityWStakingRewards.encode_input(
+    #         Tokens.DPI,
+    #         Tokens.WETH,
+    #         [0,
+    #          0,
+    #          0,
+    #          10 ** 6,
+    #          10 ** 6,
+    #          0,
+    #          0,
+    #          0],
+    #         wstaking_index
+    #     ),
+    #     {'from': deployer, 'value': '0.1 ether', 'gas_price': gas_strategy}
+    # )
+
     # for uni_lp in uniswap_whitelist_lp_tokens:
     #     token0 = interface.IAny(uni_lp).token0()
     #     token1 = interface.IAny(uni_lp).token1()
@@ -375,7 +389,7 @@ def main():
     #              0,
     #              0],
     #         ),
-    #         {'from': deployer, 'value': '0.1 ether'}
+    #         {'from': deployer, 'value': '0.1 ether', 'gas_price': gas_strategy}
     #     )
 
     # for sushi_lp in sushiswap_whitelist_lp_tokens:
