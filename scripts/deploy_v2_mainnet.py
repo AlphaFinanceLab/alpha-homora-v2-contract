@@ -241,7 +241,7 @@ def main():
     print('================================================================')
     print('Registering Curve pools...')
     crv_oracle.registerPool('0x6c3f90f043a72fa612cbac8115ee7e52bde6e490', {'from': deployer, 'gas_price': gas_strategy})  # CRV 3-pool
-    crv_oracle.registerPool('0xC25a3A3b969415c80451098fa907EC722572917F', {'from': deployer, 'gas_price': gas_strategy})  # CRV sUSD
+    # crv_oracle.registerPool('0xC25a3A3b969415c80451098fa907EC722572917F', {'from': deployer, 'gas_price': gas_strategy})  # CRV sUSD
 
     #######################################################################
     # Register liquidity gauge in gauge wrapper
