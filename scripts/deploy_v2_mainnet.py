@@ -7,6 +7,13 @@ from brownie import (ProxyAdminImpl, HomoraBank, TransparentUpgradeableProxyImpl
 
 from .utils import *
 from .tokens import Tokens
+from brownie import web3
+
+from brownie.network.gas.strategies import GasNowScalingStrategy
+
+gas_strategy = GasNowScalingStrategy(
+    initial_speed="fast", max_speed="fast", increment=1.085, block_duration=20)
+
 
 CRV_REGISTRY = '0x7D86446dDb609eD0F5f8684AcF30380a356b2B4c'
 CRV_TOKEN = '0xD533a949740bb3306d119CC777fa900bA034cd52'
@@ -31,7 +38,7 @@ def fake_credit_limit(bank):
 
 
 def main():
-    publish_status = False  # TODO: Change to true
+    publish_status = web3.eth.chainId != 1337
 
     #######################################################################
     # Load deployer account
@@ -49,23 +56,23 @@ def main():
     print('================================================================')
     print('Deploying Homora Bank...')
     proxy_admin = ProxyAdminImpl.at('0x090eCE252cEc5998Db765073D07fac77b8e60CB2')
-    bank_impl = HomoraBank.deploy({'from': deployer}, publish_source=publish_status)
+    bank_impl = HomoraBank.deploy({'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     bank = TransparentUpgradeableProxyImpl.deploy(
-        bank_impl, proxy_admin, bank_impl.initialize.encode_input(agg_oracle, 2000), {'from': deployer}, publish_source=publish_status)
+        bank_impl, proxy_admin, bank_impl.initialize.encode_input(agg_oracle, 2000), {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     bank = interface.IAny(bank)
 
     #######################################################################
     # Deploy wrappers
     print('================================================================')
     print('Deploying Wrappers...')
-    werc20 = WERC20.deploy({'from': deployer}, publish_source=publish_status)
-    wchef = WMasterChef.deploy(MASTERCHEF, {'from': deployer}, publish_source=publish_status)
-    wgauge = WLiquidityGauge.deploy(CRV_REGISTRY, CRV_TOKEN, {'from': deployer}, publish_source=publish_status)
+    werc20 = WERC20.deploy({'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    wchef = WMasterChef.deploy(MASTERCHEF, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    wgauge = WLiquidityGauge.deploy(CRV_REGISTRY, CRV_TOKEN, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     wstaking_index = WStakingRewards.deploy(
         '0xB93b505Ed567982E2b6756177ddD23ab5745f309',  # staking contract
         Tokens.UNI_DPI_WETH,  # UNI DPI-WETH
         Tokens.INDEX,  # INDEX
-        {'from': deployer},
+        {'from': deployer, 'gas_price': gas_strategy},
         publish_source=publish_status
     )
 
@@ -74,23 +81,23 @@ def main():
     print('================================================================')
     print('Deploying Spells...')
     uniswap_spell = UniswapV2SpellV1.deploy(
-        bank, werc20, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', {'from': deployer}, publish_source=publish_status)
+        bank, werc20, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     sushiswap_spell = SushiswapSpellV1.deploy(
-        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wchef, {'from': deployer}, publish_source=publish_status)
+        bank, werc20, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f', wchef, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     balancer_spell = BalancerSpellV1.deploy(
-        bank, werc20, Tokens.WETH, {'from': deployer}, publish_source=publish_status)
+        bank, werc20, Tokens.WETH, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     curve_spell = CurveSpellV1.deploy(
-        bank, werc20, Tokens.WETH, wgauge, {'from': deployer}, publish_source=publish_status)
+        bank, werc20, Tokens.WETH, wgauge, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
 
     #######################################################################
     # Deploy oracles
     print('================================================================')
     print('Deploying Oracles...')
-    core_oracle = CoreOracle.deploy({'from': deployer}, publish_source=publish_status)
-    uni_oracle = UniswapV2Oracle.deploy(core_oracle, {'from': deployer}, publish_source=publish_status)
-    bal_oracle = BalancerPairOracle.deploy(core_oracle, {'from': deployer}, publish_source=publish_status)
-    crv_oracle = CurveOracle.deploy(core_oracle, CRV_REGISTRY, {'from': deployer}, publish_source=publish_status)
-    proxy_oracle = ProxyOracle.deploy(core_oracle, {'from': deployer}, publish_source=publish_status)
+    core_oracle = CoreOracle.deploy({'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    uni_oracle = UniswapV2Oracle.deploy(core_oracle, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    bal_oracle = BalancerPairOracle.deploy(core_oracle, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    crv_oracle = CurveOracle.deploy(core_oracle, CRV_REGISTRY, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    proxy_oracle = ProxyOracle.deploy(core_oracle, {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
 
     #######################################################################
     # Set oracle routes for base tokens
@@ -119,7 +126,7 @@ def main():
                        Tokens.WBTC,
                        Tokens.YFI]
 
-    core_oracle.setRoute(base_token_list, [agg_oracle] * len(base_token_list), {'from': deployer})
+    core_oracle.setRoute(base_token_list, [agg_oracle] * len(base_token_list), {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set oracle routes for lp tokens
@@ -147,7 +154,7 @@ def main():
 
     core_oracle_tokens, core_oracle_base_oracles = zip(*core_oracle_configs)
 
-    core_oracle.setRoute(core_oracle_tokens, core_oracle_base_oracles, {'from': deployer})
+    core_oracle.setRoute(core_oracle_tokens, core_oracle_base_oracles, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set oracle token factors
@@ -208,14 +215,14 @@ def main():
     proxy_oracle.setWhitelistERC1155(
         [werc20, wchef, wgauge, wstaking_index],
         True,
-        {'from': deployer}
+        {'from': deployer, 'gas_price': gas_strategy}
     )
 
     #######################################################################
     # Set proxy oracle to bank
     print('================================================================')
     print('Setting Proxy Oracle to Homora Bank')
-    bank.setOracle(proxy_oracle, {'from': deployer})
+    bank.setOracle(proxy_oracle, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Deploy SafeBoxes
@@ -225,10 +232,10 @@ def main():
     safebox_dai = SafeBox.at('0xee8389d235E092b2945fE363e97CDBeD121A0439')
     safebox_usdt = SafeBox.at('0x020eDC614187F9937A1EfEeE007656C6356Fb13A')
     safebox_usdc = SafeBox.at('0x08bd64BFC832F1C2B3e07e634934453bA7Fa2db2')
-    safebox_yfi = SafeBox.deploy(Tokens.CYYFI, 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer}, publish_source=publish_status)
-    safebox_dpi = SafeBox.deploy(Tokens.CYDPI, 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer}, publish_source=publish_status)
-    safebox_snx = SafeBox.deploy(Tokens.CYSNX, 'Interest Bearing Synthetix Network Token v2', 'ibSNXv2', {'from': deployer}, publish_source=publish_status)
-    safebox_susd = SafeBox.deploy(Tokens.CYSUSD, 'Interest Bearing Synth sUSD v2', 'ibsUSDv2', {'from': deployer}, publish_source=publish_status)
+    safebox_yfi = SafeBox.deploy(Tokens.CYYFI, 'Interest Bearing yearn.finance v2', 'ibYFIv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_dpi = SafeBox.deploy(Tokens.CYDPI, 'Interest Bearing DefiPulse Index v2', 'ibDPIv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_snx = SafeBox.deploy(Tokens.CYSNX, 'Interest Bearing Synthetix Network Token v2', 'ibSNXv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    safebox_susd = SafeBox.deploy(Tokens.CYSUSD, 'Interest Bearing Synth sUSD v2', 'ibsUSDv2', {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
 
     #######################################################################
     # Register pool in curve oracle
@@ -241,40 +248,39 @@ def main():
     # Register liquidity gauge in gauge wrapper
     print('================================================================')
     print('Registering Liquidity Gauge in Gauge Wrapper...')
-    wgauge.registerGauge(0, 0, {'from': deployer})  # CRV 3-pool (pid 0)
-    wgauge.registerGauge(12, 0, {'from': deployer})  # CRV sUSD (pid 12)
+    wgauge.registerGauge(0, 0, {'from': deployer, 'gas_price': gas_strategy})  # CRV 3-pool (pid 0)
+    wgauge.registerGauge(12, 0, {'from': deployer, 'gas_price': gas_strategy})  # CRV sUSD (pid 12)
 
     #######################################################################
     # Set whitelist spells in Homora Bank
     print('================================================================')
     print('Whitelisting Spells in HomoraBank...')
     whitelist_spells = [uniswap_spell, sushiswap_spell, balancer_spell, curve_spell]
-    bank.setWhitelistSpells(whitelist_spells, [True] * len(whitelist_spells), {'from': deployer})
+    bank.setWhitelistSpells(whitelist_spells, [True] * len(whitelist_spells), {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set whitelist tokens in Homora Bank
     print('================================================================')
     print('Whitelisting Tokens in Homora Bank...')
 
-    # TODO: After cream enable borrowing
     bank_whitelist_tokens = [Tokens.WETH, Tokens.DAI, Tokens.LINK, Tokens.YFI, Tokens.SNX, Tokens.WBTC,
                              Tokens.USDT, Tokens.USDC, Tokens.SUSD, Tokens.DPI]
-    bank.setWhitelistTokens(bank_whitelist_tokens, [True] * len(bank_whitelist_tokens), {'from': deployer})
+    bank.setWhitelistTokens(bank_whitelist_tokens, [True] * len(bank_whitelist_tokens), {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Add cTokens to Homora Bank
     print('================================================================')
     print('Adding banks to Homora Bank...')
-    bank.addBank(Tokens.WETH, Tokens.CYWETH, {'from': deployer})
-    bank.addBank(Tokens.DAI, Tokens.CYDAI, {'from': deployer})
-    bank.addBank(Tokens.LINK, Tokens.CYLINK, {'from': deployer})
-    bank.addBank(Tokens.YFI, Tokens.CYYFI, {'from': deployer})
-    bank.addBank(Tokens.SNX, Tokens.CYSNX, {'from': deployer})
-    bank.addBank(Tokens.WBTC, Tokens.CYWBTC, {'from': deployer})
-    bank.addBank(Tokens.USDT, Tokens.CYUSDT, {'from': deployer})
-    bank.addBank(Tokens.USDC, Tokens.CYUSDC, {'from': deployer})
-    bank.addBank(Tokens.SUSD, Tokens.CYSUSD, {'from': deployer})
-    bank.addBank(Tokens.DPI, Tokens.CYDPI, {'from': deployer})
+    bank.addBank(Tokens.WETH, Tokens.CYWETH, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.DAI, Tokens.CYDAI, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.LINK, Tokens.CYLINK, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.YFI, Tokens.CYYFI, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.SNX, Tokens.CYSNX, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.WBTC, Tokens.CYWBTC, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.USDT, Tokens.CYUSDT, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.USDC, Tokens.CYUSDC, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.SUSD, Tokens.CYSUSD, {'from': deployer, 'gas_price': gas_strategy})
+    bank.addBank(Tokens.DPI, Tokens.CYDPI, {'from': deployer, 'gas_price': gas_strategy})
 
     #######################################################################
     # Set whitelist LP tokens for spells
@@ -289,7 +295,7 @@ def main():
         Tokens.UNI_WBTC_WETH,
         Tokens.UNI_YFI_WETH
     ]
-    uniswap_spell.setWhitelistLPTokens(uniswap_whitelist_lp_tokens, [True] * len(uniswap_whitelist_lp_tokens), {'from': deployer})
+    uniswap_spell.setWhitelistLPTokens(uniswap_whitelist_lp_tokens, [True] * len(uniswap_whitelist_lp_tokens), {'from': deployer, 'gas_price': gas_strategy})
 
     print('Whitelisting LP tokens for sushiswap spells...')
     sushiswap_whitelist_lp_tokens = [
@@ -301,149 +307,149 @@ def main():
         Tokens.SUSHI_WBTC_WETH,
         Tokens.SUSHI_YFI_WETH
     ]
-    sushiswap_spell.setWhitelistLPTokens(sushiswap_whitelist_lp_tokens, [True] * len(sushiswap_whitelist_lp_tokens), {'from': deployer})
+    sushiswap_spell.setWhitelistLPTokens(sushiswap_whitelist_lp_tokens, [True] * len(sushiswap_whitelist_lp_tokens), {'from': deployer, 'gas_price': gas_strategy})
 
     print('Whitelisting LP tokens for balancer spells...')
     balancer_whitelist_lp_tokens = [
         Tokens.BAL_PERP_USDC
     ]
-    balancer_spell.setWhitelistLPTokens(balancer_whitelist_lp_tokens, [True] * len(balancer_whitelist_lp_tokens), {'from': deployer})
+    balancer_spell.setWhitelistLPTokens(balancer_whitelist_lp_tokens, [True] * len(balancer_whitelist_lp_tokens), {'from': deployer, 'gas_price': gas_strategy})
 
     print('Whitelisting LP tokens for balancer spells...')
     curve_whitelist_lp_tokens = [
         Tokens.CRV_DAI_USDC_USDT,
         Tokens.CRV_DAI_USDC_USDT_SUSD
     ]
-    curve_spell.setWhitelistLPTokens(curve_whitelist_lp_tokens, [True] * len(curve_whitelist_lp_tokens), {'from': deployer})
+    curve_spell.setWhitelistLPTokens(curve_whitelist_lp_tokens, [True] * len(curve_whitelist_lp_tokens), {'from': deployer, 'gas_price': gas_strategy})
 
-    #######################################################################
-    # Open positions in each pool
-    print('================================================================')
-    print('Opening positions...')
+    # #######################################################################
+    # # Open positions in each pool
+    # print('================================================================')
+    # print('Opening positions...')
 
-    fake_credit_limit(bank)  # for testing only. TODO: remove
+    # fake_credit_limit(bank)  # for testing only. TODO: remove
 
-    borrowable_tokens = [
-        Tokens.WETH,
-        Tokens.DAI,
-        Tokens.LINK,
-        Tokens.YFI,
-        Tokens.SNX,
-        Tokens.WBTC,
-        Tokens.USDT,
-        Tokens.USDC,
-        Tokens.SUSD,
-        Tokens.DPI
-    ]
+    # borrowable_tokens = [
+    #     Tokens.WETH,
+    #     Tokens.DAI,
+    #     Tokens.LINK,
+    #     Tokens.YFI,
+    #     Tokens.SNX,
+    #     Tokens.WBTC,
+    #     Tokens.USDT,
+    #     Tokens.USDC,
+    #     Tokens.SUSD,
+    #     Tokens.DPI
+    # ]
 
-    # deposit some sUSD
-    # TODO: obtain some sUSD first
-    mint_tokens(Tokens.SUSD, deployer)
-    interface.IERC20(Tokens.SUSD).approve(safebox_susd, 2**256-1, {'from': deployer})
-    safebox_susd.deposit(10 * 10**18, {'from': deployer})
+    # # deposit some sUSD
+    # # TODO: obtain some sUSD first
+    # mint_tokens(Tokens.SUSD, deployer)
+    # interface.IERC20(Tokens.SUSD).approve(safebox_susd, 2**256-1, {'from': deployer, 'gas_price': gas_strategy})
+    # safebox_susd.deposit(10 * 10**18, {'from': deployer, 'gas_price': gas_strategy})
 
-    for uni_lp in uniswap_whitelist_lp_tokens:
-        token0 = interface.IAny(uni_lp).token0()
-        token1 = interface.IAny(uni_lp).token1()
-        print(f'Opening Uniswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+    # for uni_lp in uniswap_whitelist_lp_tokens:
+    #     token0 = interface.IAny(uni_lp).token0()
+    #     token1 = interface.IAny(uni_lp).token1()
+    #     print(f'Opening Uniswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
 
-        borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
-        borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
-        bank.execute(
-            0,
-            uniswap_spell,
-            uniswap_spell.addLiquidityWERC20.encode_input(
-                token0,
-                token1,
-                [0,
-                 0,
-                 0,
-                 borrow_amt_0,
-                 borrow_amt_1,
-                 0,
-                 0,
-                 0],
-            ),
-            {'from': deployer, 'value': '0.1 ether'}
-        )
+    #     borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
+    #     borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
+    #     bank.execute(
+    #         0,
+    #         uniswap_spell,
+    #         uniswap_spell.addLiquidityWERC20.encode_input(
+    #             token0,
+    #             token1,
+    #             [0,
+    #              0,
+    #              0,
+    #              borrow_amt_0,
+    #              borrow_amt_1,
+    #              0,
+    #              0,
+    #              0],
+    #         ),
+    #         {'from': deployer, 'value': '0.1 ether'}
+    #     )
 
-    for sushi_lp in sushiswap_whitelist_lp_tokens:
-        token0 = interface.IAny(sushi_lp).token0()
-        token1 = interface.IAny(sushi_lp).token1()
-        print(f'Opening Sushiswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+    # for sushi_lp in sushiswap_whitelist_lp_tokens:
+    #     token0 = interface.IAny(sushi_lp).token0()
+    #     token1 = interface.IAny(sushi_lp).token1()
+    #     print(f'Opening Sushiswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
 
-        borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
-        borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
-        bank.execute(
-            0,
-            sushiswap_spell,
-            sushiswap_spell.addLiquidityWMasterChef.encode_input(
-                token0,
-                token1,
-                [0,
-                 0,
-                 0,
-                 borrow_amt_0,
-                 borrow_amt_1,
-                 0,
-                 0,
-                 0],
-                SUSHI_LP_PID[sushi_lp]
-            ),
-            {'from': deployer, 'value': '0.1 ether'}
-        )
+    #     borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
+    #     borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
+    #     bank.execute(
+    #         0,
+    #         sushiswap_spell,
+    #         sushiswap_spell.addLiquidityWMasterChef.encode_input(
+    #             token0,
+    #             token1,
+    #             [0,
+    #              0,
+    #              0,
+    #              borrow_amt_0,
+    #              borrow_amt_1,
+    #              0,
+    #              0,
+    #              0],
+    #             SUSHI_LP_PID[sushi_lp]
+    #         ),
+    #         {'from': deployer, 'value': '0.1 ether'}
+    #     )
 
-    mint_tokens(Tokens.USDC, deployer)
-    interface.IERC20(Tokens.USDC).approve(bank, 2**256-1, {'from': deployer})
+    # mint_tokens(Tokens.USDC, deployer)
+    # interface.IERC20(Tokens.USDC).approve(bank, 2**256-1, {'from': deployer, 'gas_price': gas_strategy})
 
-    for bal_lp in balancer_whitelist_lp_tokens:
-        token0, token1 = interface.IAny(bal_lp).getFinalTokens()
-        print(f'Opening Balancer {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
-        bank.execute(
-            0,
-            balancer_spell,
-            balancer_spell.addLiquidityWERC20.encode_input(
-                bal_lp,
-                [0,
-                 10 * 10**6,
-                 0,
-                 0,
-                 10**6,
-                 0,
-                 0]
-            ), {'from': deployer}
-        )
+    # for bal_lp in balancer_whitelist_lp_tokens:
+    #     token0, token1 = interface.IAny(bal_lp).getFinalTokens()
+    #     print(f'Opening Balancer {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+    #     bank.execute(
+    #         0,
+    #         balancer_spell,
+    #         balancer_spell.addLiquidityWERC20.encode_input(
+    #             bal_lp,
+    #             [0,
+    #              10 * 10**6,
+    #              0,
+    #              0,
+    #              10**6,
+    #              0,
+    #              0]
+    #         ), {'from': deployer, 'gas_price': gas_strategy}
+    #     )
 
-    print('Opening Curve 3pool')
-    bank.execute(
-        0,
-        curve_spell,
-        curve_spell.addLiquidity3.encode_input(
-            Tokens.CRV_DAI_USDC_USDT,
-            [0, 10 * 10**6, 0],
-            0,
-            [10**18, 10**6, 10**6],
-            0,
-            0,
-            0,
-            0
-        ),
-        {'from': deployer}
-    )
+    # print('Opening Curve 3pool')
+    # bank.execute(
+    #     0,
+    #     curve_spell,
+    #     curve_spell.addLiquidity3.encode_input(
+    #         Tokens.CRV_DAI_USDC_USDT,
+    #         [0, 10 * 10**6, 0],
+    #         0,
+    #         [10**18, 10**6, 10**6],
+    #         0,
+    #         0,
+    #         0,
+    #         0
+    #     ),
+    #     {'from': deployer, 'gas_price': gas_strategy}
+    # )
 
-    print('Opening Curve sUSD')
-    bank.execute(
-        0,
-        curve_spell,
-        curve_spell.addLiquidity4.encode_input(
-            Tokens.CRV_DAI_USDC_USDT_SUSD,
-            [0, 10 * 10**6, 0, 0],
-            0,
-            [10**18, 10**6, 10**6, 10**18],
-            0,
-            0,
-            12,
-            0
-        ),
-        {'from': deployer}
-    )
+    # print('Opening Curve sUSD')
+    # bank.execute(
+    #     0,
+    #     curve_spell,
+    #     curve_spell.addLiquidity4.encode_input(
+    #         Tokens.CRV_DAI_USDC_USDT_SUSD,
+    #         [0, 10 * 10**6, 0, 0],
+    #         0,
+    #         [10**18, 10**6, 10**6, 10**18],
+    #         0,
+    #         0,
+    #         12,
+    #         0
+    #     ),
+    #     {'from': deployer, 'gas_price': gas_strategy}
+    # )

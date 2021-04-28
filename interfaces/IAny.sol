@@ -55,8 +55,6 @@ interface IAny {
 
   function getPrice(address, address) external view returns (uint, uint);
 
-  function owner() external view returns (address);
-
   function work(
     uint,
     address,
@@ -74,8 +72,6 @@ interface IAny {
   function getETHPx(address) external view returns (uint);
 
   function balanceOf(address) external view returns (uint);
-
-  function admin() external view returns (address);
 
   function addBank(address, address) external;
 
