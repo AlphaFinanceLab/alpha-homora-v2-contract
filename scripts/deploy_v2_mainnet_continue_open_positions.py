@@ -205,8 +205,8 @@ def main():
             {'from': deployer, 'value': '0.01 ether', 'gas_price': gas_strategy}
         )
 
-    mint_tokens(Tokens.USDC, deployer)
-    interface.IERC20(Tokens.USDC).approve(bank, 2**256-1, {'from': deployer, 'gas_price': gas_strategy})
+    # approve 20 USDC to bank (for balancer and curve pool)
+    interface.IERC20(Tokens.USDC).approve(bank, 20 * 10**6, {'from': deployer, 'gas_price': gas_strategy})
 
     for bal_lp in balancer_whitelist_lp_tokens:
         token0, token1 = interface.IAny(bal_lp).getFinalTokens()
