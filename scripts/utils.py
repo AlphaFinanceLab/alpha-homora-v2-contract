@@ -180,6 +180,10 @@ def mint_tokens(token, to, amount=None):
         owner = token.owner()
         token.mint(amount, {'from': owner})
         token.transfer(to, amount, {'from': owner})
+    elif token == LINK:
+        top_holder = '0x98c63b7b319dfbdf3d811530f2ab9dfe4983af9d'
+        amount = 10 ** 24
+        token.transfer(to, amount, {'from': top_holder})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
         # Uniswap LP token
