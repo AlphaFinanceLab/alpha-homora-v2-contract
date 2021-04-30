@@ -162,7 +162,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
     require(
       token0 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
         token1 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-      'one of the requested tokens must be ETH or WETH'
+      'one of the requested tokens must be WETH'
     );
     if (token0 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
       return (uint(2**112).mul(1e18).div(getETHPx(token1)), block.timestamp);
