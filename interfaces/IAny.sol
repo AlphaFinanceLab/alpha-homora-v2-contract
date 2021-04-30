@@ -46,4 +46,35 @@ interface IAny {
   function balanceOf(address) external view returns (uint);
 
   function admin() external view returns (address);
+
+  function getPositionInfo(uint)
+    external
+    view
+    returns (
+      address,
+      address,
+      uint,
+      uint
+    );
+
+  function getUnderlyingToken(uint) external view returns (address);
+
+  function getReserves()
+    external
+    view
+    returns (
+      uint,
+      uint,
+      uint
+    );
+
+  function totalSupply() external view returns (uint);
+
+  function token0() external view returns (address);
+
+  function token1() external view returns (address);
+
+  function decimals() external view returns (uint);
+
+  function symbol() external view returns (string memory);
 }
