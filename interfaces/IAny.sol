@@ -1,4 +1,5 @@
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
 interface IAny {
   function approve(address, uint) external;
@@ -77,4 +78,22 @@ interface IAny {
   function decimals() external view returns (uint);
 
   function symbol() external view returns (string memory);
+
+  function setPrimarySources(
+    address,
+    uint,
+    address[] memory
+  ) external;
+
+  function setMultiPrimarySources(
+    address[] memory,
+    uint[] memory,
+    address[][] memory
+  ) external;
+
+  function setSourceGasLimits(address[] memory, uint[] memory) external;
+
+  function getETHPx(address, uint[] memory) external view returns (uint);
+
+  function governor() external view returns (address);
 }

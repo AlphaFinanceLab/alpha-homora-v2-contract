@@ -14,17 +14,13 @@ contract AggregatorOracle is IBaseOracle, Governable {
   event SetPrimarySources(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
   event SetSourceGasLimits(address indexed source, uint gasLimit);
 
-  address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH address
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
   mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (multiplied by 1e18)
 
-  uint public constant MIN_PRICE_DEVIATION = 1e18; // min price deviation
-  uint public constant MAX_PRICE_DEVIATION = 1.5e18; // max price deviation
-
   mapping(address => uint) public sourceGasLimits; // Mapping from source to price query gas limit
 
-  constructor() public {
+  function initialize() external initializer {
     __Governable__init();
   }
 
@@ -66,10 +62,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
     IBaseOracle[] memory sources
   ) internal {
     primarySourceCount[token] = sources.length;
-    require(
-      maxPriceDeviation >= MIN_PRICE_DEVIATION && maxPriceDeviation <= MAX_PRICE_DEVIATION,
-      'bad max deviation value'
-    );
+    require(maxPriceDeviation >= 1e18 && maxPriceDeviation <= 1.5e18, 'bad max deviation value');
     require(sources.length <= 3, 'sources length exceed 3');
     maxPriceDeviations[token] = maxPriceDeviation;
     for (uint idx = 0; idx < sources.length; idx++) {
@@ -166,8 +159,12 @@ contract AggregatorOracle is IBaseOracle, Governable {
   /// @dev Return the price of token0/token1, multiplied by 1e18
   /// @notice One of the input tokens must be WETH
   function getPrice(address token0, address token1) external view returns (uint, uint) {
-    require(token0 == WETH || token1 == WETH, 'one of the requested tokens must be ETH or WETH');
-    if (token0 == WETH) {
+    require(
+      token0 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
+        token1 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
+      'one of the requested tokens must be ETH or WETH'
+    );
+    if (token0 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
       return (uint(2**112).mul(1e18).div(getETHPx(token1)), block.timestamp);
     } else {
       return (getETHPx(token0).mul(1e18).div(2**112), block.timestamp);
