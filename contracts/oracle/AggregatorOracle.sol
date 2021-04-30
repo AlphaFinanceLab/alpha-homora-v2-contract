@@ -12,6 +12,7 @@ contract AggregatorOracle is IBaseOracle, Governable {
   using SafeMath for uint;
 
   event SetPrimarySources(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
+  event SetSourceGasLimits(address indexed source, uint gasLimit);
 
   address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH address
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
@@ -20,6 +21,8 @@ contract AggregatorOracle is IBaseOracle, Governable {
 
   uint public constant MIN_PRICE_DEVIATION = 1e18; // min price deviation
   uint public constant MAX_PRICE_DEVIATION = 1.5e18; // max price deviation
+
+  mapping(address => uint) public sourceGasLimits; // Mapping from source to price query gas limit
 
   constructor() public {
     __Governable__init();
@@ -75,18 +78,43 @@ contract AggregatorOracle is IBaseOracle, Governable {
     emit SetPrimarySources(token, maxPriceDeviation, sources);
   }
 
-  /// @dev Return token price relative to ETH, multiplied by 2**112
+  /// @dev Set gas limits for oracle sources
+  /// @param sources List of oracle sources
+  /// @param gasLimits List of gas limits
+  function setSourceGasLimits(address[] memory sources, uint[] memory gasLimits) external onlyGov {
+    require(sources.length == gasLimits.length, 'sources & gasLimits have inconsistent length');
+    for (uint idx = 0; idx < sources.length; idx++) {
+      sourceGasLimits[sources[idx]] = gasLimits[idx];
+      emit SetSourceGasLimits(sources[idx], gasLimits[idx]);
+    }
+  }
+
+  /// @dev Return token price relative to ETH, multiplied by 2**112, using sourceGasLimits as gas limits
   /// @param token Token to get price of
   /// NOTE: Support at most 3 oracle sources per token
   function getETHPx(address token) public view override returns (uint) {
     uint candidateSourceCount = primarySourceCount[token];
+    uint[] memory gasLimits = new uint[](candidateSourceCount);
+    for (uint idx = 0; idx < candidateSourceCount; idx++) {
+      gasLimits[idx] = sourceGasLimits[address(primarySources[token][idx])];
+    }
+    return getETHPx(token, gasLimits);
+  }
+
+  /// @dev Return token price relative to ETH, multiplied by 2**112, with specific gas limits (based on input) for each query
+  /// @param token Token to get price of
+  /// @param gasLimits Gas limits for sources
+  /// NOTE: Support at most 3 oracle sources per token
+  function getETHPx(address token, uint[] memory gasLimits) public view returns (uint) {
+    uint candidateSourceCount = primarySourceCount[token];
     require(candidateSourceCount > 0, 'no primary source');
+    require(gasLimits.length == candidateSourceCount, 'gasLimits has incorrect length');
     uint[] memory prices = new uint[](candidateSourceCount);
 
     // Get valid oracle sources
     uint validSourceCount = 0;
     for (uint idx = 0; idx < candidateSourceCount; idx++) {
-      try primarySources[token][idx].getETHPx(token) returns (uint px) {
+      try primarySources[token][idx].getETHPx{gas: gasLimits[idx]}(token) returns (uint px) {
         prices[validSourceCount++] = px;
       } catch {}
     }
