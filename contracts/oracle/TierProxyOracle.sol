@@ -27,7 +27,7 @@ contract TierProxyOracle is IOracle, Governable {
   IBaseOracle public immutable source; // Main oracle source
   IAlphaTier public immutable alphaTier; // alpha tier contract address
   uint public tierCount; // number of tiers
-  mapping(address => TokenFactor[]) public tierTokenFactors; // Mapping from token to mapping tier to token factor.
+  mapping(address => TokenFactor[]) public tierTokenFactors; // Mapping from token to list of token factor by tier.
   mapping(address => uint) public liqIncentives; // Mapping from token to liquidation incentive, multiplied by 1e4.
   mapping(address => bool) public whitelistERC1155; // Mapping from token address to whitelist status
 
