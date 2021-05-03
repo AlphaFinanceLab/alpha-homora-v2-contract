@@ -84,5 +84,5 @@ interface IAny {
 
   function get_coins(address) external view returns (address[8] memory);
 
-  function balances(address) external view returns (uint);
+  function balances(uint) external view returns (uint);
 }
