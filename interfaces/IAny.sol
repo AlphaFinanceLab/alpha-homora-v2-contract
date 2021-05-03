@@ -77,4 +77,12 @@ interface IAny {
   function decimals() external view returns (uint);
 
   function symbol() external view returns (string memory);
+
+  function exchangeRateStored() external view returns (uint);
+
+  function get_n_coins(address) external view returns (uint, uint);
+
+  function get_coins(address) external view returns (address[8] memory);
+
+  function balances(address) external view returns (uint);
 }
