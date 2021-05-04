@@ -80,15 +80,11 @@ interface IAny {
 
   function exchangeRateStored() external view returns (uint);
 
-  function get_n_coins(address) external view returns (uint, uint);
+  function exchangeRateCurrent() external returns (uint);
 
-  function get_coins(address) external view returns (address[8] memory);
+  function borrowBalanceStored(address) external view returns (uint);
 
-  function balances(uint) external view returns (uint);
+  function borrowBalanceCurrent(address) external returns (uint);
 
-  function getFinalTokens() external view returns (address[] memory);
-
-  function name() external view returns (string memory);
-
-  function getBalance(address) external view returns (uint);
+  function accrueInterest() external returns (uint);
 }
