@@ -315,7 +315,7 @@ def main():
                                       agg_sources,
                                       {'from': deployer, 'gas_price': gas_strategy})
 
-    # setup gas limit on agg oracle to 40k
+    # setup gas limit on agg oracle to 40k (real usage: ~27k)
     agg_oracle.setSourceGasLimits([band_oracle, link_oracle], [40000, 40000], {'from': deployer, 'gas_price': gas_strategy})
 
     ########################################################################
@@ -341,4 +341,4 @@ def main():
     ########################################################################
     # check price is the same as previous agg oracle
 
-    check_agg_oracle_prices(agg_oracle, deployer)
+    # check_agg_oracle_prices(agg_oracle, deployer)
