@@ -14,14 +14,17 @@ contract AggregatorOracle is IBaseOracle, Governable {
   event SetPrimarySources(address indexed token, uint maxPriceDeviation, IBaseOracle[] oracles);
   event SetSourceGasLimits(address indexed source, uint gasLimit);
 
+  address public WETH;
+
   mapping(address => uint) public primarySourceCount; // Mapping from token to number of sources
   mapping(address => mapping(uint => IBaseOracle)) public primarySources; // Mapping from token to (mapping from index to oracle source)
   mapping(address => uint) public maxPriceDeviations; // Mapping from token to max price deviation (multiplied by 1e18)
 
   mapping(address => uint) public sourceGasLimits; // Mapping from source to price query gas limit
 
-  function initialize() external initializer {
+  function initialize(address _WETH) external initializer {
     __Governable__init();
+    WETH = _WETH;
   }
 
   /// @dev Set oracle primary sources for the token
@@ -41,8 +44,8 @@ contract AggregatorOracle is IBaseOracle, Governable {
   /// @param maxPriceDeviationList List of max price deviations (in 1e18) for tokens
   /// @param allSources List of oracle sources for tokens
   function setMultiPrimarySources(
-    address[] memory tokens,
-    uint[] memory maxPriceDeviationList,
+    address[] calldata tokens,
+    uint[] calldata maxPriceDeviationList,
     IBaseOracle[][] memory allSources
   ) external onlyGov {
     require(tokens.length == allSources.length, 'inconsistent length');
@@ -74,7 +77,10 @@ contract AggregatorOracle is IBaseOracle, Governable {
   /// @dev Set gas limits for oracle sources
   /// @param sources List of oracle sources
   /// @param gasLimits List of gas limits
-  function setSourceGasLimits(address[] memory sources, uint[] memory gasLimits) external onlyGov {
+  function setSourceGasLimits(address[] calldata sources, uint[] calldata gasLimits)
+    external
+    onlyGov
+  {
     require(sources.length == gasLimits.length, 'sources & gasLimits have inconsistent length');
     for (uint idx = 0; idx < sources.length; idx++) {
       sourceGasLimits[sources[idx]] = gasLimits[idx];
@@ -159,12 +165,9 @@ contract AggregatorOracle is IBaseOracle, Governable {
   /// @dev Return the price of token0/token1, multiplied by 1e18
   /// @notice One of the input tokens must be WETH
   function getPrice(address token0, address token1) external view returns (uint, uint) {
-    require(
-      token0 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
-        token1 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-      'one of the requested tokens must be WETH'
-    );
-    if (token0 == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+    address WETH_ = WETH; // load to local to save gas
+    require(token0 == WETH_ || token1 == WETH_, 'one of the requested tokens must be WETH');
+    if (token0 == WETH_) {
       return (uint(2**112).mul(1e18).div(getETHPx(token1)), block.timestamp);
     } else {
       return (getETHPx(token0).mul(1e18).div(2**112), block.timestamp);
