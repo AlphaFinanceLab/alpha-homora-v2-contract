@@ -245,6 +245,12 @@ def check_low_gas(agg_oracle, deployer):
             print(e)
 
 
+def check_agg_oracle_prices(agg_oracle, deployer):
+    old_agg_oracle = interface.IAny('0x636478DcecA0308ec6b39e3ab1e6b9EBF00Cd01c')
+    for token in tokens:
+        assert agg_oracle.getETHPx(token) == old_agg_oracle.getETHPx(token), f'{interface.IAny(token).name()} prices mismatched in old & new agg oracles'
+
+
 def main():
     deployer = accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
     # deployer = accounts.load('gh')
@@ -331,3 +337,8 @@ def main():
     # try using too low gas
 
     # check_low_gas(agg_oracle, deployer)
+
+    ########################################################################
+    # check price is the same as previous agg oracle
+
+    check_agg_oracle_prices(agg_oracle, deployer)
