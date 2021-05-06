@@ -252,6 +252,9 @@ def check_agg_oracle_prices(agg_oracle, deployer):
 
 
 def main():
+
+    publish_status = False
+
     deployer = accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
     # deployer = accounts.load('gh')
 
@@ -259,8 +262,9 @@ def main():
     band_oracle = BandAdapterOracle.at('0xb35E6a063CC00c66408284d60765c52e70394772')
     link_oracle = ChainlinkAdapterOracle.at('0x9A42660eebFf100B9D88cab82b3049Ae2a33712f')
     proxy_admin = ProxyAdminImpl.at('0x090eCE252cEc5998Db765073D07fac77b8e60CB2')
-    agg_oracle_impl = AggregatorOracle.deploy({'from': deployer, 'gas_price': gas_strategy})
-    agg_oracle = TransparentUpgradeableProxyImpl.deploy(agg_oracle_impl, proxy_admin, agg_oracle_impl.initialize.encode_input(WETH), {'from': deployer, 'gas_price': gas_strategy})
+    agg_oracle_impl = AggregatorOracle.deploy({'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
+    agg_oracle = TransparentUpgradeableProxyImpl.deploy(agg_oracle_impl, proxy_admin, agg_oracle_impl.initialize.encode_input(WETH),
+                                                        {'from': deployer, 'gas_price': gas_strategy}, publish_source=publish_status)
     agg_oracle = interface.IAny(agg_oracle)
 
     # token list
