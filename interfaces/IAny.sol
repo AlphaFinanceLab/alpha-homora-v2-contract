@@ -3,9 +3,39 @@ pragma solidity 0.6.12;
 interface IAny {
   function approve(address, uint) external;
 
+  function target() external view returns (address);
+
+  function owner() external view returns (address);
+
+  function masterMinter() external view returns (address);
+
+  function issue(uint) external;
+
+  function configureMinter(address, uint) external;
+
+  function mint(address, uint) external;
+
+  function increaseSupply(uint) external;
+
+  function transfer(address, uint) external;
+
+  function deposit(uint) external;
+
+  function getModules() external view returns (address[] memory);
+
+  function addMinter(address) external;
+
+  function governance() external view returns (address);
+
+  function createTokens(uint) external;
+
+  function joinPool(uint, uint) external;
+
   function _setCreditLimit(address, uint) external;
 
   function setOracle(address) external;
+
+  function decimals() external view returns (uint8);
 
   function poolInfo(uint)
     external
@@ -25,8 +55,6 @@ interface IAny {
 
   function getPrice(address, address) external view returns (uint, uint);
 
-  function owner() external view returns (address);
-
   function work(
     uint,
     address,
@@ -45,46 +73,21 @@ interface IAny {
 
   function balanceOf(address) external view returns (uint);
 
+  function addBank(address, address) external;
+
+  function getFinalTokens() external view returns (address[] memory);
+
   function admin() external view returns (address);
-
-  function getPositionInfo(uint)
-    external
-    view
-    returns (
-      address,
-      address,
-      uint,
-      uint
-    );
-
-  function getUnderlyingToken(uint) external view returns (address);
-
-  function getReserves()
-    external
-    view
-    returns (
-      uint,
-      uint,
-      uint
-    );
-
-  function totalSupply() external view returns (uint);
 
   function token0() external view returns (address);
 
   function token1() external view returns (address);
 
-  function decimals() external view returns (uint);
-
   function symbol() external view returns (string memory);
 
-  function exchangeRateStored() external view returns (uint);
-
-  function exchangeRateCurrent() external returns (uint);
-
-  function borrowBalanceStored(address) external view returns (uint);
-
-  function borrowBalanceCurrent(address) external returns (uint);
-
-  function accrueInterest() external returns (uint);
+  function execute(
+    uint,
+    address,
+    bytes memory
+  ) external returns (uint);
 }
