@@ -53,7 +53,6 @@ def main():
     core_oracle_configs = [
         (Tokens.UNI_USDC_USDT, uni_oracle),
         (Tokens.UNI_DAI_USDC, uni_oracle),
-        (Tokens.UNI_DAI_USDT, uni_oracle),
     ]
 
     core_oracle_tokens, core_oracle_base_oracles = zip(*core_oracle_configs)
@@ -71,7 +70,6 @@ def main():
     token_factors = [
         (Tokens.UNI_USDC_USDT, [50000, 9502, 10250]),
         (Tokens.UNI_DAI_USDC, [50000, 9502, 10250]),
-        (Tokens.UNI_DAI_USDT, [50000, 9502, 10250]),
     ]
 
     proxy_oracle_tokens, proxy_oracle_configs = zip(*token_factors)
@@ -90,58 +88,61 @@ def main():
         Tokens.UNI_SUSD_WETH,  # FALSE
         Tokens.UNI_USDC_USDT,
         Tokens.UNI_DAI_USDC,
-        Tokens.UNI_DAI_USDT
     ]
 
-    uniswap_spell.setWhitelistLPTokens(uniswap_whitelist_lp_tokens, [False, True, True, True], {'from': deployer, 'gas_price': gas_strategy})
+    uniswap_spell.setWhitelistLPTokens(uniswap_whitelist_lp_tokens, [False, True, True], {'from': deployer, 'gas_price': gas_strategy})
 
-    #######################################################################
-    # Open positions in each pool
-    print('================================================================')
-    print('Opening positions...')
+    # #######################################################################
+    # # Open positions in each pool
+    # print('================================================================')
+    # print('Opening positions...')
 
-    # fake_credit_limit(bank)  # for testing only. TODO: remove
+    # # fake_credit_limit(bank)  # for testing only. TODO: remove
 
-    borrowable_tokens = [
-        Tokens.WETH,
-        Tokens.DAI,
-        Tokens.LINK,
-        Tokens.YFI,
-        Tokens.SNX,
-        Tokens.WBTC,
-        Tokens.USDT,
-        Tokens.USDC,
-        Tokens.SUSD,
-        Tokens.DPI
-    ]
+    # borrowable_tokens = [
+    #     Tokens.WETH,
+    #     Tokens.DAI,
+    #     Tokens.LINK,
+    #     Tokens.YFI,
+    #     Tokens.SNX,
+    #     Tokens.WBTC,
+    #     Tokens.USDT,
+    #     Tokens.USDC,
+    #     Tokens.SUSD,
+    #     Tokens.DPI
+    # ]
 
-    user = accounts.at('0x60e86029ed1A8b91cB0dF8BBDFE56c4C2Ad2D073', force=True)
-    # user = accounts.load('homora-relaunch')
+    # user = accounts.at('0x60e86029ed1A8b91cB0dF8BBDFE56c4C2Ad2D073', force=True)
+    # # user = accounts.load('homora-relaunch')
 
-    interface.IERC20(Tokens.USDC).approve(bank, 20 * 10**6, {'from': user})
-    interface.IERC20(Tokens.DAI).approve(bank, 10 * 10**18, {'from': user})
+    # accounts[9].transfer(user, '10 ether')
 
-    for uni_lp in uniswap_whitelist_lp_tokens[1:]:
-        token0 = interface.IAny(uni_lp).token0()
-        token1 = interface.IAny(uni_lp).token1()
-        print(f'Opening Uniswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+    # interface.IERC20(Tokens.USDC).approve(bank, 5 * 10**6, {'from': user})
+    # interface.IERC20(Tokens.DAI).approve(bank, 5 * 10**18, {'from': user})
 
-        borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 6) if token0 in borrowable_tokens else 0
-        borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 6) if token1 in borrowable_tokens else 0
-        bank.execute(
-            0,
-            uniswap_spell,
-            uniswap_spell.addLiquidityWERC20.encode_input(
-                token0,
-                token1,
-                [5 * 10**interface.IAny(token0).decimals(),
-                 0,
-                 0,
-                 borrow_amt_0,
-                 borrow_amt_1,
-                 0,
-                 0,
-                 0],
-            ),
-            {'from': user}
-        )
+    # for uni_lp in uniswap_whitelist_lp_tokens[1:]:
+    #     token0 = interface.IAny(uni_lp).token0()
+    #     token1 = interface.IAny(uni_lp).token1()
+    #     print(f'Opening Uniswap {interface.IAny(token0).symbol()} {interface.IAny(token1).symbol()}')
+
+    #     borrow_amt_0 = 10 ** (interface.IAny(token0).decimals() - 5) if token0 in borrowable_tokens else 0
+    #     borrow_amt_1 = 10 ** (interface.IAny(token1).decimals() - 5) if token1 in borrowable_tokens else 0
+    #     # print(f'borrowing {borrow_amt_0}')
+    #     # print(f'borrowing {borrow_amt_1}')
+    #     bank.execute(
+    #         0,
+    #         uniswap_spell,
+    #         uniswap_spell.addLiquidityWERC20.encode_input(
+    #             token0,
+    #             token1,
+    #             [5 * 10**interface.IAny(token0).decimals(),
+    #              0,
+    #              0,
+    #              borrow_amt_0,
+    #              0,  # borrow_amt_1,
+    #              0,
+    #              0,
+    #              0],
+    #         ),
+    #         {'from': user}
+    #     )
