@@ -4,6 +4,15 @@ from .utils import *
 from .tokens import *
 import eth_abi
 
+from brownie.network.gas.strategies import GasNowScalingStrategy
+from brownie import network
+
+gas_strategy = GasNowScalingStrategy(
+    initial_speed="fast", max_speed="fast", increment=1.085, block_duration=20)
+
+# set gas strategy
+network.gas_price(gas_strategy)
+
 token_names = ['weth', 'aave', 'band', 'comp', 'crv', 'dai',
                'dpi', 'link', 'mkr', 'perp', 'ren', 'renbtc',
                'snx', 'susd', 'sushi', 'uma', 'uni', 'usdc', 'usdt', 'wbtc', 'yfi'
