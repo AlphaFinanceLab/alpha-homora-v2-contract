@@ -35,7 +35,8 @@ def test_safebox_eth(safebox):
     safebox.deposit({'from': alice, 'value': deposit_amt})
     curETHBal = alice.balance()
 
-    assert almostEqual(curETHBal - prevETHBal, -deposit_amt), 'incorrect deposit amount'
+    assert almostEqual(curETHBal - prevETHBal, -
+                       deposit_amt), 'incorrect deposit amount'
 
     withdraw_amt = safebox.balanceOf(alice) // 3
 
@@ -43,7 +44,8 @@ def test_safebox_eth(safebox):
     safebox.withdraw(withdraw_amt, {'from': alice})
     curETHBal = alice.balance()
 
-    assert almostEqual(curETHBal - prevETHBal, deposit_amt // 3), 'incorrect first withdraw amount'
+    assert almostEqual(curETHBal - prevETHBal, deposit_amt //
+                       3), 'incorrect first withdraw amount'
 
     withdraw_amt = safebox.balanceOf(alice)
 
@@ -63,13 +65,14 @@ def test_safebox(token, safebox):
 
     token.approve(safebox, 2**256-1, {'from': alice})
 
-    deposit_amt = 100 * 10**token.decimals()
+    deposit_amt = 1 * 10**token.decimals()
 
     prevBal = token.balanceOf(alice)
     safebox.deposit(deposit_amt, {'from': alice})
     curBal = token.balanceOf(alice)
 
-    assert almostEqual(curBal - prevBal, -deposit_amt), 'incorrect deposit amount'
+    assert almostEqual(curBal - prevBal, -
+                       deposit_amt), 'incorrect deposit amount'
 
     withdraw_amt = safebox.balanceOf(alice) // 3
 
@@ -77,7 +80,8 @@ def test_safebox(token, safebox):
     safebox.withdraw(withdraw_amt, {'from': alice})
     curBal = token.balanceOf(alice)
 
-    assert almostEqual(curBal - prevBal, deposit_amt // 3), 'incorrect first withdraw amount'
+    assert almostEqual(curBal - prevBal, deposit_amt //
+                       3), 'incorrect first withdraw amount'
 
     withdraw_amt = safebox.balanceOf(alice)
 
@@ -91,8 +95,10 @@ def test_safebox(token, safebox):
 
 def test_bank_uniswap(token, bank):
     alice = accounts[1]
+    print('testing', token.name())
 
-    uniswap_spell = UniswapV2SpellV1.at('0x7b1f4cDD4f599774feae6516460BCCD97Fc2100E')
+    uniswap_spell = UniswapV2SpellV1.at(
+        '0x7b1f4cDD4f599774feae6516460BCCD97Fc2100E')
 
     mint_tokens(token, alice)
 
@@ -100,9 +106,9 @@ def test_bank_uniswap(token, bank):
 
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
 
-    amt = 100 * 10**token.decimals()
+    amt = 1 * (10 ** token.decimals())
 
-    borrow_amt = 1 * 10**token.decimals()
+    borrow_amt = int(0.01 * (10 ** token.decimals()))
 
     prevTokenAlice = token.balanceOf(alice)
 
@@ -111,13 +117,16 @@ def test_bank_uniswap(token, bank):
 
     curTokenAlice = token.balanceOf(alice)
 
-    assert almostEqual(curTokenAlice - prevTokenAlice, -amt), 'incorrect input amt'
+    assert almostEqual(curTokenAlice - prevTokenAlice, -
+                       amt), 'incorrect input amt'
 
 
 def test_bank_sushiswap(token, bank):
     alice = accounts[1]
+    print('testing bank with token ', token.name())
 
-    sushiswap_spell = SushiswapSpellV1.at('0xc671B7251a789de0835a2fa33c83c8D4afB39092')
+    sushiswap_spell = SushiswapSpellV1.at(
+        '0xc4a59cfEd3FE06bDB5C21dE75A70B20dB280D8fE')
 
     mint_tokens(token, alice)
 
@@ -125,25 +134,27 @@ def test_bank_sushiswap(token, bank):
 
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
 
-    amt = 100 * 10**token.decimals()
+    amt = 1 * (10**token.decimals())
 
-    borrow_amt = 1 * 10**token.decimals()
+    borrow_amt = int(0.01 * (10**token.decimals()))
 
     prevTokenAlice = token.balanceOf(alice)
 
     bank.execute(0, sushiswap_spell, sushiswap_spell.addLiquidityWMasterChef.encode_input(
-        token, weth, [amt, 0, 0, borrow_amt, 10**18, 0, 0, 0]), {'from': alice})
+        token, weth, [amt, 0, 0, borrow_amt, 10**12, 0, 0, 0], 12), {'from': alice})
 
     curTokenAlice = token.balanceOf(alice)
 
-    assert almostEqual(curTokenAlice - prevTokenAlice, -amt), 'incorrect input amt'
+    assert almostEqual(curTokenAlice - prevTokenAlice, -
+                       amt), 'incorrect input amt'
 
 
 def main():
 
     publish_status = False
 
-    deployer = accounts.at('0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
+    deployer = accounts.at(
+        '0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
     # deployer = accounts.load('gh')
 
     # deploy safeboxes (uni + sushi)
@@ -153,10 +164,14 @@ def main():
     cyuni = '0xFEEB92386A055E2eF7C2B598c872a4047a7dB59F'
     cysushi = '0x226F3738238932BA0dB2319a8117D9555446102f'
 
-    safebox_link = SafeBox.deploy(cylink, 'Interest Bearing ChainLink Token', 'ibLINKv2', {'from': deployer}, publish_source=publish_status)
-    safebox_wbtc = SafeBox.deploy(cywbtc, 'Interest Bearing Wrapped BTC', 'ibWBTCv2', {'from': deployer}, publish_source=publish_status)
-    safebox_uni = SafeBox.deploy(cyuni, 'Interest Bearing Uniswap', 'ibUNIv2', {'from': deployer}, publish_source=publish_status)
-    safebox_sushi = SafeBox.deploy(cysushi, 'Interest Bearing SushiToken', 'ibSUSHI', {'from': deployer}, publish_source=publish_status)
+    safebox_link = SafeBox.deploy(cylink, 'Interest Bearing ChainLink Token', 'ibLINKv2', {
+                                  'from': deployer}, publish_source=publish_status)
+    safebox_wbtc = SafeBox.deploy(cywbtc, 'Interest Bearing Wrapped BTC', 'ibWBTCv2', {
+                                  'from': deployer}, publish_source=publish_status)
+    safebox_uni = SafeBox.deploy(cyuni, 'Interest Bearing Uniswap', 'ibUNIv2', {
+                                 'from': deployer}, publish_source=publish_status)
+    safebox_sushi = SafeBox.deploy(cysushi, 'Interest Bearing SushiToken', 'ibSUSHI', {
+                                   'from': deployer}, publish_source=publish_status)
 
     link = interface.IERC20Ex('0x514910771AF9Ca656af840dff83E8264EcF986CA')
     wbtc = interface.IERC20Ex('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
@@ -168,6 +183,68 @@ def main():
     # bank.addBank(wbtc, cywbtc, {'from': deployer}) # already added
     bank.addBank(uni, cyuni, {'from': deployer})
     bank.addBank(sushi, cysushi, {'from': deployer})
+
+    bank.setWhitelistTokens(
+        [wbtc.address, uni.address, sushi.address],
+        [True, True, True],
+        {'from': deployer}
+    )
+
+    #######################################################################
+    # Try Opening positions in each pool
+
+    tester = accounts.at(
+        '0x60e86029ed1A8b91cB0dF8BBDFE56c4C2Ad2D073',
+        force=True
+    )
+
+    # TODO: in production please remove this line and use real money.
+    accounts[0].transfer(tester, '100 ether')
+
+    print("opening wbtc-weth on uniswap spell with borrowing...")
+    weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+    uniswap_spell = UniswapV2SpellV1.at(
+        '0x7b1f4cDD4f599774feae6516460BCCD97Fc2100E')
+    bank.execute(
+        0,
+        uniswap_spell,
+        uniswap_spell.addLiquidityWERC20.encode_input(
+            wbtc,
+            weth,
+            [0, 0, 0, 10**5, 10**7, 0, 0, 0]
+        ),
+        {'from': tester, 'value': '0.03 ether', 'gas_price': gas_strategy}
+    )
+    print("pass!!!")
+
+    print("opening uni-weth on uniswap spell with borrowing...")
+    bank.execute(
+        0,
+        uniswap_spell,
+        uniswap_spell.addLiquidityWERC20.encode_input(
+            uni,
+            weth,
+            [0, 0, 0, 10**17, 10**10, 0, 0, 0]
+        ),
+        {'from': tester, 'value': '0.01 ether', 'gas_price': gas_strategy}
+    )
+    print("pass!!!")
+
+    print("opening sushi-weth on sushiswap spell with borrowing...")
+    sushiswap_spell = SushiswapSpellV1.at(
+        '0xc4a59cfEd3FE06bDB5C21dE75A70B20dB280D8fE')
+    bank.execute(
+        0,
+        sushiswap_spell,
+        sushiswap_spell.addLiquidityWMasterChef.encode_input(
+            sushi,
+            weth,
+            [0, 0, 0, 5*10**16, 10**10, 0, 0, 0],
+            12
+        ),
+        {'from': tester, 'value': '0.01 ether', 'gas_price': gas_strategy}
+    )
+    print("pass!!!")
 
     ###########################################################
     # test cyToken
@@ -195,20 +272,34 @@ def main():
 
     mint_tokens(link, accounts[3])
     link.approve(safebox_link, 2**256-1, {'from': accounts[3]})
-    safebox_link.deposit(200000 * 10**link.decimals(), {'from': accounts[3]})
+    safebox_link.deposit(
+        link.balanceOf(accounts[3], {'from': accounts[3]}),
+        {'from': accounts[3]}
+    )
     test_bank_uniswap(link, bank)
 
     mint_tokens(wbtc, accounts[3])
     wbtc.approve(safebox_wbtc, 2**256-1, {'from': accounts[3]})
-    safebox_wbtc.deposit(200000 * 10**wbtc.decimals(), {'from': accounts[3]})
+    safebox_wbtc.deposit(
+        wbtc.balanceOf(accounts[3], {'from': accounts[3]}),
+        {'from': accounts[3]}
+    )
     test_bank_uniswap(wbtc, bank)
 
     mint_tokens(uni, accounts[3])
     uni.approve(safebox_uni, 2**256-1, {'from': accounts[3]})
-    safebox_uni.deposit(200000 * 10**uni.decimals(), {'from': accounts[3]})
+    safebox_uni.deposit(
+        uni.balanceOf(accounts[3], {'from': accounts[3]}),
+        {'from': accounts[3]}
+    )
     test_bank_uniswap(uni, bank)
 
     mint_tokens(sushi, accounts[3])
     sushi.approve(safebox_sushi, 2**256-1, {'from': accounts[3]})
-    safebox_sushi.deposit(200000 * 10**sushi.decimals(), {'from': accounts[3]})
+    safebox_sushi.deposit(
+        sushi.balanceOf(accounts[3], {'from': accounts[3]}),
+        {'from': accounts[3]}
+    )
     test_bank_sushiswap(sushi, bank)
+
+    print("Done!!!!")

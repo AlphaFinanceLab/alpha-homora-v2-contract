@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "devDependencies": {
-    "prettier": "2.2.0",
+    "prettier": "^2.2.0",
     "prettier-plugin-solidity": "^1.0.0-alpha.59"
   },
   "scripts": {
