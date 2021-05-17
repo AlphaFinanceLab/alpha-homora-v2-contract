@@ -87,4 +87,20 @@ interface IAny {
   function borrowBalanceCurrent(address) external returns (uint);
 
   function accrueInterest() external returns (uint);
+
+  function factory() external view returns (address);
+
+  function execute(
+    uint,
+    address,
+    bytes memory
+  ) external returns (uint);
+
+  function borrow(uint) external returns (uint);
+
+  function getCash() external view returns (uint);
+
+  function totalBorrows() external view returns (uint);
+
+  function totalReserves() external view returns (uint);
 }

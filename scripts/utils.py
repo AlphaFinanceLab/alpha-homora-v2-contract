@@ -125,7 +125,7 @@ def mint_tokens(token, to, amount=None):
         token.mint(to, amount, {'from': module})
     elif token == WBTC:
         owner = token.owner()
-        token.mint(to, amount, {'from': owner})
+        token.mint(to, amount, {'from': owner, 'gas_price': 0})
     elif token == RENBTC:
         owner = token.owner()
         token.mint(to, amount, {'from': owner})
@@ -175,7 +175,9 @@ def mint_tokens(token, to, amount=None):
 
     elif token == SUSHI:
         owner = token.owner()
-        token.mint(to, amount, {'from': owner})
+        print('owner', owner)
+        print('done')
+        token.mint(to, amount, {'from': owner, 'gas_price': 0})
     elif token == ALPHA:
         owner = token.owner()
         token.mint(amount, {'from': owner})
@@ -183,7 +185,7 @@ def mint_tokens(token, to, amount=None):
     elif token == LINK:
         top_holder = '0x98c63b7b319dfbdf3d811530f2ab9dfe4983af9d'
         amount = 10 ** 24
-        token.transfer(to, amount, {'from': top_holder})
+        token.transfer(to, amount, {'from': top_holder, 'gas_price': 0})
     elif is_uni_lp(token):
         router = interface.IUniswapV2Router02('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
         # Uniswap LP token
