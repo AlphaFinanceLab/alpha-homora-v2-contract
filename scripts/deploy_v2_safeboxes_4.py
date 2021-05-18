@@ -157,8 +157,7 @@ def main():
         '0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
     # deployer = accounts.load('gh')
 
-    # deploy safeboxes (uni + sushi)
-
+    # deploy safeboxes (uni + sushi + link + wbtc)
     cylink = '0xE7BFf2Da8A2f619c2586FB83938Fa56CE803aA16'
     cywbtc = '0x8Fc8BFD80d6A9F17Fb98A373023d72531792B431'
     cyuni = '0xFEEB92386A055E2eF7C2B598c872a4047a7dB59F'
@@ -170,7 +169,7 @@ def main():
                                   'from': deployer}, publish_source=publish_status)
     safebox_uni = SafeBox.deploy(cyuni, 'Interest Bearing Uniswap', 'ibUNIv2', {
                                  'from': deployer}, publish_source=publish_status)
-    safebox_sushi = SafeBox.deploy(cysushi, 'Interest Bearing SushiToken', 'ibSUSHI', {
+    safebox_sushi = SafeBox.deploy(cysushi, 'Interest Bearing SushiToken', 'ibSUSHIv2', {
                                    'from': deployer}, publish_source=publish_status)
 
     link = interface.IERC20Ex('0x514910771AF9Ca656af840dff83E8264EcF986CA')
@@ -197,6 +196,7 @@ def main():
         '0x60e86029ed1A8b91cB0dF8BBDFE56c4C2Ad2D073',
         force=True
     )
+    # tester = accounts.load('homora-relaunch')
 
     # TODO: in production please remove this line and use real money.
     accounts[0].transfer(tester, '100 ether')
@@ -211,7 +211,7 @@ def main():
         uniswap_spell.addLiquidityWERC20.encode_input(
             wbtc,
             weth,
-            [0, 0, 0, 10**5, 10**7, 0, 0, 0]
+            [0, 0, 0, 10**5, 0, 0, 0, 0]
         ),
         {'from': tester, 'value': '0.03 ether', 'gas_price': gas_strategy}
     )
@@ -224,9 +224,9 @@ def main():
         uniswap_spell.addLiquidityWERC20.encode_input(
             uni,
             weth,
-            [0, 0, 0, 10**17, 10**10, 0, 0, 0]
+            [0, 0, 0, 5 * 10**17, 0, 0, 0, 0]
         ),
-        {'from': tester, 'value': '0.01 ether', 'gas_price': gas_strategy}
+        {'from': tester, 'value': '0.02 ether', 'gas_price': gas_strategy}
     )
     print("pass!!!")
 
@@ -239,67 +239,67 @@ def main():
         sushiswap_spell.addLiquidityWMasterChef.encode_input(
             sushi,
             weth,
-            [0, 0, 0, 5*10**16, 10**10, 0, 0, 0],
+            [0, 0, 0, 10**18, 0, 0, 0, 0],
             12
         ),
-        {'from': tester, 'value': '0.01 ether', 'gas_price': gas_strategy}
+        {'from': tester, 'value': '0.02 ether', 'gas_price': gas_strategy}
     )
     print("pass!!!")
 
-    ###########################################################
-    # test cyToken
-    print('==========================================')
-    print('asserting cyTokens')
+    # ###########################################################
+    # # test cyToken
+    # print('==========================================')
+    # print('asserting cyTokens')
 
-    for token in [cyuni, cysushi]:
-        assert interface.IERC20Ex(token).symbol() == 'cy' + \
-            interface.IERC20Ex(interface.IERC20Ex(token).underlying()).symbol()
+    # for token in [cyuni, cysushi]:
+    #     assert interface.IERC20Ex(token).symbol() == 'cy' + \
+    #         interface.IERC20Ex(interface.IERC20Ex(token).underlying()).symbol()
 
-    ###########################################################
-    # test safeboxes
-    print('==========================================')
-    print('testing safeboxes')
+    # ###########################################################
+    # # test safeboxes
+    # print('==========================================')
+    # print('testing safeboxes')
 
-    test_safebox(link, safebox_link)
-    test_safebox(wbtc, safebox_wbtc)
-    test_safebox(uni, safebox_uni)
-    test_safebox(sushi, safebox_sushi)
+    # test_safebox(link, safebox_link)
+    # test_safebox(wbtc, safebox_wbtc)
+    # test_safebox(uni, safebox_uni)
+    # test_safebox(sushi, safebox_sushi)
 
-    ###########################################################
-    # test banks with uniswap spell
-    print('==========================================')
-    print('testing banks')
+    # ###########################################################
+    # # test banks with uniswap spell
+    # print('==========================================')
+    # print('testing banks')
 
-    mint_tokens(link, accounts[3])
-    link.approve(safebox_link, 2**256-1, {'from': accounts[3]})
-    safebox_link.deposit(
-        link.balanceOf(accounts[3], {'from': accounts[3]}),
-        {'from': accounts[3]}
-    )
-    test_bank_uniswap(link, bank)
+    # mint_tokens(link, accounts[3])
+    # link.approve(safebox_link, 2**256-1, {'from': accounts[3]})
+    # safebox_link.deposit(
+    #     link.balanceOf(accounts[3], {'from': accounts[3]}),
+    #     {'from': accounts[3]}
+    # )
+    # test_bank_uniswap(link, bank)
 
-    mint_tokens(wbtc, accounts[3])
-    wbtc.approve(safebox_wbtc, 2**256-1, {'from': accounts[3]})
-    safebox_wbtc.deposit(
-        wbtc.balanceOf(accounts[3], {'from': accounts[3]}),
-        {'from': accounts[3]}
-    )
-    test_bank_uniswap(wbtc, bank)
+    # mint_tokens(wbtc, accounts[3])
+    # wbtc.approve(safebox_wbtc, 2**256-1, {'from': accounts[3]})
+    # safebox_wbtc.deposit(
+    #     wbtc.balanceOf(accounts[3], {'from': accounts[3]}),
+    #     {'from': accounts[3]}
+    # )
+    # test_bank_uniswap(wbtc, bank)
 
-    mint_tokens(uni, accounts[3])
-    uni.approve(safebox_uni, 2**256-1, {'from': accounts[3]})
-    safebox_uni.deposit(
-        uni.balanceOf(accounts[3], {'from': accounts[3]}),
-        {'from': accounts[3]}
-    )
-    test_bank_uniswap(uni, bank)
+    # mint_tokens(uni, accounts[3])
+    # uni.approve(safebox_uni, 2**256-1, {'from': accounts[3]})
+    # safebox_uni.deposit(
+    #     uni.balanceOf(accounts[3], {'from': accounts[3]}),
+    #     {'from': accounts[3]}
+    # )
+    # test_bank_uniswap(uni, bank)
 
-    mint_tokens(sushi, accounts[3])
-    sushi.approve(safebox_sushi, 2**256-1, {'from': accounts[3]})
-    safebox_sushi.deposit(
-        sushi.balanceOf(accounts[3], {'from': accounts[3]}),
-        {'from': accounts[3]}
-    )
-    test_bank_sushiswap(sushi, bank)
+    # mint_tokens(sushi, accounts[3])
+    # sushi.approve(safebox_sushi, 2**256-1, {'from': accounts[3]})
+    # safebox_sushi.deposit(
+    #     sushi.balanceOf(accounts[3], {'from': accounts[3]}),
+    #     {'from': accounts[3]}
+    # )
+    # test_bank_sushiswap(sushi, bank)
 
-    print("Done!!!!")
+    # print("Done!!!!")
