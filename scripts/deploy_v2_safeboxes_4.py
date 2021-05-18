@@ -118,28 +118,28 @@ def main():
 
     print("End of deploy process!!!")
 
-    ###########################################################
-    # test cyToken
-    print('==========================================')
-    print('asserting cyTokens')
+    # ###########################################################
+    # # test cyToken
+    # print('==========================================')
+    # print('asserting cyTokens')
 
-    for token in [cyuni, cysushi]:
-        assert interface.IERC20Ex(token).symbol() == 'cy' + \
-            interface.IERC20Ex(interface.IERC20Ex(token).underlying()).symbol()
+    # for token in [cyuni, cysushi]:
+    #     assert interface.IERC20Ex(token).symbol() == 'cy' + \
+    #         interface.IERC20Ex(interface.IERC20Ex(token).underlying()).symbol()
 
-    ###########################################################
-    # test safeboxes
-    print('==========================================')
-    print('testing safeboxes')
+    # ###########################################################
+    # # test safeboxes
+    # print('==========================================')
+    # print('testing safeboxes')
 
-    link = interface.IERC20Ex('0x514910771AF9Ca656af840dff83E8264EcF986CA')
-    wbtc = interface.IERC20Ex('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
-    uni = interface.IERC20Ex('0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984')
-    sushi = interface.IERC20Ex('0x6B3595068778DD592e39A122f4f5a5cF09C90fE2')
+    # link = interface.IERC20Ex('0x514910771AF9Ca656af840dff83E8264EcF986CA')
+    # wbtc = interface.IERC20Ex('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
+    # uni = interface.IERC20Ex('0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984')
+    # sushi = interface.IERC20Ex('0x6B3595068778DD592e39A122f4f5a5cF09C90fE2')
 
-    test_safebox(link, safebox_link)
-    test_safebox(wbtc, safebox_wbtc)
-    test_safebox(uni, safebox_uni)
-    test_safebox(sushi, safebox_sushi)
+    # test_safebox(link, safebox_link)
+    # test_safebox(wbtc, safebox_wbtc)
+    # test_safebox(uni, safebox_uni)
+    # test_safebox(sushi, safebox_sushi)
 
-    print("Done!!!!")
+    # print("Done!!!!")

@@ -184,35 +184,35 @@ def main():
     print("Done!!!")
     print("End of deploy process!!!")
 
-    ###########################################################
-    # test banks with uniswap spell
-    print('==========================================')
-    print('testing banks')
-    alice = accounts[1]
-    mint_tokens(link, alice)
-    print(int(0.001 * 10 ** link.decimals()))
+    # ###########################################################
+    # # test banks with uniswap spell
+    # print('==========================================')
+    # print('testing banks')
+    # alice = accounts[1]
+    # mint_tokens(link, alice)
+    # print(int(0.001 * 10 ** link.decimals()))
 
-    for token in [link, wbtc, uni]:
-        mint_tokens(token, alice)
-        test_bank_uniswap(
-            token,
-            bank,
-            alice,
-            10 ** token.decimals(),
-            borrow_token_amt=int(0.001 * 10 ** token.decimals()),
-            borrow_weth_amt=10**12,
-        )
+    # for token in [link, wbtc, uni]:
+    #     mint_tokens(token, alice)
+    #     test_bank_uniswap(
+    #         token,
+    #         bank,
+    #         alice,
+    #         10 ** token.decimals(),
+    #         borrow_token_amt=int(0.001 * 10 ** token.decimals()),
+    #         borrow_weth_amt=10**12,
+    #     )
 
-    for token, pool_id in [(sushi, 12)]:
-        mint_tokens(token, alice)
-        test_bank_sushiswap(
-            token,
-            bank,
-            alice,
-            pool_id,
-            10 ** token.decimals(),
-            borrow_token_amt=int(0.001 * 10 ** token.decimals()),
-            borrow_weth_amt=10**12,
-        )
+    # for token, pool_id in [(sushi, 12)]:
+    #     mint_tokens(token, alice)
+    #     test_bank_sushiswap(
+    #         token,
+    #         bank,
+    #         alice,
+    #         pool_id,
+    #         10 ** token.decimals(),
+    #         borrow_token_amt=int(0.001 * 10 ** token.decimals()),
+    #         borrow_weth_amt=10**12,
+    #     )
 
-    print("Done!!!!")
+    # print("Done!!!!")
