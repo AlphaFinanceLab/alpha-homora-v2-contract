@@ -41,7 +41,10 @@ def test_bank_uniswap(
     uniswap_spell = UniswapV2SpellV1.at(
         '0x7b1f4cDD4f599774feae6516460BCCD97Fc2100E')
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
-    # token.approve(bank, 2**256-1, {'from': user})
+    if token_amt > 0:
+        token.approve(bank, token_amt, {'from': user})
+    if weth_amt > 0:
+        weth.approve(bank, weth_amt, {'from': user})
 
     prevTokenUser = token.balanceOf(user)
     bank.execute(
@@ -78,7 +81,10 @@ def test_bank_sushiswap(
         '0xc4a59cfEd3FE06bDB5C21dE75A70B20dB280D8fE'
     )
     weth = interface.IERC20Ex('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
-    # token.approve(bank, 2**256-1, {'from': user})
+    if token_amt > 0:
+        token.approve(bank, token_amt, {'from': user})
+    if weth_amt > 0:
+        weth.approve(bank, weth_amt, {'from': user})
 
     prevTokenUser = token.balanceOf(user)
 
