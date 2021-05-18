@@ -60,7 +60,8 @@ def test_bank_uniswap(
 
     curTokenUser = token.balanceOf(user)
 
-    assert almostEqual(curTokenUser - prevTokenUser, -token_amt), (
+    # in case dust
+    assert almostEqual(curTokenUser - prevTokenUser, -token_amt) or (curTokenUser - prevTokenUser < 100 and token_amt < 100), (
         'incorrect input amt'
     )
 
@@ -112,25 +113,19 @@ def main():
         '0xB593d82d53e2c187dc49673709a6E9f806cdC835', force=True)
     # deployer = accounts.load('gh')
 
-    cylink = '0xE7BFf2Da8A2f619c2586FB83938Fa56CE803aA16'
-    cywbtc = '0x8Fc8BFD80d6A9F17Fb98A373023d72531792B431'
     cyuni = '0xFEEB92386A055E2eF7C2B598c872a4047a7dB59F'
     cysushi = '0x226F3738238932BA0dB2319a8117D9555446102f'
 
-    link = interface.IERC20Ex('0x514910771AF9Ca656af840dff83E8264EcF986CA')
-    wbtc = interface.IERC20Ex('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
     uni = interface.IERC20Ex('0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984')
     sushi = interface.IERC20Ex('0x6B3595068778DD592e39A122f4f5a5cF09C90fE2')
 
     bank = HomoraBank.at('0xba5eBAf3fc1Fcca67147050Bf80462393814E54B')
-    # bank.addBank(link, cylink, {'from': deployer}) # already added
-    # bank.addBank(wbtc, cywbtc, {'from': deployer}) # already added
     bank.addBank(uni, cyuni, {'from': deployer})
     bank.addBank(sushi, cysushi, {'from': deployer})
 
     bank.setWhitelistTokens(
-        [wbtc.address, uni.address, sushi.address],
-        [True, True, True],
+        [uni.address, sushi.address],
+        [True, True],
         {'from': deployer}
     )
 
@@ -145,18 +140,6 @@ def main():
 
     # TODO: in production please remove this line and use real money.
     accounts[0].transfer(tester, '100 ether')
-
-    print("opening wbtc-weth position with uniswap spell and borrowing wbtc...")
-    test_bank_uniswap(
-        wbtc,
-        bank,
-        tester,
-        0,
-        msg_value='0.03 ether',
-        borrow_token_amt=10**5,
-        borrow_weth_amt=0,
-    )
-    print("Done!!!")
 
     print("opening uni-weth position with uniswap spell and borrowing uni...")
     test_bank_uniswap(
